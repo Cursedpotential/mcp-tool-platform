@@ -176,3 +176,88 @@
 - [x] Fallback chain: Local Ollama → OpenRouter → Other providers
 - [x] Model routing based on task type
 - [x] Token/cost tracking per request
+
+
+## Chroma Working Memory (Large File Processing)
+- [x] Chroma database integration as processing staging area
+- [x] Streaming chunk processor for 5GB+ XML files
+- [x] Memory-efficient XML parser (SAX/streaming)
+- [x] Chunk storage with embeddings in Chroma
+- [x] Persistent collections per processing job
+- [x] Collection management (create, list, delete, export)
+- [x] Progress tracking for large file processing
+- [x] Resume capability for interrupted processing
+- [ ] Chroma management UI in dashboard
+- [ ] Export from Chroma to final DBs (Neo4j, Supabase, Vector DB)
+
+
+## LLM-Assisted MCP Forking (via OpenRouter)
+- [ ] OpenRouter integration for MCP design prompts
+- [ ] Auto-generate MCP manifest/schema from tool description
+- [ ] Generate optimized tool descriptions per platform
+- [ ] Create Claude MCP skills definitions via LLM
+- [ ] Generate Gemini extension manifest via LLM
+- [ ] Best practices templates per platform
+- [ ] Fork wizard UI with LLM suggestions
+
+## Local MCP Orchestration (Minimize Calls)
+- [ ] Local tool registry with cached index
+- [ ] Tool discovery caching (don't re-discover on every call)
+- [ ] Request batching for same MCP server
+- [ ] Smart routing (know which MCP has which tool)
+- [ ] Connection pooling for local MCPs
+- [ ] Periodic refresh of tool listings
+- [ ] Offline mode with cached tool specs
+
+
+## Smart LLM Provider Routing (Enhanced)
+- [x] Route by task type (simple/complex/creative)
+- [x] Route by cost (free tier → paid fallback chain)
+- [x] Route by latency requirements (local vs cloud)
+- [x] Route by context window needs (long docs → Gemini)
+- [x] Load balancing across multiple API keys
+- [x] Automatic failover on rate limits
+- [x] Cost tracking and budget limits per provider
+
+## Database Provider Routing (NEW)
+- [ ] Unified export router for processed data
+- [ ] Route entities with relationships → Neo4j
+- [ ] Route tabular/structured data → Supabase
+- [ ] Route embeddings/semantic data → Vector DB
+- [ ] Route large files/blobs → S3/Content Store
+- [ ] Auto-detect data type and structure
+- [ ] Multi-destination export (same data to multiple DBs)
+- [ ] Export validation and rollback
+- [ ] Progress tracking for large exports
+
+
+## Config UI (Settings Tabs)
+- [ ] LLM Provider config tab (API keys, endpoints, models)
+- [ ] Database routing config tab (Neo4j, Supabase, Vector DB)
+- [ ] Chroma settings tab (host, port, collections)
+- [ ] MCP server registry tab (add/remove servers)
+- [ ] Budget & cost tracking tab (daily/monthly limits)
+- [ ] Smart routing policies tab (task types, fallback chains)
+- [ ] Import/export all settings as JSON
+
+## Enhanced Security
+- [ ] API key encryption at rest (not plain text)
+- [ ] Encrypted storage for database credentials
+- [ ] Audit logging for sensitive operations
+- [ ] Session timeout for inactive users
+- [ ] IP whitelisting option
+- [ ] Secrets rotation reminder
+- [ ] Backup/restore encrypted configs
+
+
+## Model Discovery & Price Tracking
+- [ ] Fetch available models from OpenRouter API
+- [ ] Fetch models from Groq, Together, Mistral APIs
+- [ ] Parse pricing info and identify free tier models
+- [ ] Auto-update model list every 24 hours
+- [ ] Track pricing changes over time
+- [ ] Alert when free models become paid
+- [ ] Recommend cheapest model for each task type
+- [ ] Historical price data visualization
+- [ ] Smart model selection (prefer free when quality is sufficient)
+- [ ] A/B testing free vs paid models for quality comparison
