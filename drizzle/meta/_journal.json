@@ -8,6 +8,20 @@
       "when": 1767160390672,
       "tag": "0000_boring_squadron_supreme",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1767187875529,
+      "tag": "0001_remarkable_wendigo",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1767187893426,
+      "tag": "0002_slimy_newton_destine",
+      "breakpoints": true
     }
   ]
 }

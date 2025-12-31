@@ -10,6 +10,36 @@ import { getLogStream, type LogFilter } from "./mcp/realtime/log-stream";
 import { getToolForkManager, type PlatformType, type ToolCustomization } from "./mcp/forking/tool-fork";
 import { getMCPProxy, type ServerTransport } from "./mcp/proxy/mcp-proxy";
 import { z } from "zod";
+import {
+  createApiKey,
+  listApiKeys,
+  revokeApiKey,
+  rotateApiKey,
+  logApiKeyUsage,
+  type ApiKeyPermission,
+} from "./mcp/auth/api-keys";
+import {
+  createPrompt,
+  listPrompts,
+  getPromptById,
+  updatePrompt,
+  deletePrompt,
+  getPromptVersionHistory,
+  createWorkflow,
+  listWorkflows,
+  getWorkflowById,
+  updateWorkflow,
+  deleteWorkflow,
+  getDefaultPrompt,
+} from "./mcp/prompts/prompt-manager";
+import {
+  getWikiCategories,
+  getWikiPage,
+  getPagesByCategory,
+  searchWiki,
+  getAllWikiPages,
+} from "./mcp/wiki/wiki-content";
+import { getMCPConfigGenerator, type Platform } from "./mcp/config/mcp-generator";
 
 // ============================================================================
 // Config Router - Manage definitions, patterns, dictionaries
@@ -613,6 +643,293 @@ const proxyRouter = router({
 });
 
 // ============================================================================
+// API Keys Router
+// ============================================================================
+
+const apiKeysRouter = router({
+  list: protectedProcedure.query(async ({ ctx }) => {
+    return listApiKeys(ctx.user!.id);
+  }),
+
+  create: protectedProcedure
+    .input(z.object({
+      name: z.string(),
+      permissions: z.array(z.object({
+        resource: z.string(),
+        actions: z.array(z.enum(['read', 'write', 'execute'])),
+      })).optional(),
+      expiresInDays: z.number().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return createApiKey({
+        userId: ctx.user!.id,
+        name: input.name,
+        permissions: input.permissions,
+        expiresInDays: input.expiresInDays,
+      });
+    }),
+
+  revoke: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      return revokeApiKey(input.id, ctx.user!.id);
+    }),
+
+  rotate: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      return rotateApiKey(input.id, ctx.user!.id);
+    }),
+});
+
+// ============================================================================
+// System Prompts Router
+// ============================================================================
+
+const promptsRouter = router({
+  list: protectedProcedure
+    .input(z.object({ toolName: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      return listPrompts(ctx.user!.id, input?.toolName);
+    }),
+
+  get: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      return getPromptById(input.id);
+    }),
+
+  create: protectedProcedure
+    .input(z.object({
+      name: z.string(),
+      description: z.string().optional(),
+      toolName: z.string().optional(),
+      promptText: z.string(),
+      variables: z.array(z.object({
+        name: z.string(),
+        description: z.string(),
+        defaultValue: z.string().optional(),
+        required: z.boolean(),
+      })).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return createPrompt({ ...input, userId: ctx.user!.id });
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      promptText: z.string().optional(),
+      name: z.string().optional(),
+      description: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return updatePrompt(input.id, ctx.user!.id, input);
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      return deletePrompt(input.id, ctx.user!.id);
+    }),
+
+  getVersionHistory: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      return getPromptVersionHistory(input.id);
+    }),
+
+  getDefault: protectedProcedure
+    .input(z.object({ toolName: z.string() }))
+    .query(({ input }) => {
+      return getDefaultPrompt(input.toolName);
+    }),
+});
+
+// ============================================================================
+// Workflows Router
+// ============================================================================
+
+const workflowsRouter = router({
+  list: protectedProcedure
+    .input(z.object({ category: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      return listWorkflows(ctx.user!.id, input?.category);
+    }),
+
+  get: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .query(async ({ input }) => {
+      return getWorkflowById(input.id);
+    }),
+
+  create: protectedProcedure
+    .input(z.object({
+      name: z.string(),
+      description: z.string().optional(),
+      category: z.string().optional(),
+      steps: z.array(z.object({
+        toolName: z.string(),
+        description: z.string(),
+        inputMapping: z.record(z.string(), z.string()),
+        outputKey: z.string(),
+        optional: z.boolean().optional(),
+        condition: z.string().optional(),
+      })),
+      systemPromptId: z.number().optional(),
+      isPublic: z.boolean().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return createWorkflow({ ...input, userId: ctx.user!.id });
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.number(),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      category: z.string().optional(),
+      steps: z.array(z.object({
+        toolName: z.string(),
+        description: z.string(),
+        inputMapping: z.record(z.string(), z.string()),
+        outputKey: z.string(),
+        optional: z.boolean().optional(),
+        condition: z.string().optional(),
+      })).optional(),
+      isPublic: z.boolean().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return updateWorkflow(input.id, ctx.user!.id, input);
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      return deleteWorkflow(input.id, ctx.user!.id);
+    }),
+});
+
+// ============================================================================
+// Wiki Router
+// ============================================================================
+
+const wikiRouter = router({
+  categories: publicProcedure.query(() => {
+    return getWikiCategories();
+  }),
+
+  page: publicProcedure
+    .input(z.object({ slug: z.string() }))
+    .query(({ input }) => {
+      return getWikiPage(input.slug);
+    }),
+
+  pagesByCategory: publicProcedure
+    .input(z.object({ category: z.string() }))
+    .query(({ input }) => {
+      return getPagesByCategory(input.category);
+    }),
+
+  search: publicProcedure
+    .input(z.object({ query: z.string() }))
+    .query(({ input }) => {
+      return searchWiki(input.query);
+    }),
+
+  all: publicProcedure.query(() => {
+    return getAllWikiPages();
+  }),
+});
+
+// ============================================================================
+// MCP Config Generator Router
+// ============================================================================
+
+const mcpConfigRouter = router({
+  generate: protectedProcedure
+    .input(z.object({
+      platform: z.enum(['claude', 'gemini', 'openai', 'generic']),
+      includeAllTools: z.boolean().optional(),
+      generateWithAI: z.boolean().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // First create an API key for this config
+      const apiKeyResult = await createApiKey({
+        userId: ctx.user!.id,
+        name: `MCP Config - ${input.platform}`,
+        permissions: [
+          { resource: 'tools', actions: ['read', 'execute'] },
+        ],
+      });
+      
+      if (!apiKeyResult) {
+        throw new Error('Failed to create API key');
+      }
+
+      // Get available tools (simplified for now)
+      const tools = [
+        { name: 'document.convert', description: 'Convert documents between formats', inputSchema: {} },
+        { name: 'document.ocr', description: 'Extract text from images using OCR', inputSchema: {} },
+        { name: 'document.chunk', description: 'Split documents into chunks', inputSchema: {} },
+        { name: 'nlp.extract_entities', description: 'Extract named entities from text', inputSchema: {} },
+        { name: 'nlp.extract_keywords', description: 'Extract keywords from text', inputSchema: {} },
+        { name: 'nlp.detect_language', description: 'Detect text language', inputSchema: {} },
+        { name: 'nlp.sentiment', description: 'Analyze text sentiment', inputSchema: {} },
+        { name: 'search.ripgrep', description: 'Search files with ripgrep', inputSchema: {} },
+        { name: 'summarization.map_reduce', description: 'Summarize large documents', inputSchema: {} },
+        { name: 'retrieval.bm25_search', description: 'BM25 keyword search', inputSchema: {} },
+      ];
+
+      const baseUrl = process.env.VITE_APP_URL || 'https://your-domain.manus.space';
+      const generator = getMCPConfigGenerator(baseUrl);
+      
+      const config = await generator.generateConfig(
+        input.platform as Platform,
+        apiKeyResult.plainKey,
+        tools,
+        {
+          includeAllTools: input.includeAllTools,
+          generateWithAI: input.generateWithAI,
+        }
+      );
+
+      const file = generator.generateConfigFile(config, input.platform as Platform);
+
+      return {
+        config,
+        file,
+        apiKeyId: apiKeyResult.id,
+        apiKeyName: apiKeyResult.name,
+      };
+    }),
+
+  download: protectedProcedure
+    .input(z.object({
+      platform: z.enum(['claude', 'gemini', 'openai', 'generic']),
+      apiKey: z.string(),
+    }))
+    .query(async ({ input }) => {
+      const tools = [
+        { name: 'document.convert', description: 'Convert documents between formats', inputSchema: {} },
+        { name: 'nlp.extract_entities', description: 'Extract named entities from text', inputSchema: {} },
+        { name: 'search.ripgrep', description: 'Search files with ripgrep', inputSchema: {} },
+      ];
+
+      const baseUrl = process.env.VITE_APP_URL || 'https://your-domain.manus.space';
+      const generator = getMCPConfigGenerator(baseUrl);
+      
+      const config = await generator.generateConfig(
+        input.platform as Platform,
+        input.apiKey,
+        tools
+      );
+
+      return generator.generateConfigFile(config, input.platform as Platform);
+    }),
+});
+
+// ============================================================================
 // Main Router
 // ============================================================================
 
@@ -648,6 +965,21 @@ export const appRouter = router({
 
   // MCP Server Proxy
   proxy: proxyRouter,
+
+  // API Keys management
+  apiKeys: apiKeysRouter,
+
+  // System prompts
+  prompts: promptsRouter,
+
+  // Workflow templates
+  workflows: workflowsRouter,
+
+  // Wiki/Documentation
+  wiki: wikiRouter,
+
+  // MCP Config Generator
+  mcpConfig: mcpConfigRouter,
 });
 
 export type AppRouter = typeof appRouter;

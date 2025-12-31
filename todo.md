@@ -261,3 +261,65 @@
 - [ ] Historical price data visualization
 - [ ] Smart model selection (prefer free when quality is sufficient)
 - [ ] A/B testing free vs paid models for quality comparison
+
+
+## API Key Authentication for MCP Clients
+- [x] Generate unique API keys for MCP clients (mcp_sk_...)
+- [x] Store hashed keys in database with metadata
+- [x] Middleware to validate Bearer token on MCP endpoints
+- [x] Key management (create, list, revoke, rotate)
+- [x] Usage tracking per key (calls, tokens, cost)
+- [ ] Rate limiting per key
+- [x] Key expiration and auto-rotation
+- [x] Audit log for key usage
+
+## AI-Generated Platform-Specific MCP Configs
+- [x] LLM prompt templates for each platform (Claude, Gemini, OpenAI)
+- [x] Generate skills definitions for Claude MCP
+- [x] Generate extension manifest for Gemini
+- [x] Generate function schemas for OpenAI
+- [x] Include platform-specific optimizations (prompt caching, etc.)
+- [x] Tool chain recommendations
+- [x] Downloadable config files with embedded API key
+- [ ] Config versioning and regeneration
+
+## Editable System Prompts & Templates
+- [x] System prompt editor for each tool
+- [x] Workflow template creator (multi-tool pipelines)
+- [x] Prompt versioning with git-like history
+- [ ] A/B testing framework for prompts
+- [x] Import/export prompt templates
+- [ ] Prompt performance metrics (success rate, latency)
+- [x] Default prompts for common use cases
+- [x] Prompt variables and templating
+
+## Key Management Dashboard
+- [x] List all active API keys with metadata
+- [x] Show last used timestamp and usage stats
+- [x] Revoke/rotate keys UI
+- [x] Generate new key button
+- [x] Download platform-specific configs
+- [x] Key permissions (read-only, full-access)
+- [ ] Usage charts per key
+
+
+## Wiki/Documentation System
+- [x] Wiki page with comprehensive tool documentation
+- [x] Tool catalog with usage examples
+- [x] System architecture overview
+- [x] API reference documentation
+- [x] Best practices guides
+- [x] Troubleshooting section
+- [x] Search functionality for wiki
+- [x] Markdown-based wiki content
+- [ ] Version history for wiki pages
+
+## Skills/Extensions Library
+- [ ] Pre-built skills for Claude MCP
+- [ ] Pre-built extensions for Gemini
+- [ ] When to use each tool guide
+- [ ] Tool combination workflows
+- [ ] Example prompts and outputs
+- [ ] Platform-specific best practices
+- [ ] Downloadable skill/extension packages
+- [ ] Community-contributed skills (if public)

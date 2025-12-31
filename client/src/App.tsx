@@ -12,6 +12,9 @@ import Config from "./pages/Config";
 import Logs from "./pages/Logs";
 import Proxy from "./pages/Proxy";
 import Forks from "./pages/Forks";
+import Wiki from "./pages/Wiki";
+import ApiKeys from "./pages/ApiKeys";
+import McpConfig from "./pages/McpConfig";
 
 function Router() {
   return (
@@ -24,6 +27,9 @@ function Router() {
       <Route path={"/logs"} component={Logs} />
       <Route path={"/proxy"} component={Proxy} />
       <Route path={"/forks"} component={Forks} />
+      <Route path={"/wiki"} component={Wiki} />
+      <Route path={"/api-keys"} component={ApiKeys} />
+      <Route path={"/mcp-config"} component={McpConfig} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
