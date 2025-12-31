@@ -323,3 +323,47 @@
 - [ ] Platform-specific best practices
 - [ ] Downloadable skill/extension packages
 - [ ] Community-contributed skills (if public)
+
+
+## Bug Fixes
+- [x] Fix "Explore Tools" button navigation on Home page
+- [x] Fix "View Documentation" button navigation on Home page
+
+## Pre-built Code Analysis Agents
+- [ ] Code diff agent (compare files, PRs, branches)
+- [ ] Code review agent (security, style, best practices)
+- [ ] Dependency analysis agent (outdated, vulnerabilities)
+- [ ] Codebase summarization agent
+- [ ] Refactoring suggestion agent
+- [ ] Test coverage analysis agent
+- [ ] Agent templates page in dashboard
+
+## Docker CLI Environment (Subscription Bridge)
+- [ ] Dockerfile with Linux base + CLI tools
+- [ ] Install Gemini CLI in container
+- [ ] Install Claude Code CLI in container
+- [ ] Install Qwen/Aider/other CLI tools
+- [ ] HTTP endpoint server to invoke CLI tools
+- [ ] MCP tool wrappers (gemini-mcp-tool, claude-agent-sdk)
+- [ ] Authentication for CLI tool invocations
+- [ ] Session management for CLI contexts
+- [ ] docker-compose.yml for easy deployment
+- [ ] Environment variable passthrough for API keys
+- [ ] Streaming response support from CLI tools
+- [ ] Container orchestration from main platform
+
+
+
+## File Sync (Syncthing - Local ↔ VPS)
+- [ ] Syncthing container in Docker stack
+- [ ] Bidirectional sync between local machine and VPS
+- [ ] Workspace folder sync for CLI tool context
+- [ ] CLI logs sync back to local
+- [ ] Syncthing GUI exposed for pairing
+
+## Tailscale (Private Network)
+- [ ] Tailscale container in Docker stack
+- [ ] Private access to VPS without public ports
+- [ ] CLI bridge accessible via Tailscale hostname
+- [ ] MCP Tool Shop connects via Tailscale IP
+

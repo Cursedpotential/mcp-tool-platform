@@ -129,7 +129,7 @@ export default function Home() {
                 <span className="text-sm text-muted-foreground">
                   Welcome, {user?.name || "User"}
                 </span>
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => window.location.href = '/tools'}>
                   Dashboard
                 </Button>
               </div>
@@ -160,11 +160,11 @@ export default function Home() {
             data flows to your final databases.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="gap-2">
+            <Button size="lg" className="gap-2" onClick={() => window.location.href = '/tools'}>
               <Terminal className="h-4 w-4" />
               Explore Tools
             </Button>
-            <Button size="lg" variant="outline" className="gap-2">
+            <Button size="lg" variant="outline" className="gap-2" onClick={() => window.location.href = '/wiki'}>
               View Documentation
               <ArrowRight className="h-4 w-4" />
             </Button>
