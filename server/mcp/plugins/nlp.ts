@@ -14,6 +14,7 @@
 
 import { getContentStore } from '../store/content-store';
 import type { Entity, EntityType, SentimentResult, KeywordResult, SentenceSpan, ContentRef } from '../../../shared/mcp-types';
+import * as pythonBridge from '../python-bridge';
 
 // ============================================================================
 // Provider Interface
@@ -210,15 +211,75 @@ class JavaScriptNLPProvider implements NLPProvider {
 }
 
 // ============================================================================
+// Python Provider (via subprocess bridge)
+// ============================================================================
+
+class PythonNLPProvider implements NLPProvider {
+  name = 'python';
+
+  async detectLanguage(text: string): Promise<{ language: string; confidence: number }> {
+    const result = await pythonBridge.detectLanguage(text);
+    return { language: result.language, confidence: result.confidence };
+  }
+
+  async extractEntities(text: string): Promise<Entity[]> {
+    const result = await pythonBridge.extractEntities(text);
+    return result.entities.map(e => ({
+      text: e.text,
+      type: e.type as EntityType,
+      startOffset: e.start,
+      endOffset: e.end,
+      confidence: e.confidence,
+    }));
+  }
+
+  async extractKeywords(text: string, topK: number): Promise<KeywordResult[]> {
+    const result = await pythonBridge.extractKeywords(text, topK);
+    return result.keywords.map(k => ({
+      keyword: k.keyword,
+      score: k.score,
+      frequency: k.frequency,
+      positions: [],
+    }));
+  }
+
+  async analyzeSentiment(text: string): Promise<SentimentResult> {
+    const result = await pythonBridge.analyzeSentiment(text);
+    return {
+      label: result.label,
+      score: result.score,
+      confidence: result.confidence,
+    };
+  }
+
+  async splitSentences(text: string): Promise<SentenceSpan[]> {
+    const result = await pythonBridge.splitSentences(text);
+    return result.sentences.map(s => ({
+      text: s.text,
+      startOffset: s.start,
+      endOffset: s.end,
+      index: s.index,
+    }));
+  }
+}
+
+// ============================================================================
 // Provider Registry
 // ============================================================================
 
 const providers: Map<string, NLPProvider> = new Map();
 let defaultProvider: NLPProvider;
 
-// Initialize with JavaScript provider as default
-defaultProvider = new JavaScriptNLPProvider();
-providers.set('javascript', defaultProvider);
+// Initialize providers - Python preferred, JS fallback
+const pythonProvider = new PythonNLPProvider();
+const jsProvider = new JavaScriptNLPProvider();
+
+providers.set('python', pythonProvider);
+providers.set('javascript', jsProvider);
+providers.set('spacy', pythonProvider); // spaCy is accessed via Python
+
+// Default to Python (will auto-fallback to JS if Python unavailable)
+defaultProvider = pythonProvider;
 providers.set('auto', defaultProvider);
 
 /**
