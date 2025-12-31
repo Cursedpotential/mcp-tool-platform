@@ -6,6 +6,9 @@ import { mcpGatewayRouter } from "./mcp/gateway";
 import { getConfigManager } from "./mcp/config/config-manager";
 import { getStatsCollector } from "./mcp/stats/collector";
 import { getLLMHub } from "./mcp/llm/provider-hub";
+import { getLogStream, type LogFilter } from "./mcp/realtime/log-stream";
+import { getToolForkManager, type PlatformType, type ToolCustomization } from "./mcp/forking/tool-fork";
+import { getMCPProxy, type ServerTransport } from "./mcp/proxy/mcp-proxy";
 import { z } from "zod";
 
 // ============================================================================
@@ -331,6 +334,285 @@ const llmRouter = router({
 });
 
 // ============================================================================
+// Real-time Logs Router
+// ============================================================================
+
+const logsRouter = router({
+  recent: protectedProcedure
+    .input(z.object({
+      count: z.number().min(1).max(1000).optional().default(100),
+      filter: z.object({
+        levels: z.array(z.enum(['debug', 'info', 'warn', 'error', 'fatal'])).optional(),
+        categories: z.array(z.string()).optional(),
+        tools: z.array(z.string()).optional(),
+        traceId: z.string().optional(),
+        search: z.string().optional(),
+        since: z.number().optional(),
+      }).optional(),
+    }).optional())
+    .query(({ input }) => {
+      return getLogStream().getRecentLogs(input?.count, input?.filter as LogFilter | undefined);
+    }),
+
+  query: protectedProcedure
+    .input(z.object({
+      filter: z.object({
+        levels: z.array(z.enum(['debug', 'info', 'warn', 'error', 'fatal'])).optional(),
+        categories: z.array(z.string()).optional(),
+        tools: z.array(z.string()).optional(),
+        traceId: z.string().optional(),
+        search: z.string().optional(),
+        since: z.number().optional(),
+      }),
+      limit: z.number().min(1).max(10000).optional().default(1000),
+    }))
+    .query(({ input }) => {
+      return getLogStream().queryLogs(input.filter as LogFilter, input.limit);
+    }),
+
+  export: protectedProcedure
+    .input(z.object({
+      filter: z.object({
+        levels: z.array(z.enum(['debug', 'info', 'warn', 'error', 'fatal'])).optional(),
+        categories: z.array(z.string()).optional(),
+        tools: z.array(z.string()).optional(),
+        traceId: z.string().optional(),
+        search: z.string().optional(),
+        since: z.number().optional(),
+      }).optional(),
+    }).optional())
+    .query(({ input }) => {
+      return getLogStream().exportLogs(input?.filter as LogFilter | undefined);
+    }),
+
+  metrics: protectedProcedure.query(() => {
+    return getLogStream().getMetricsSnapshot();
+  }),
+});
+
+// ============================================================================
+// Tool Forking Router
+// ============================================================================
+
+const forkRouter = router({
+  list: protectedProcedure
+    .input(z.object({
+      platform: z.enum(['generic', 'claude-mcp', 'gemini-extension', 'openai-function']).optional(),
+    }).optional())
+    .query(({ ctx, input }) => {
+      return getToolForkManager().listForks(ctx.user?.openId, input?.platform as PlatformType | undefined);
+    }),
+
+  get: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(({ input }) => {
+      return getToolForkManager().getFork(input.id);
+    }),
+
+  create: protectedProcedure
+    .input(z.object({
+      parentToolName: z.string(),
+      platform: z.enum(['generic', 'claude-mcp', 'gemini-extension', 'openai-function']),
+      name: z.string().optional(),
+      description: z.string().optional(),
+      customizations: z.object({
+        parameterOverrides: z.record(z.string(), z.object({
+          default: z.unknown().optional(),
+          required: z.boolean().optional(),
+          description: z.string().optional(),
+          hidden: z.boolean().optional(),
+        })).optional(),
+        additionalParameters: z.record(z.string(), z.object({
+          type: z.string(),
+          description: z.string(),
+          required: z.boolean().optional(),
+          default: z.unknown().optional(),
+        })).optional(),
+        platformConfig: z.record(z.string(), z.unknown()).optional(),
+        hooks: z.object({
+          preProcess: z.string().optional(),
+          postProcess: z.string().optional(),
+        }).optional(),
+        rateLimit: z.object({
+          maxCallsPerMinute: z.number().optional(),
+          maxCallsPerHour: z.number().optional(),
+        }).optional(),
+      }).optional().default({}),
+    }))
+    .mutation(({ ctx, input }) => {
+      // Get the parent tool spec from the registry
+      const parentSpec = {
+        name: input.parentToolName,
+        category: 'custom',
+        description: input.description || 'Custom tool fork',
+        version: '1.0.0',
+        tags: [],
+        inputSchema: { type: 'object', properties: {}, required: [] },
+        outputSchema: { type: 'object', properties: {} },
+        permissions: [] as ('read:filesystem' | 'write:filesystem' | 'read:network' | 'write:network' | 'execute:process' | 'access:llm' | 'access:vectordb')[],
+      };
+      return getToolForkManager().createFork(
+        parentSpec,
+        input.platform as PlatformType,
+        input.customizations as ToolCustomization,
+        ctx.user?.openId || 'anonymous',
+        input.name,
+        input.description
+      );
+    }),
+
+  update: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      updates: z.object({
+        name: z.string().optional(),
+        description: z.string().optional(),
+        version: z.string().optional(),
+        customizations: z.object({
+          parameterOverrides: z.record(z.string(), z.object({
+            default: z.unknown().optional(),
+            required: z.boolean().optional(),
+            description: z.string().optional(),
+            hidden: z.boolean().optional(),
+          })).optional(),
+          additionalParameters: z.record(z.string(), z.object({
+            type: z.string(),
+            description: z.string(),
+            required: z.boolean().optional(),
+            default: z.unknown().optional(),
+          })).optional(),
+        }).optional(),
+      }),
+    }))
+    .mutation(({ input }) => {
+      return getToolForkManager().updateFork(input.id, input.updates);
+    }),
+
+  delete: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(({ input }) => {
+      return getToolForkManager().deleteFork(input.id);
+    }),
+
+  exportClaudeMCP: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(({ input }) => {
+      return getToolForkManager().exportAsClaudeMCP(input.id);
+    }),
+
+  exportGeminiExtension: protectedProcedure
+    .input(z.object({ id: z.string(), baseUrl: z.string() }))
+    .query(({ input }) => {
+      return getToolForkManager().exportAsGeminiExtension(input.id, input.baseUrl);
+    }),
+
+  exportOpenAIFunction: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(({ input }) => {
+      return getToolForkManager().exportAsOpenAIFunction(input.id);
+    }),
+
+  exportPackage: protectedProcedure
+    .input(z.object({ id: z.string(), baseUrl: z.string() }))
+    .query(({ input }) => {
+      return getToolForkManager().exportAsPackage(input.id, input.baseUrl);
+    }),
+
+  compare: protectedProcedure
+    .input(z.object({ forkId1: z.string(), forkId2: z.string() }))
+    .query(({ input }) => {
+      return getToolForkManager().compareForks(input.forkId1, input.forkId2);
+    }),
+});
+
+// ============================================================================
+// MCP Proxy Router
+// ============================================================================
+
+const proxyRouter = router({
+  listServers: protectedProcedure.query(() => {
+    return getMCPProxy().listServers();
+  }),
+
+  getServer: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(({ input }) => {
+      return getMCPProxy().getServer(input.id);
+    }),
+
+  registerServer: protectedProcedure
+    .input(z.object({
+      name: z.string(),
+      description: z.string().optional(),
+      transport: z.enum(['stdio', 'http', 'websocket']),
+      endpoint: z.string(),
+      apiKey: z.string().optional(),
+      headers: z.record(z.string(), z.string()).optional(),
+      timeout: z.number().optional(),
+      retryAttempts: z.number().optional(),
+      enabled: z.boolean().default(true),
+      tags: z.array(z.string()).optional(),
+      priority: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      return getMCPProxy().registerServer({
+        ...input,
+        transport: input.transport as ServerTransport,
+      });
+    }),
+
+  updateServer: protectedProcedure
+    .input(z.object({
+      id: z.string(),
+      updates: z.object({
+        name: z.string().optional(),
+        description: z.string().optional(),
+        endpoint: z.string().optional(),
+        apiKey: z.string().optional(),
+        enabled: z.boolean().optional(),
+        priority: z.number().optional(),
+      }),
+    }))
+    .mutation(async ({ input }) => {
+      return getMCPProxy().updateServer(input.id, input.updates);
+    }),
+
+  unregisterServer: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input }) => {
+      return getMCPProxy().unregisterServer(input.id);
+    }),
+
+  refreshServer: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input }) => {
+      await getMCPProxy().refreshServer(input.id);
+      return { success: true };
+    }),
+
+  getAllTools: protectedProcedure.query(() => {
+    return getMCPProxy().getAllTools();
+  }),
+
+  invokeTool: protectedProcedure
+    .input(z.object({
+      serverId: z.string().optional(),
+      toolName: z.string(),
+      args: z.record(z.string(), z.unknown()),
+      timeout: z.number().optional(),
+    }))
+    .mutation(async ({ input }) => {
+      return getMCPProxy().invokeTool(input);
+    }),
+
+  getMigrationConfig: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .query(({ input }) => {
+      return getMCPProxy().generateMigrationConfig(input.id);
+    }),
+});
+
+// ============================================================================
 // Main Router
 // ============================================================================
 
@@ -357,6 +639,15 @@ export const appRouter = router({
 
   // LLM provider management
   llm: llmRouter,
+
+  // Real-time logs
+  logs: logsRouter,
+
+  // Tool forking
+  fork: forkRouter,
+
+  // MCP Server Proxy
+  proxy: proxyRouter,
 });
 
 export type AppRouter = typeof appRouter;

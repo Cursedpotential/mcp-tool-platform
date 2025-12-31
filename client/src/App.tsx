@@ -9,6 +9,9 @@ import Tools from "./pages/Tools";
 import Stats from "./pages/Stats";
 import Settings from "./pages/Settings";
 import Config from "./pages/Config";
+import Logs from "./pages/Logs";
+import Proxy from "./pages/Proxy";
+import Forks from "./pages/Forks";
 
 function Router() {
   return (
@@ -18,6 +21,9 @@ function Router() {
       <Route path={"/stats"} component={Stats} />
       <Route path={"/settings"} component={Settings} />
       <Route path={"/config"} component={Config} />
+      <Route path={"/logs"} component={Logs} />
+      <Route path={"/proxy"} component={Proxy} />
+      <Route path={"/forks"} component={Forks} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

@@ -141,3 +141,38 @@
 - [x] Unified LLM router with fallback chain
 - [x] Provider priority configuration
 - [ ] Qwen Coder integration
+
+
+## Real-time Logging & Analytics
+- [x] WebSocket server for real-time log streaming
+- [x] Live log viewer in dashboard
+- [x] Log filtering by level, tool, trace ID
+- [x] Log export functionality
+- [x] Real-time metrics updates (auto-refresh)
+
+## Tool Forking System
+- [x] Generic tool base class with fork capability
+- [x] Tool versioning system
+- [x] Fork UI in Tool Explorer (Forks page)
+- [x] Claude MCP adapter (tools + skills format)
+- [x] Gemini Extension adapter (extension manifest)
+- [x] OpenAI Function adapter
+- [x] Platform-specific best practices templates
+- [x] Export forked tool as downloadable package
+- [x] Tool diff view (compare versions)
+
+## MCP Server Proxy/Aggregator
+- [x] MCP server registry (add/remove remote servers)
+- [x] Proxy layer to forward requests to registered servers
+- [x] Tool aggregation from multiple MCP servers
+- [x] Health monitoring for connected servers
+- [x] Load balancing across servers (priority-based)
+- [x] Server migration wizard (migration config export)
+- [ ] Connection pooling and caching
+
+## Cloud Model Backend
+- [x] OpenRouter integration as default cloud backend
+- [x] Free model tier selection (Llama, Mistral, etc.)
+- [x] Fallback chain: Local Ollama → OpenRouter → Other providers
+- [x] Model routing based on task type
+- [x] Token/cost tracking per request
