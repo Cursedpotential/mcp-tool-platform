@@ -878,3 +878,28 @@
   - Claude: complex reasoning only (minimize usage)
 - [ ] Fallback chain: Native → Free → CLI → Paid → Claude
 - [ ] Update smart-router.ts with Claude-last priority
+
+
+## NotebookLM Integration (Shared Knowledge Hub)
+- [ ] Add notebooklm-mcp as dependency or proxy through gateway
+- [ ] Expose NotebookLM tools: ask_question, list_notebooks, select_notebook, add_notebook
+- [ ] Create knowledge hub abstraction layer
+- [ ] Enable cross-platform sharing (Claude, Gemini, Codex all access same notebooks)
+- [ ] Add notebook tagging for automatic selection based on task context
+- [ ] Gemini web app native access to NotebookLM as bridge
+
+## Dedicated Embedding & Vector Tools
+- [ ] embedding.generate - Single text to vector (Ollama Cloud primary)
+- [ ] embedding.batch - Bulk text to vectors
+- [ ] embedding.compare - Cosine similarity between vectors
+- [ ] vector.store - Add document to Chroma collection
+- [ ] vector.search - Semantic search with filters
+- [ ] vector.delete - Remove documents from collection
+- [ ] vector.list_collections - List all Chroma collections
+- [ ] vector.create_collection - Create new collection with metadata
+
+## Combined Knowledge Architecture
+- [ ] NotebookLM = Human-curated knowledge (zero hallucination, Gemini-powered)
+- [ ] Chroma = Machine-generated embeddings (semantic search, coordination)
+- [ ] Both accessible via MCP tools for any calling agent
+- [ ] Coordination namespace for multi-agent collaboration
