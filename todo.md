@@ -580,3 +580,35 @@
 - [ ] Ensure all tools return structured, parseable JSON
 - [ ] Add confidence scores to all tool outputs
 - [ ] Add warnings/errors array to all tool outputs
+
+
+## Large File Processing (5GB+ XML/HTML)
+- [ ] Chroma DB integration for vector storage
+- [ ] Streaming XML parser (SAX/iterparse - no full DOM load)
+- [ ] Streaming HTML parser (incremental processing)
+- [ ] Semantic chunk generator (respects document structure)
+- [ ] Sub-agent spawning and coordination system
+- [ ] Parallel chunk processing with worker pool
+- [ ] Map-reduce pattern for result aggregation
+- [ ] Progress tracking for long-running jobs
+- [ ] Incremental result delivery (stream results as available)
+- [ ] Memory-efficient file handling (never load full file)
+- [ ] Resume capability for interrupted processing
+- [ ] Chunk overlap handling for context continuity
+
+### Large File Tools:
+- [ ] largefile.stream_parse - Stream parse large XML/HTML/JSON
+- [ ] largefile.chunk_document - Generate semantic chunks from stream
+- [ ] largefile.process_parallel - Spawn sub-agents for parallel processing
+- [ ] largefile.aggregate_results - Map-reduce result aggregation
+- [ ] largefile.query_chunks - Query processed chunks via Chroma
+- [ ] largefile.get_progress - Check processing progress
+- [ ] largefile.resume_job - Resume interrupted processing
+
+### Chroma Integration:
+- [ ] Chroma collection management
+- [ ] Embedding generation for chunks
+- [ ] Metadata storage (source file, position, timestamps)
+- [ ] Similarity search for retrieval
+- [ ] Filtered queries (by file, date range, content type)
+- [ ] Collection cleanup and maintenance
