@@ -24,7 +24,7 @@ export interface PromptVersion {
   id: number;
   version: number;
   promptText: string;
-  createdAt: Date;
+  createdAt: string;
   successRate: number;
   avgLatencyMs: number;
   usageCount: number;

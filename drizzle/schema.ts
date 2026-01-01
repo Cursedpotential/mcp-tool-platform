@@ -1,111 +1,304 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { mysqlTable, mysqlSchema, AnyMySqlColumn, index, int, varchar, text, mysqlEnum, timestamp, foreignKey } from "drizzle-orm/mysql-core"
+import { sql } from "drizzle-orm"
 
-/**
- * Core user table backing auth flow.
- * Extend this file with additional tables as your product grows.
- * Columns use camelCase to match both database fields and generated types.
- */
-export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
-  id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
-  name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+export const analysisModules = mysqlTable("analysisModules", {
+	id: int().autoincrement().notNull(),
+	moduleId: varchar({ length: 64 }).notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	description: text(),
+	category: mysqlEnum(['negative','positive','neutral']).notNull(),
+	subcategory: varchar({ length: 100 }),
+	isBuiltIn: mysqlEnum(['true','false']).default('true').notNull(),
+	isEnabled: mysqlEnum(['true','false']).default('true').notNull(),
+	severityWeight: int().default(50),
+	mclMapping: varchar({ length: 50 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("analysisModules_moduleId_unique").on(table.moduleId),
+]);
+
+export const analysisResults = mysqlTable("analysisResults", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull(),
+	documentId: varchar({ length: 64 }),
+	documentName: varchar({ length: 255 }),
+	analysisType: varchar({ length: 100 }).notNull(),
+	modulesUsed: text().notNull(),
+	overallScore: int(),
+	mclFactors: text(),
+	findings: text().notNull(),
+	timeline: text(),
+	contradictions: text(),
+	summary: text(),
+	status: mysqlEnum(['pending','processing','completed','error']).default('pending').notNull(),
+	processingTimeMs: int(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
+export const apiKeyUsageLogs = mysqlTable("apiKeyUsageLogs", {
+	id: int().autoincrement().notNull(),
+	apiKeyId: int().notNull().references(() => apiKeys.id, { onDelete: "cascade" } ),
+	toolName: varchar({ length: 255 }),
+	method: varchar({ length: 50 }),
+	statusCode: int(),
+	latencyMs: int(),
+	tokensUsed: int(),
+	cost: int(),
+	ipAddress: varchar({ length: 45 }),
+	userAgent: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const apiKeys = mysqlTable("apiKeys", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	name: varchar({ length: 255 }).notNull(),
+	keyHash: varchar({ length: 255 }).notNull(),
+	keyPrefix: varchar({ length: 16 }).notNull(),
+	permissions: text().notNull(),
+	lastUsedAt: timestamp({ mode: 'string' }),
+	expiresAt: timestamp({ mode: 'string' }),
+	isActive: mysqlEnum(['true','false']).default('true').notNull(),
+	usageCount: int().default(0).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("apiKeys_keyHash_unique").on(table.keyHash),
+]);
+
+export const behavioralPatterns = mysqlTable("behavioralPatterns", {
+	id: int().autoincrement().notNull(),
+	userId: int().references(() => users.id, { onDelete: "cascade" } ),
+	name: varchar({ length: 255 }).notNull(),
+	category: varchar({ length: 100 }).notNull(),
+	pattern: text().notNull(),
+	description: text(),
+	severity: int().default(5).notNull(),
+	mclFactors: text(),
+	examples: text(),
+	isActive: mysqlEnum(['true','false']).default('true').notNull(),
+	isCustom: mysqlEnum(['true','false']).default('false').notNull(),
+	matchCount: int().default(0).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const bertConfigs = mysqlTable("bertConfigs", {
+	id: int().autoincrement().notNull(),
+	userId: int().references(() => users.id, { onDelete: "cascade" } ),
+	name: varchar({ length: 255 }).notNull(),
+	modelName: varchar({ length: 255 }).notNull(),
+	modelSource: varchar({ length: 50 }).default('huggingface').notNull(),
+	taskType: varchar({ length: 50 }).notNull(),
+	confidenceThreshold: int().default(70).notNull(),
+	maxSequenceLength: int().default(512).notNull(),
+	batchSize: int().default(8).notNull(),
+	useGpu: mysqlEnum(['true','false']).default('false').notNull(),
+	customLabels: text(),
+	preprocessingSteps: text(),
+	isActive: mysqlEnum(['true','false']).default('true').notNull(),
+	isDefault: mysqlEnum(['true','false']).default('false').notNull(),
+	avgLatencyMs: int().default(0),
+	usageCount: int().default(0),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const forensicResults = mysqlTable("forensicResults", {
+	id: int().autoincrement().notNull(),
+	userId: int().references(() => users.id, { onDelete: "cascade" } ),
+	sourceHash: varchar({ length: 64 }).notNull(),
+	sourceType: varchar({ length: 50 }),
+	analysisType: varchar({ length: 50 }).notNull(),
+	results: text().notNull(),
+	matchCount: int().default(0),
+	severityScore: int(),
+	mclFactorsMatched: text(),
+	processingTimeMs: int(),
+	modelUsed: varchar({ length: 255 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+});
+
+export const hurtlexCategories = mysqlTable("hurtlexCategories", {
+	id: int().autoincrement().notNull(),
+	userId: int().references(() => users.id, { onDelete: "cascade" } ),
+	code: varchar({ length: 20 }).notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	description: text(),
+	isActive: mysqlEnum(['true','false']).default('true').notNull(),
+	termCount: int().default(0).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const hurtlexSyncStatus = mysqlTable("hurtlexSyncStatus", {
+	id: int().autoincrement().notNull(),
+	language: varchar({ length: 10 }).notNull(),
+	lastSyncAt: timestamp({ mode: 'string' }),
+	termCount: int().default(0).notNull(),
+	sourceUrl: text(),
+	sourceCommit: varchar({ length: 64 }),
+	status: mysqlEnum(['pending','syncing','success','error']).default('pending').notNull(),
+	errorMessage: text(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const hurtlexTerms = mysqlTable("hurtlexTerms", {
+	id: int().autoincrement().notNull(),
+	userId: int().references(() => users.id, { onDelete: "cascade" } ),
+	term: varchar({ length: 255 }).notNull(),
+	category: varchar({ length: 50 }).notNull(),
+	language: varchar({ length: 10 }).default('en').notNull(),
+	level: varchar({ length: 20 }),
+	pos: varchar({ length: 20 }),
+	isActive: mysqlEnum(['true','false']).default('true').notNull(),
+	isCustom: mysqlEnum(['true','false']).default('false').notNull(),
+	matchCount: int().default(0).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const mclFactors = mysqlTable("mclFactors", {
+	id: int().autoincrement().notNull(),
+	factorLetter: varchar({ length: 5 }).notNull(),
+	name: varchar({ length: 255 }).notNull(),
+	description: text().notNull(),
+	keywords: text(),
+	patternCategories: text(),
+	isActive: mysqlEnum(['true','false']).default('true').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("mclFactors_factorLetter_unique").on(table.factorLetter),
+]);
+
+export const patternCategories = mysqlTable("patternCategories", {
+	id: int().autoincrement().notNull(),
+	userId: int().references(() => users.id, { onDelete: "cascade" } ),
+	name: varchar({ length: 100 }).notNull(),
+	description: text(),
+	color: varchar({ length: 7 }),
+	icon: varchar({ length: 50 }),
+	defaultSeverity: int().default(5).notNull(),
+	isActive: mysqlEnum(['true','false']).default('true').notNull(),
+	sortOrder: int().default(0).notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const schemaResolvers = mysqlTable("schemaResolvers", {
+	id: int().autoincrement().notNull(),
+	userId: int().references(() => users.id, { onDelete: "cascade" } ),
+	name: varchar({ length: 255 }).notNull(),
+	sourceFormat: varchar({ length: 100 }),
+	fieldMappings: text().notNull(),
+	aiGenerated: mysqlEnum(['true','false']).default('false').notNull(),
+	confidence: int(),
+	sampleData: text(),
+	isActive: mysqlEnum(['true','false']).default('true').notNull(),
+	usageCount: int().default(0),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const severityWeights = mysqlTable("severityWeights", {
+	id: int().autoincrement().notNull(),
+	userId: int().references(() => users.id, { onDelete: "cascade" } ),
+	category: varchar({ length: 100 }).notNull(),
+	weight: int().default(5).notNull(),
+	description: text(),
+	mclFactors: text(),
+	escalationThreshold: int(),
+	isActive: mysqlEnum(['true','false']).default('true').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const systemPrompts = mysqlTable("systemPrompts", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	name: varchar({ length: 255 }).notNull(),
+	description: text(),
+	toolName: varchar({ length: 255 }),
+	promptText: text().notNull(),
+	variables: text(),
+	version: int().default(1).notNull(),
+	parentId: int(),
+	isActive: mysqlEnum(['true','false']).default('true').notNull(),
+	successRate: int().default(0),
+	avgLatencyMs: int().default(0),
+	usageCount: int().default(0),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+export const users = mysqlTable("users", {
+	id: int().autoincrement().notNull(),
+	openId: varchar({ length: 64 }).notNull(),
+	name: text(),
+	email: varchar({ length: 320 }),
+	loginMethod: varchar({ length: 64 }),
+	role: mysqlEnum(['user','admin']).default('user').notNull(),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+	lastSignedIn: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("users_openId_unique").on(table.openId),
+]);
+
+export const workflowTemplates = mysqlTable("workflowTemplates", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id, { onDelete: "cascade" } ),
+	name: varchar({ length: 255 }).notNull(),
+	description: text(),
+	category: varchar({ length: 100 }),
+	steps: text().notNull(),
+	systemPromptId: int().references(() => systemPrompts.id),
+	isPublic: mysqlEnum(['true','false']).default('false').notNull(),
+	usageCount: int().default(0),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+});
+
+// Type exports for TypeScript
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
-
-/**
- * API keys for MCP client authentication
- */
-export const apiKeys = mysqlTable("apiKeys", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  name: varchar("name", { length: 255 }).notNull(), // User-friendly name
-  keyHash: varchar("keyHash", { length: 255 }).notNull().unique(), // SHA-256 hash of the key
-  keyPrefix: varchar("keyPrefix", { length: 16 }).notNull(), // First 8 chars for display
-  permissions: text("permissions").notNull(), // JSON array of permissions
-  lastUsedAt: timestamp("lastUsedAt"),
-  expiresAt: timestamp("expiresAt"),
-  isActive: mysqlEnum("isActive", ["true", "false"]).default("true").notNull(),
-  usageCount: int("usageCount").default(0).notNull(),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type InsertApiKey = typeof apiKeys.$inferInsert;
-
-/**
- * System prompts for tools and workflows
- */
-export const systemPrompts = mysqlTable("systemPrompts", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  name: varchar("name", { length: 255 }).notNull(),
-  description: text("description"),
-  toolName: varchar("toolName", { length: 255 }), // null for workflow templates
-  promptText: text("promptText").notNull(),
-  variables: text("variables"), // JSON array of variable names
-  version: int("version").default(1).notNull(),
-  parentId: int("parentId"), // For versioning
-  isActive: mysqlEnum("isActive", ["true", "false"]).default("true").notNull(),
-  successRate: int("successRate").default(0), // 0-100
-  avgLatencyMs: int("avgLatencyMs").default(0),
-  usageCount: int("usageCount").default(0),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export type SystemPrompt = typeof systemPrompts.$inferSelect;
-export type InsertSystemPrompt = typeof systemPrompts.$inferInsert;
-
-/**
- * Workflow templates (multi-tool pipelines)
- */
-export const workflowTemplates = mysqlTable("workflowTemplates", {
-  id: int("id").autoincrement().primaryKey(),
-  userId: int("userId").notNull().references(() => users.id, { onDelete: 'cascade' }),
-  name: varchar("name", { length: 255 }).notNull(),
-  description: text("description"),
-  category: varchar("category", { length: 100 }),
-  steps: text("steps").notNull(), // JSON array of tool calls
-  systemPromptId: int("systemPromptId").references(() => systemPrompts.id),
-  isPublic: mysqlEnum("isPublic", ["true", "false"]).default("false").notNull(),
-  usageCount: int("usageCount").default(0),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-});
-
-export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;
-export type InsertWorkflowTemplate = typeof workflowTemplates.$inferInsert;
-
-/**
- * API key usage logs for audit trail
- */
-export const apiKeyUsageLogs = mysqlTable("apiKeyUsageLogs", {
-  id: int("id").autoincrement().primaryKey(),
-  apiKeyId: int("apiKeyId").notNull().references(() => apiKeys.id, { onDelete: 'cascade' }),
-  toolName: varchar("toolName", { length: 255 }),
-  method: varchar("method", { length: 50 }),
-  statusCode: int("statusCode"),
-  latencyMs: int("latencyMs"),
-  tokensUsed: int("tokensUsed"),
-  cost: int("cost"), // in cents
-  ipAddress: varchar("ipAddress", { length: 45 }),
-  userAgent: text("userAgent"),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-});
-
 export type ApiKeyUsageLog = typeof apiKeyUsageLogs.$inferSelect;
 export type InsertApiKeyUsageLog = typeof apiKeyUsageLogs.$inferInsert;
+export type SystemPrompt = typeof systemPrompts.$inferSelect;
+export type InsertSystemPrompt = typeof systemPrompts.$inferInsert;
+export type WorkflowTemplate = typeof workflowTemplates.$inferSelect;
+export type InsertWorkflowTemplate = typeof workflowTemplates.$inferInsert;
+export type BehavioralPattern = typeof behavioralPatterns.$inferSelect;
+export type InsertBehavioralPattern = typeof behavioralPatterns.$inferInsert;
+export type PatternCategory = typeof patternCategories.$inferSelect;
+export type InsertPatternCategory = typeof patternCategories.$inferInsert;
+export type HurtlexTerm = typeof hurtlexTerms.$inferSelect;
+export type InsertHurtlexTerm = typeof hurtlexTerms.$inferInsert;
+export type HurtlexCategory = typeof hurtlexCategories.$inferSelect;
+export type InsertHurtlexCategory = typeof hurtlexCategories.$inferInsert;
+export type HurtlexSyncStatus = typeof hurtlexSyncStatus.$inferSelect;
+export type InsertHurtlexSyncStatus = typeof hurtlexSyncStatus.$inferInsert;
+export type BertConfig = typeof bertConfigs.$inferSelect;
+export type InsertBertConfig = typeof bertConfigs.$inferInsert;
+export type ForensicResult = typeof forensicResults.$inferSelect;
+export type InsertForensicResult = typeof forensicResults.$inferInsert;
+export type SchemaResolver = typeof schemaResolvers.$inferSelect;
+export type InsertSchemaResolver = typeof schemaResolvers.$inferInsert;
+export type SeverityWeight = typeof severityWeights.$inferSelect;
+export type InsertSeverityWeight = typeof severityWeights.$inferInsert;
+export type MclFactor = typeof mclFactors.$inferSelect;
+export type InsertMclFactor = typeof mclFactors.$inferInsert;
+export type AnalysisModule = typeof analysisModules.$inferSelect;
+export type InsertAnalysisModule = typeof analysisModules.$inferInsert;
+export type AnalysisResult = typeof analysisResults.$inferSelect;
+export type InsertAnalysisResult = typeof analysisResults.$inferInsert;

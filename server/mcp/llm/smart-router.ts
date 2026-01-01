@@ -292,18 +292,34 @@ export class SmartLLMRouter {
     // Get API key (with rotation if multiple keys available)
     const apiKey = this.getNextApiKey(provider);
     
-    // Note: The hub doesn't have a callProvider method yet
-    // This is a placeholder for the actual implementation
-    const startTime = Date.now();
+    // If we have a rotated API key, temporarily update the provider config
+    if (apiKey) {
+      const config = this.hub.getConfig(provider);
+      if (config) {
+        // Store original key and set rotated key
+        const originalKey = config.apiKey;
+        config.apiKey = apiKey;
+        
+        try {
+          // Call the hub's chat method which handles provider-specific logic
+          const response = await this.hub.chat({
+            ...request,
+            task: 'general', // Use the task from request or default
+          });
+          return response;
+        } finally {
+          // Restore original key
+          config.apiKey = originalKey;
+        }
+      }
+    }
     
-    // TODO: Implement actual provider call through hub
-    const response: LLMResponse = {
-      content: 'Placeholder response',
-      model: 'unknown',
-      provider: provider as any,
-      latencyMs: Date.now() - startTime,
-    };
-
+    // Call the hub's chat method which handles provider-specific logic
+    const response = await this.hub.chat({
+      ...request,
+      task: 'general',
+    });
+    
     return response;
   }
 

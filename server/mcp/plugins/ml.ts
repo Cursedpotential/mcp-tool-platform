@@ -363,22 +363,95 @@ function generateLocalEmbedding(text: string): number[] {
 }
 
 async function generateOllamaEmbedding(text: string, model: string): Promise<number[]> {
-  // Placeholder for Ollama integration
-  // In production, call Ollama API
-  console.warn('Ollama embedding not implemented, using local fallback');
-  return generateLocalEmbedding(text);
+  try {
+    const ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
+    const response = await fetch(`${ollamaUrl}/api/embeddings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: model || 'nomic-embed-text',
+        prompt: text,
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn(`Ollama embedding failed (${response.status}), using local fallback`);
+      return generateLocalEmbedding(text);
+    }
+
+    const data = await response.json() as { embedding: number[] };
+    return data.embedding;
+  } catch (error) {
+    console.warn('Ollama embedding error, using local fallback:', error);
+    return generateLocalEmbedding(text);
+  }
 }
 
 async function generateOpenAIEmbedding(text: string, model: string): Promise<number[]> {
-  // Placeholder for OpenAI integration
-  console.warn('OpenAI embedding not implemented, using local fallback');
-  return generateLocalEmbedding(text);
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    console.warn('OpenAI API key not set, using local fallback');
+    return generateLocalEmbedding(text);
+  }
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/embeddings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: model || 'text-embedding-3-small',
+        input: text,
+      }),
+    });
+
+    if (!response.ok) {
+      console.warn(`OpenAI embedding failed (${response.status}), using local fallback`);
+      return generateLocalEmbedding(text);
+    }
+
+    const data = await response.json() as { data: Array<{ embedding: number[] }> };
+    return data.data[0].embedding;
+  } catch (error) {
+    console.warn('OpenAI embedding error, using local fallback:', error);
+    return generateLocalEmbedding(text);
+  }
 }
 
 async function generateGeminiEmbedding(text: string, model: string): Promise<number[]> {
-  // Placeholder for Gemini integration
-  console.warn('Gemini embedding not implemented, using local fallback');
-  return generateLocalEmbedding(text);
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) {
+    console.warn('Google API key not set, using local fallback');
+    return generateLocalEmbedding(text);
+  }
+
+  try {
+    const embeddingModel = model || 'text-embedding-004';
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${embeddingModel}:embedContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: `models/${embeddingModel}`,
+          content: { parts: [{ text }] },
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      console.warn(`Gemini embedding failed (${response.status}), using local fallback`);
+      return generateLocalEmbedding(text);
+    }
+
+    const data = await response.json() as { embedding: { values: number[] } };
+    return data.embedding.values;
+  } catch (error) {
+    console.warn('Gemini embedding error, using local fallback:', error);
+    return generateLocalEmbedding(text);
+  }
 }
 
 // ============================================================================

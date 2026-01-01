@@ -78,7 +78,7 @@ export async function createApiKey(request: CreateApiKeyRequest): Promise<ApiKey
   const keyPrefix = getKeyPrefix(plainKey);
 
   const expiresAt = request.expiresInDays
-    ? new Date(Date.now() + request.expiresInDays * 24 * 60 * 60 * 1000)
+    ? new Date(Date.now() + request.expiresInDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 19).replace('T', ' ')
     : null;
 
   const insertData: InsertApiKey = {
@@ -206,7 +206,7 @@ export async function validateApiKey(key: string): Promise<ApiKeyValidationResul
     return { valid: false, reason: 'Key is inactive' };
   }
 
-  if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
+  if (apiKey.expiresAt && new Date(apiKey.expiresAt) < new Date()) {
     return { valid: false, reason: 'Key has expired' };
   }
 
@@ -214,7 +214,7 @@ export async function validateApiKey(key: string): Promise<ApiKeyValidationResul
   await db
     .update(apiKeys)
     .set({
-      lastUsedAt: new Date(),
+      lastUsedAt: new Date().toISOString().slice(0, 19).replace('T', ' '),
       usageCount: apiKey.usageCount + 1,
     })
     .where(eq(apiKeys.id, apiKey.id));

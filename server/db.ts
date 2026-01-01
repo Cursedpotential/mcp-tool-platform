@@ -60,12 +60,13 @@ export async function upsertUser(user: InsertUser): Promise<void> {
       updateSet.role = 'admin';
     }
 
+    const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
     if (!values.lastSignedIn) {
-      values.lastSignedIn = new Date();
+      values.lastSignedIn = nowStr;
     }
 
     if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = new Date();
+      updateSet.lastSignedIn = nowStr;
     }
 
     await db.insert(users).values(values).onDuplicateKeyUpdate({

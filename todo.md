@@ -367,3 +367,26 @@
 - [ ] CLI bridge accessible via Tailscale hostname
 - [ ] MCP Tool Shop connects via Tailscale IP
 
+
+
+## Forensics & Behavioral Analysis (NEW)
+- [x] Research proper naming for behavioral pattern detector tool (renamed to "Communication Pattern Analyzer")
+- [x] Create database schema for forensics tables (patterns, HurtLex, BERT, severity)
+- [x] Implement module-based analysis system (select which modules to run)
+- [x] Build negative pattern detection modules (manipulation, gaslighting, threats, etc.)
+- [x] Build positive pattern detection modules (love bombing, affirmations, kind words)
+- [x] Implement HurtLex fetcher from GitHub
+- [x] Add severity scoring with MCL 722.23 mapping
+- [x] Create timeline generation for pattern visualization
+- [x] Support dual-polarity analysis for contradiction detection
+- [x] Add forensics router with tRPC endpoints
+- [x] Add unit tests for pattern analyzer (24 tests passing)
+
+## Critical Fixes from Audit (P0)
+- [x] Fix LLM smart router - connect callProvider to actual provider hub
+- [x] Fix ML embeddings - implement Ollama, OpenAI, Gemini embedding APIs
+- [ ] Persist config manager to database (currently in-memory only)
+
+## High Priority from Audit (P1)
+- [x] Implement tool testing UI (now functional with parameter inputs and result display)
+- [ ] Add import functionality to Config page

@@ -40,6 +40,7 @@ import {
   getAllWikiPages,
 } from "./mcp/wiki/wiki-content";
 import { getMCPConfigGenerator, type Platform } from "./mcp/config/mcp-generator";
+import { forensicsRouter } from "./mcp/forensics/forensics-router";
 
 // ============================================================================
 // Config Router - Manage definitions, patterns, dictionaries
@@ -980,6 +981,9 @@ export const appRouter = router({
 
   // MCP Config Generator
   mcpConfig: mcpConfigRouter,
+
+  // Forensics & Behavioral Analysis
+  forensics: forensicsRouter,
 });
 
 export type AppRouter = typeof appRouter;
