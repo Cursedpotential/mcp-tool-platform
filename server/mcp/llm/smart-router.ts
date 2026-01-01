@@ -17,7 +17,7 @@ type LLMProvider = ProviderType;
 // Types
 // ============================================================================
 
-export type TaskType = 'simple' | 'complex' | 'creative' | 'long-context' | 'embedding';
+export type TaskType = 'simple' | 'complex' | 'creative' | 'long-context' | 'embedding' | 'code' | 'math' | 'speed' | 'multimodal';
 
 export type CostTier = 'free' | 'cheap' | 'moderate' | 'expensive';
 
@@ -109,9 +109,13 @@ const PROVIDER_COSTS: Record<ProviderType, { inputCost: number; outputCost: numb
   'sambanova': { inputCost: 0.0001, outputCost: 0.0001, contextWindow: 8192, tier: 'cheap' },
   'lepton': { inputCost: 0.0002, outputCost: 0.0002, contextWindow: 8192, tier: 'cheap' },
   // CLI tools (subscription-based, effectively free per-call)
-  'claude-cli': { inputCost: 0, outputCost: 0, contextWindow: 200000, tier: 'free' },
   'gemini-cli': { inputCost: 0, outputCost: 0, contextWindow: 2000000, tier: 'free' },
+  'codex-cli': { inputCost: 0, outputCost: 0, contextWindow: 128000, tier: 'free' },
+  'qwen-cli': { inputCost: 0, outputCost: 0, contextWindow: 128000, tier: 'free' },
   'aider': { inputCost: 0, outputCost: 0, contextWindow: 128000, tier: 'free' },
+  'claude-cli': { inputCost: 0, outputCost: 0, contextWindow: 200000, tier: 'free' }, // Last resort
+  // Remote Docker Bridge
+  'ollama-cloud': { inputCost: 0, outputCost: 0, contextWindow: 32000, tier: 'free' }, // Great for embeddings
 };
 
 // ============================================================================
@@ -139,12 +143,27 @@ export class SmartLLMRouter {
 
   private mergeWithDefaults(policy: Partial<RoutingPolicy>): RoutingPolicy {
     return {
+      // Claude-last routing: Native tools → Free → CLI subscriptions → Paid → Claude
+      // Gemini CLI and Qwen have higher limits, prioritize over Claude
       taskTypePreferences: policy.taskTypePreferences || {
-        'simple': ['ollama', 'openrouter', 'groq', 'openai'],
-        'complex': ['anthropic', 'openai', 'google', 'openrouter'],
-        'creative': ['anthropic', 'openai', 'mistral', 'openrouter'],
-        'long-context': ['google', 'anthropic', 'openai'],
-        'embedding': ['ollama', 'openai', 'cohere'],
+        // Simple tasks: local first, then free tiers, CLI, paid APIs, Claude last
+        'simple': ['ollama', 'lmstudio', 'openrouter', 'groq', 'gemini-cli', 'deepseek', 'openai', 'anthropic'],
+        // Complex reasoning: Gemini CLI first (high limits), then DeepSeek, paid, Claude last
+        'complex': ['gemini-cli', 'deepseek', 'google', 'openai', 'openrouter', 'anthropic'],
+        // Creative: Gemini/Mistral first, Claude last
+        'creative': ['gemini-cli', 'mistral', 'openrouter', 'openai', 'anthropic'],
+        // Long context: Gemini (2M), then others, Claude last
+        'long-context': ['gemini-cli', 'google', 'ai21', 'deepseek', 'openai', 'anthropic'],
+        // Code generation: Qwen/DeepSeek excel here
+        'code': ['ollama', 'deepseek', 'gemini-cli', 'fireworks', 'openai', 'anthropic'],
+        // Math/reasoning: DeepSeek, Qwen
+        'math': ['deepseek', 'gemini-cli', 'openai', 'anthropic'],
+        // Speed critical: Groq (fastest inference)
+        'speed': ['groq', 'cerebras', 'sambanova', 'gemini-cli', 'openai'],
+        // Embeddings: local first
+        'embedding': ['ollama', 'openai', 'cohere', 'google'],
+        // Multimodal: Gemini excels
+        'multimodal': ['gemini-cli', 'google', 'openai', 'anthropic'],
       },
       maxCostPerRequest: policy.maxCostPerRequest,
       preferFreeTier: policy.preferFreeTier ?? true,

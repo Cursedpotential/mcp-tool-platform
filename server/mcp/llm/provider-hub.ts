@@ -44,7 +44,11 @@ export type ProviderType =
   // CLI Tools (via remote bridge or local)
   | 'claude-cli'
   | 'gemini-cli'
-  | 'aider';
+  | 'codex-cli'  // OpenAI Codex via ChatGPT subscription
+  | 'qwen-cli'   // Qwen CLI
+  | 'aider'
+  // Remote Docker Bridge
+  | 'ollama-cloud';  // Ollama via Docker bridge - great for embeddings
 
 export type TaskComplexity = 'simple' | 'medium' | 'complex';
 
@@ -310,20 +314,41 @@ const DEFAULT_CONFIGS: Record<ProviderType, Partial<ProviderConfig>> = {
   },
 
   // CLI Tools (Use your subscriptions via remote bridge or local)
-  'claude-cli': {
-    type: 'claude-cli',
-    priority: 20,
-    capabilities: { chat: true, embeddings: false, streaming: false, functionCalling: false },
-  },
+  // Priority order: Gemini CLI (high limits) > Codex CLI > Qwen CLI > Aider > Claude CLI (minimize usage)
   'gemini-cli': {
     type: 'gemini-cli',
-    priority: 21,
+    priority: 5, // High priority - high usage limits
+    capabilities: { chat: true, embeddings: false, streaming: false, functionCalling: false },
+  },
+  'codex-cli': {
+    type: 'codex-cli',
+    priority: 6, // OpenAI Codex via ChatGPT subscription
+    capabilities: { chat: true, embeddings: false, streaming: false, functionCalling: true },
+  },
+  'qwen-cli': {
+    type: 'qwen-cli',
+    priority: 7, // Qwen CLI - good for code and long context
     capabilities: { chat: true, embeddings: false, streaming: false, functionCalling: false },
   },
   aider: {
     type: 'aider',
-    priority: 22,
+    priority: 8,
     capabilities: { chat: true, embeddings: false, streaming: false, functionCalling: false },
+  },
+  'claude-cli': {
+    type: 'claude-cli',
+    priority: 50, // LOW priority - minimize Claude usage
+    capabilities: { chat: true, embeddings: false, streaming: false, functionCalling: false },
+  },
+
+  // Remote Docker Bridge
+  'ollama-cloud': {
+    type: 'ollama-cloud',
+    // baseUrl set via remoteBridgeConfig
+    defaultModel: 'qwen2.5:7b',
+    embeddingModel: 'nomic-embed-text', // Great for embeddings
+    priority: 4, // High priority for embeddings - free via Docker
+    capabilities: { chat: true, embeddings: true, streaming: true, functionCalling: false },
   },
 };
 

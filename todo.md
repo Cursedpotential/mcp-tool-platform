@@ -793,3 +793,88 @@
 - [ ] clean_normalize output contract (JSON schema)
 - [ ] segment output contract (JSON schema)
 - [ ] Task graph checkpoint markers format
+
+
+## ============================================
+## CLAUDE SESSION TOOLS (To Integrate)
+## ============================================
+
+## Text Miner Tool (from Claude session)
+- [ ] Port text_miner.py to TypeScript MCP tool
+- [ ] Expose as `search.text_mine` tool
+- [ ] Add ugrep installation check/fallback
+- [ ] Timestamp extraction from various formats
+- [ ] Generate forensic markdown reports
+- [ ] JSON output for pipeline integration
+- [ ] Timeline generation from timestamped matches
+
+## Format Converter (from Claude session)
+- [ ] Port format_converter.py to TypeScript
+- [ ] Universal I/O: JSON, CSV, HTML, MD, DOCX, PDF, Images
+- [ ] OCR via Tesseract for images/scanned PDFs
+- [ ] PDF text extraction via pypdf + OCR fallback
+- [ ] DOCX parsing via python-docx
+- [ ] HTML parsing via BeautifulSoup
+- [ ] Schema validation with field coverage stats
+- [ ] Pandoc integration for output conversion
+
+## Schema Resolver (from Claude session)
+- [ ] Port schema_resolver.py to TypeScript
+- [ ] Standard field mapping (body, date, contact_name, address)
+- [ ] Exact match → Fuzzy match → Content analysis pipeline
+- [ ] AI-powered field mapping via LLM
+- [ ] Mapping cache with hash-based lookup
+- [ ] Apply mapping to transform data
+
+## Evidence Hasher / Chain of Custody (from Claude session)
+- [ ] Port evidence_hasher.py to TypeScript
+- [ ] SHA-256 hashing at each processing stage
+- [ ] Chain of custody data structure
+- [ ] Processing chain verification
+- [ ] Generate forensic report with hash trail
+- [ ] Export schemas: evidence_json, court_csv, timeline_json, forensic_report
+
+## Backend API Endpoints (from Claude session)
+- [ ] /health - Component availability check
+- [ ] /ocr - OCR image or PDF
+- [ ] /parse - Parse any format
+- [ ] /schema/check - Validate schema
+- [ ] /schema/resolve - AI field mapping
+- [ ] /bert - Batch sentiment analysis
+- [ ] /convert - Format conversion
+
+## Settings Manager (from Claude session)
+- [ ] Port settings_manager.py to TypeScript
+- [ ] Persistent configuration storage
+- [ ] Working copies directory management
+- [ ] API key management (env + settings)
+- [ ] Schema cache directory
+
+## Integration Requirements
+- [ ] Install system tools: tesseract, pandoc, ugrep, poppler
+- [ ] Python environment for BERT/spaCy (or port to JS)
+- [ ] Docker container for heavy processing
+- [ ] Connect to existing MCP gateway
+
+
+## Smart Search Router
+- [ ] Auto-select ugrep vs ripgrep based on content type
+- [ ] ugrep for: conversations, JSON, CSV, forensic data, Unicode
+- [ ] ripgrep for: code, repositories, .gitignore-aware, binary handling
+- [ ] Fallback chain: preferred → alternative → JS implementation
+
+
+## Intelligent LLM Routing Strategy (Claude-Last)
+- [ ] Native tools FIRST (zero LLM cost): ugrep, ripgrep, Tesseract, spaCy, BERT
+- [ ] Free tiers SECOND: OpenRouter free models, Groq free tier
+- [ ] CLI subscriptions THIRD: Gemini CLI (primary), Qwen CLI (secondary)
+- [ ] Paid APIs FOURTH: DeepSeek, Groq paid, OpenAI
+- [ ] Claude LAST: Only for tasks nothing else can handle
+- [ ] Route by provider strengths:
+  - Gemini: large context, multimodal, fast
+  - Qwen: code generation, long context, multilingual  
+  - Groq: speed (Llama/Mixtral inference)
+  - DeepSeek: code, math, reasoning
+  - Claude: complex reasoning only (minimize usage)
+- [ ] Fallback chain: Native → Free → CLI → Paid → Claude
+- [ ] Update smart-router.ts with Claude-last priority
