@@ -1001,3 +1001,15 @@
 - [ ] Auto-cleanup scheduler (cron-based)
 - [ ] Retention config in settings UI
 - [ ] Memory pressure monitoring (auto-clear if disk full)
+
+
+## Plugin Handler Wiring (Phase 1 - P0 Critical) - COMPLETED
+- [x] Wire forensics plugin to executor (analyze_patterns, score_severity, get_modules, detect_hurtlex)
+- [x] Wire text-miner plugin to executor (text.mine)
+- [x] Wire format-converter plugin to executor (format.convert, format.parse, format.check_schema, format.ocr)
+- [x] Wire schema-resolver plugin to executor (schema.resolve, schema.apply, schema.cache_stats, schema.clear_cache)
+- [x] Wire evidence-hasher plugin to executor (create_chain, add_stage, verify, hash_file, hash_content, export, generate_report, hash)
+- [x] Add document intelligence database schema (documents, documentSections, documentChunks, documentSpans, documentSummaries, documentEntities, evidenceChains)
+- [x] Create vitest tests for new plugin handlers
+- [x] All 61 tests passing
+

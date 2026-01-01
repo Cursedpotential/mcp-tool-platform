@@ -1,0 +1,64 @@
+{
+  "query": "SHOW TABLES;",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2QJxepF6RkxixEF.root --database CrKBAyYZGWJki2G2dH59p7 --execute SHOW TABLES;",
+  "rows": [
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "__drizzle_migrations"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "analysisModules"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "analysisResults"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "apiKeyUsageLogs"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "apiKeys"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "behavioralPatterns"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "bertConfigs"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "forensicResults"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "hurtlexCategories"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "hurtlexSyncStatus"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "hurtlexTerms"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "mclFactors"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "patternCategories"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "schemaResolvers"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "severityWeights"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "systemPrompts"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "users"
+    },
+    {
+      "Tables_in_CrKBAyYZGWJki2G2dH59p7": "workflowTemplates"
+    }
+  ],
+  "messages": [],
+  "stdout": "Tables_in_CrKBAyYZGWJki2G2dH59p7\n__drizzle_migrations\nanalysisModules\nanalysisResults\napiKeyUsageLogs\napiKeys\nbehavioralPatterns\nbertConfigs\nforensicResults\nhurtlexCategories\nhurtlexSyncStatus\nhurtlexTerms\nmclFactors\npatternCategories\nschemaResolvers\nseverityWeights\nsystemPrompts\nusers\nworkflowTemplates\n",
+  "stderr": "",
+  "execution_time_ms": 176
+}

@@ -267,6 +267,157 @@ export const workflowTemplates = mysqlTable("workflowTemplates", {
 	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
 });
 
+// ============================================================================
+// DOCUMENT INTELLIGENCE TABLES
+// ============================================================================
+
+// Documents table - stores metadata about processed documents
+export const documents = mysqlTable("documents", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id, { onDelete: "cascade" }),
+	filename: varchar({ length: 512 }).notNull(),
+	originalPath: varchar({ length: 1024 }),
+	mimeType: varchar({ length: 128 }),
+	fileSize: int(),
+	contentHash: varchar({ length: 64 }).notNull(),
+	processingStatus: mysqlEnum(['pending','processing','completed','error']).default('pending').notNull(),
+	processingError: text(),
+	totalSections: int().default(0),
+	totalChunks: int().default(0),
+	totalEntities: int().default(0),
+	metadata: text(), // JSON: source, platform, date range, etc.
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("documents_contentHash_idx").on(table.contentHash),
+	index("documents_userId_idx").on(table.userId),
+]);
+
+// Document sections - logical divisions (chapters, conversations, threads)
+export const documentSections = mysqlTable("documentSections", {
+	id: int().autoincrement().notNull(),
+	documentId: int().notNull().references(() => documents.id, { onDelete: "cascade" }),
+	parentSectionId: int(), // For nested sections
+	sectionType: varchar({ length: 64 }).notNull(), // 'chapter', 'conversation', 'thread', 'paragraph'
+	title: varchar({ length: 512 }),
+	sequenceNum: int().notNull(), // Order within parent
+	startOffset: int().notNull(), // Character offset in original
+	endOffset: int().notNull(),
+	contentPreview: text(), // First 500 chars for quick reference
+	metadata: text(), // JSON: participants, date, platform, etc.
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("documentSections_documentId_idx").on(table.documentId),
+	index("documentSections_parentId_idx").on(table.parentSectionId),
+]);
+
+// Document chunks - fixed-size pieces for embedding/retrieval
+export const documentChunks = mysqlTable("documentChunks", {
+	id: int().autoincrement().notNull(),
+	documentId: int().notNull().references(() => documents.id, { onDelete: "cascade" }),
+	sectionId: int().references(() => documentSections.id, { onDelete: "set null" }),
+	chunkIndex: int().notNull(), // Sequential index
+	startOffset: int().notNull(),
+	endOffset: int().notNull(),
+	chunkSize: int().notNull(),
+	overlap: int().default(0), // Overlap with previous chunk
+	content: text().notNull(),
+	contentHash: varchar({ length: 64 }).notNull(),
+	embeddingRef: varchar({ length: 128 }), // Reference to vector store
+	embeddingModel: varchar({ length: 64 }),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("documentChunks_documentId_idx").on(table.documentId),
+	index("documentChunks_sectionId_idx").on(table.sectionId),
+	index("documentChunks_contentHash_idx").on(table.contentHash),
+]);
+
+// Document spans - annotated regions (matches, citations, highlights)
+export const documentSpans = mysqlTable("documentSpans", {
+	id: int().autoincrement().notNull(),
+	documentId: int().notNull().references(() => documents.id, { onDelete: "cascade" }),
+	chunkId: int().references(() => documentChunks.id, { onDelete: "set null" }),
+	spanType: varchar({ length: 64 }).notNull(), // 'pattern_match', 'entity', 'citation', 'highlight'
+	label: varchar({ length: 255 }),
+	startOffset: int().notNull(),
+	endOffset: int().notNull(),
+	matchedText: text().notNull(),
+	context: text(), // Surrounding text for reference
+	confidence: int(), // 0-100
+	metadata: text(), // JSON: pattern_id, entity_type, severity, etc.
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("documentSpans_documentId_idx").on(table.documentId),
+	index("documentSpans_chunkId_idx").on(table.chunkId),
+	index("documentSpans_spanType_idx").on(table.spanType),
+]);
+
+// Document summaries - hierarchical summaries at different levels
+export const documentSummaries = mysqlTable("documentSummaries", {
+	id: int().autoincrement().notNull(),
+	documentId: int().notNull().references(() => documents.id, { onDelete: "cascade" }),
+	sectionId: int().references(() => documentSections.id, { onDelete: "cascade" }),
+	summaryLevel: mysqlEnum(['document','section','chunk']).notNull(),
+	summaryStyle: varchar({ length: 32 }).default('concise'), // 'concise', 'detailed', 'bullet'
+	content: text().notNull(),
+	wordCount: int(),
+	compressionRatio: int(), // Original words / summary words * 100
+	modelUsed: varchar({ length: 128 }),
+	preserveCitations: mysqlEnum(['true','false']).default('false'),
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("documentSummaries_documentId_idx").on(table.documentId),
+	index("documentSummaries_sectionId_idx").on(table.sectionId),
+]);
+
+// Document entities - extracted named entities with relationships
+export const documentEntities = mysqlTable("documentEntities", {
+	id: int().autoincrement().notNull(),
+	documentId: int().notNull().references(() => documents.id, { onDelete: "cascade" }),
+	entityType: varchar({ length: 64 }).notNull(), // 'PERSON', 'ORG', 'DATE', 'LOCATION', etc.
+	entityValue: varchar({ length: 512 }).notNull(),
+	normalizedValue: varchar({ length: 512 }), // Canonical form
+	occurrenceCount: int().default(1),
+	firstOccurrence: int(), // Character offset
+	confidence: int(), // 0-100
+	extractorModel: varchar({ length: 128 }),
+	metadata: text(), // JSON: aliases, relationships, context
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+},
+(table) => [
+	index("documentEntities_documentId_idx").on(table.documentId),
+	index("documentEntities_entityType_idx").on(table.entityType),
+	index("documentEntities_entityValue_idx").on(table.entityValue),
+]);
+
+// Evidence chains - chain of custody tracking for forensic evidence
+export const evidenceChains = mysqlTable("evidenceChains", {
+	id: int().autoincrement().notNull(),
+	userId: int().notNull().references(() => users.id, { onDelete: "cascade" }),
+	evidenceId: varchar({ length: 64 }).notNull(), // EVD-xxx-xxx format
+	documentId: int().references(() => documents.id, { onDelete: "set null" }),
+	originalFilename: varchar({ length: 512 }).notNull(),
+	originalHash: varchar({ length: 64 }).notNull(),
+	mimeType: varchar({ length: 128 }),
+	fileSize: int(),
+	chainData: text().notNull(), // JSON: full chain of custody
+	isVerified: mysqlEnum(['true','false']).default('true').notNull(),
+	verificationErrors: text(),
+	metadata: text(), // JSON: case number, source, etc.
+	createdAt: timestamp({ mode: 'string' }).default('CURRENT_TIMESTAMP').notNull(),
+	updatedAt: timestamp({ mode: 'string' }).defaultNow().onUpdateNow().notNull(),
+},
+(table) => [
+	index("evidenceChains_evidenceId_idx").on(table.evidenceId),
+	index("evidenceChains_userId_idx").on(table.userId),
+	index("evidenceChains_originalHash_idx").on(table.originalHash),
+]);
+
 // Type exports for TypeScript
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -302,3 +453,17 @@ export type AnalysisModule = typeof analysisModules.$inferSelect;
 export type InsertAnalysisModule = typeof analysisModules.$inferInsert;
 export type AnalysisResult = typeof analysisResults.$inferSelect;
 export type InsertAnalysisResult = typeof analysisResults.$inferInsert;
+export type Document = typeof documents.$inferSelect;
+export type InsertDocument = typeof documents.$inferInsert;
+export type DocumentSection = typeof documentSections.$inferSelect;
+export type InsertDocumentSection = typeof documentSections.$inferInsert;
+export type DocumentChunk = typeof documentChunks.$inferSelect;
+export type InsertDocumentChunk = typeof documentChunks.$inferInsert;
+export type DocumentSpan = typeof documentSpans.$inferSelect;
+export type InsertDocumentSpan = typeof documentSpans.$inferInsert;
+export type DocumentSummary = typeof documentSummaries.$inferSelect;
+export type InsertDocumentSummary = typeof documentSummaries.$inferInsert;
+export type DocumentEntity = typeof documentEntities.$inferSelect;
+export type InsertDocumentEntity = typeof documentEntities.$inferInsert;
+export type EvidenceChain = typeof evidenceChains.$inferSelect;
+export type InsertEvidenceChain = typeof evidenceChains.$inferInsert;

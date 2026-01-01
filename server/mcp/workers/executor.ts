@@ -399,6 +399,294 @@ export class TaskExecutor {
       const { retrieveSupportingSpans } = await import('../plugins/retrieval');
       return retrieveSupportingSpans(args as { question: string; docRef: string; topK?: number; useEmbeddings?: boolean });
     });
+
+    // ============================================================================
+    // FORENSICS PLUGIN HANDLERS
+    // ============================================================================
+
+    this.registerHandler('forensics.analyze_patterns', async (args) => {
+      const { patternAnalyzer } = await import('../forensics/pattern-analyzer');
+      const { text, moduleIds, includeContext, contextChars } = args as {
+        text: string;
+        moduleIds?: string[];
+        includeContext?: boolean;
+        contextChars?: number;
+      };
+      return patternAnalyzer.analyze(text, { moduleIds, includeContext, contextChars });
+    });
+
+    this.registerHandler('forensics.detect_hurtlex', async (args) => {
+      const { HurtLexFetcher } = await import('../forensics/hurtlex-fetcher');
+      const { text, language, categories } = args as { text: string; language?: string; categories?: string[] };
+      const fetcher = new HurtLexFetcher();
+      const terms = await fetcher.getTerms(language || 'EN', categories);
+      
+      // Detect terms in text
+      const textLower = text.toLowerCase();
+      const matches: Array<{ term: string; category: string; position: number; context: string }> = [];
+      
+      for (const term of terms) {
+        const termLower = term.term.toLowerCase();
+        let idx = textLower.indexOf(termLower);
+        while (idx !== -1) {
+          const start = Math.max(0, idx - 50);
+          const end = Math.min(text.length, idx + termLower.length + 50);
+          matches.push({
+            term: term.term,
+            category: term.category,
+            position: idx,
+            context: text.slice(start, end)
+          });
+          idx = textLower.indexOf(termLower, idx + 1);
+        }
+      }
+      
+      return {
+        totalTermsChecked: terms.length,
+        matchCount: matches.length,
+        matches,
+        categoryCounts: matches.reduce((acc, m) => {
+          acc[m.category] = (acc[m.category] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>)
+      };
+    });
+
+    this.registerHandler('forensics.score_severity', async (args) => {
+      const { patternAnalyzer } = await import('../forensics/pattern-analyzer');
+      const { text, moduleIds } = args as { text: string; moduleIds?: string[] };
+      const result = await patternAnalyzer.analyze(text, { moduleIds });
+      return {
+        severityScore: result.severityScore,
+        mclFactorScores: result.mclFactorScores,
+        totalMatches: result.totalMatches,
+        summary: result.summary
+      };
+    });
+
+    this.registerHandler('forensics.get_modules', async () => {
+      const { patternAnalyzer, BUILT_IN_MODULES } = await import('../forensics/pattern-analyzer');
+      return {
+        modules: BUILT_IN_MODULES,
+        activeModules: patternAnalyzer.getModules().filter(m => m.enabled).map(m => m.id)
+      };
+    });
+
+    // ============================================================================
+    // TEXT MINER PLUGIN HANDLERS
+    // ============================================================================
+
+    this.registerHandler('text.mine', async (args) => {
+      const { mineFiles, generateMarkdownReport } = await import('../plugins/text-miner');
+      const { searchTerm, paths, options, generateReport } = args as {
+        searchTerm: string;
+        paths: string[];
+        options?: {
+          recursive?: boolean;
+          contextLines?: number;
+          caseInsensitive?: boolean;
+          wholeWord?: boolean;
+          regexMode?: boolean;
+          fileTypes?: string[];
+          engine?: 'ugrep' | 'ripgrep' | 'auto';
+          maxResults?: number;
+        };
+        generateReport?: boolean;
+      };
+      const result = await mineFiles(searchTerm, paths, options);
+      if (generateReport) {
+        return {
+          ...result,
+          report: generateMarkdownReport(result)
+        };
+      }
+      return result;
+    });
+
+    // ============================================================================
+    // FORMAT CONVERTER PLUGIN HANDLERS
+    // ============================================================================
+
+    this.registerHandler('format.convert', async (args) => {
+      const { parseFile, toJson, toCsv, toMarkdown } = await import('../plugins/format-converter');
+      const { inputPath, outputFormat } = args as {
+        inputPath: string;
+        outputFormat?: 'json' | 'csv' | 'md';
+      };
+      const { messages, format } = await parseFile(inputPath);
+      let output: string;
+      switch (outputFormat) {
+        case 'csv':
+          output = toCsv(messages);
+          break;
+        case 'md':
+          output = toMarkdown(messages);
+          break;
+        case 'json':
+        default:
+          output = toJson(messages);
+          break;
+      }
+      return { messages, sourceFormat: format, outputFormat: outputFormat || 'json', output };
+    });
+
+    this.registerHandler('format.parse', async (args) => {
+      const { parseFile } = await import('../plugins/format-converter');
+      const { inputPath } = args as { inputPath: string };
+      return parseFile(inputPath);
+    });
+
+    this.registerHandler('format.check_schema', async (args) => {
+      const { checkSchema } = await import('../plugins/format-converter');
+      const { inputPath, previewCount } = args as { inputPath: string; previewCount?: number };
+      return checkSchema(inputPath, previewCount);
+    });
+
+    this.registerHandler('format.ocr', async (args) => {
+      const { ocrImage, ocrPdf } = await import('../plugins/format-converter');
+      const { inputPath, language } = args as { inputPath: string; language?: string };
+      const ext = inputPath.toLowerCase();
+      if (ext.endsWith('.pdf')) {
+        return { text: await ocrPdf(inputPath, language), format: 'pdf-ocr' };
+      }
+      return { text: await ocrImage(inputPath, language), format: 'image-ocr' };
+    });
+
+    // ============================================================================
+    // SCHEMA RESOLVER PLUGIN HANDLERS
+    // ============================================================================
+
+    this.registerHandler('schema.resolve', async (args) => {
+      const { resolve } = await import('../plugins/schema-resolver');
+      const { sourceFields, sample, useCache, useAi } = args as {
+        sourceFields: string[];
+        sample?: Record<string, any>[];
+        useCache?: boolean;
+        useAi?: boolean;
+      };
+      return resolve(sourceFields, sample, useCache, useAi);
+    });
+
+    this.registerHandler('schema.apply', async (args) => {
+      const { resolve, applyMapping } = await import('../plugins/schema-resolver');
+      const { data, sourceFields, useCache } = args as {
+        data: Record<string, any>[];
+        sourceFields?: string[];
+        useCache?: boolean;
+      };
+      const fields = sourceFields || (data.length > 0 ? Object.keys(data[0]) : []);
+      const { mappings } = await resolve(fields, data.slice(0, 5), useCache);
+      return {
+        transformedData: applyMapping(data, mappings),
+        mappings
+      };
+    });
+
+    this.registerHandler('schema.cache_stats', async () => {
+      const { getCacheStats } = await import('../plugins/schema-resolver');
+      return getCacheStats();
+    });
+
+    this.registerHandler('schema.clear_cache', async () => {
+      const { clearCache } = await import('../plugins/schema-resolver');
+      await clearCache();
+      return { success: true, message: 'Schema cache cleared' };
+    });
+
+    // ============================================================================
+    // EVIDENCE HASHER PLUGIN HANDLERS
+    // ============================================================================
+
+    this.registerHandler('evidence.create_chain', async (args) => {
+      const { createChainOfCustody } = await import('../plugins/evidence-hasher');
+      const { filePath, operator, metadata } = args as {
+        filePath: string;
+        operator?: string;
+        metadata?: Record<string, any>;
+      };
+      const chain = await createChainOfCustody(filePath, operator, metadata);
+      return { success: true, evidenceId: chain.evidenceId, originalHash: chain.originalHash, chain };
+    });
+
+    this.registerHandler('evidence.add_stage', async (args) => {
+      const { addProcessingStage, hashFile, hashContent } = await import('../plugins/evidence-hasher');
+      const { chain, stage, outputFilePath, outputContent, operator, notes } = args as {
+        chain: any;
+        stage: 'imported' | 'converted' | 'normalized' | 'analyzed' | 'redacted' | 'exported';
+        outputFilePath?: string;
+        outputContent?: string;
+        operator?: string;
+        notes?: string;
+      };
+      let outputHash: string;
+      if (outputFilePath) {
+        outputHash = await hashFile(outputFilePath);
+      } else if (outputContent) {
+        outputHash = hashContent(outputContent);
+      } else {
+        throw new Error('Either outputFilePath or outputContent required');
+      }
+      const updatedChain = addProcessingStage(chain, stage, outputHash, operator, notes);
+      return { success: true, stage, hash: outputHash, chain: updatedChain };
+    });
+
+    this.registerHandler('evidence.verify', async (args) => {
+      const { verifyChain } = await import('../plugins/evidence-hasher');
+      const { chain } = args as { chain: any };
+      return verifyChain(chain);
+    });
+
+    this.registerHandler('evidence.hash_file', async (args) => {
+      const { hashFile } = await import('../plugins/evidence-hasher');
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const { filePath } = args as { filePath: string };
+      const hash = await hashFile(filePath);
+      const stats = await fs.stat(filePath);
+      return { hash, algorithm: 'sha256', fileSize: stats.size, filename: path.basename(filePath) };
+    });
+
+    this.registerHandler('evidence.hash_content', async (args) => {
+      const { hashContent } = await import('../plugins/evidence-hasher');
+      const { content } = args as { content: string };
+      return { hash: hashContent(content), algorithm: 'sha256', contentLength: content.length };
+    });
+
+    this.registerHandler('evidence.export', async (args) => {
+      const { exportChain } = await import('../plugins/evidence-hasher');
+      const fs = await import('fs/promises');
+      const { chain, format, outputPath } = args as {
+        chain: any;
+        format: 'evidence_json' | 'court_csv' | 'timeline_json' | 'forensic_report';
+        outputPath?: string;
+      };
+      const content = exportChain(chain, format);
+      if (outputPath) {
+        await fs.writeFile(outputPath, content);
+        return { success: true, format, outputPath, contentLength: content.length };
+      }
+      return { success: true, format, content };
+    });
+
+    this.registerHandler('evidence.generate_report', async (args) => {
+      const { generateForensicReport, verifyChain } = await import('../plugins/evidence-hasher');
+      const { chain } = args as { chain: any };
+      const report = generateForensicReport(chain);
+      const verification = verifyChain(chain);
+      return { report, verification, evidenceId: chain.evidenceId };
+    });
+
+    this.registerHandler('evidence.hash', async (args) => {
+      // Alias for evidence.hash_file for backward compatibility
+      const { hashFile, hashContent } = await import('../plugins/evidence-hasher');
+      const { filePath, content } = args as { filePath?: string; content?: string };
+      if (filePath) {
+        return { hash: await hashFile(filePath), algorithm: 'sha256', type: 'file' };
+      } else if (content) {
+        return { hash: hashContent(content), algorithm: 'sha256', type: 'content' };
+      }
+      throw new Error('Either filePath or content required');
+    });
   }
 }
 
