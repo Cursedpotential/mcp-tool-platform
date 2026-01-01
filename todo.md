@@ -421,3 +421,80 @@
 - [ ] Auto-detect document type and apply appropriate parser
 - [ ] Extract structured elements (tables, headers, lists, images)
 - [ ] Chunk documents intelligently for embedding/analysis
+
+
+## Remote Docker CLI Bridge (VPS Integration)
+- [ ] Design API contract for Docker CLI bridge
+- [ ] Add VPS endpoint configuration to Settings UI
+- [ ] Support Tailscale hostname/IP connection
+- [ ] Support Cloudflare Tunnel connection
+- [ ] Implement remote CLI provider in provider-hub
+- [ ] Add connection health check and status indicator
+- [ ] Create Docker CLI bridge specification document
+- [ ] Add authentication token for bridge API
+- [ ] Support streaming responses from remote CLI
+
+- [ ] Add LLM routing mode toggle (API / CLI / Auto)
+- [ ] Global setting in Settings UI for default routing mode
+- [ ] Per-request override for routing mode
+- [ ] Visual indicator showing which mode is active
+
+
+## OpenRouter Integration
+- [ ] Proper OpenRouter API integration with model selection
+- [ ] Daily refresh of free models from OpenRouter API
+- [ ] Cache free model list in database
+- [ ] Display available free models in UI
+- [ ] Auto-select best free model for task type
+
+
+## Additional LLM Providers
+- [ ] NVIDIA NIM API integration
+- [ ] Ollama Cloud (check for API, fallback to VPS Docker)
+- [ ] Fireworks AI integration
+- [ ] Replicate integration
+- [ ] DeepSeek integration
+- [ ] xAI (Grok) integration
+- [ ] AI21 Labs integration
+- [ ] Cerebras integration
+- [ ] SambaNova integration
+- [ ] Lepton AI integration
+
+
+## Enterprise Cloud AI & Document Processing
+- [ ] Google Document AI integration (OCR, form parsing, entity extraction)
+- [ ] Google Vertex AI integration (Gemini, embeddings, vision)
+- [ ] AWS Textract integration (document analysis)
+- [ ] AWS Comprehend integration (NLP, sentiment, entities)
+- [ ] AWS Rekognition integration (image analysis)
+- [ ] Azure Document Intelligence integration
+- [ ] Azure AI Language integration (sentiment, NER, key phrases)
+- [ ] Azure Computer Vision integration
+
+## LangChain Integration
+- [ ] LangChain document loaders
+- [ ] LangChain text splitters
+- [ ] LangChain retrievers
+- [ ] LangChain chains for complex workflows
+
+
+## Abuse & Legal Analysis Tools (Priority)
+- [ ] Google Perspective API (toxicity, threat, insult, identity attack)
+- [ ] OpenAI Moderation API (harassment, hate, violence detection)
+- [ ] Hume AI emotion detection (nuanced emotional analysis)
+- [ ] Rewire API (hate speech and abuse detection)
+- [ ] Google Document AI - Legal Document processor
+- [ ] AWS Comprehend targeted sentiment (sentiment on specific entities)
+- [ ] Azure AI Language opinion mining (aspect-based sentiment)
+- [ ] PII detection and redaction for legal submission
+- [ ] Screenshot/PDF OCR for message parsing
+
+
+## AWS Rekognition (Priority - Image/Screenshot Analysis)
+- [ ] Text detection in screenshots (messages, timestamps, usernames)
+- [ ] Face detection with emotion analysis
+- [ ] Content moderation (inappropriate/explicit content detection)
+- [ ] Label detection (objects, scenes, activities)
+- [ ] Image properties analysis (quality, manipulation detection)
+- [ ] Batch processing for multiple images
+- [ ] Integration with forensics pipeline for evidence tagging

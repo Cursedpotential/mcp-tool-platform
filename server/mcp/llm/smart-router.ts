@@ -84,9 +84,11 @@ export interface BudgetTracker {
 // ============================================================================
 
 const PROVIDER_COSTS: Record<ProviderType, { inputCost: number; outputCost: number; contextWindow: number; tier: CostTier }> = {
+  // Local providers (free)
   'ollama': { inputCost: 0, outputCost: 0, contextWindow: 4096, tier: 'free' },
   'lmstudio': { inputCost: 0, outputCost: 0, contextWindow: 4096, tier: 'free' },
   'llamacpp': { inputCost: 0, outputCost: 0, contextWindow: 4096, tier: 'free' },
+  // Major cloud providers
   'openai': { inputCost: 0.0015, outputCost: 0.002, contextWindow: 128000, tier: 'moderate' },
   'anthropic': { inputCost: 0.003, outputCost: 0.015, contextWindow: 200000, tier: 'expensive' },
   'google': { inputCost: 0.00025, outputCost: 0.0005, contextWindow: 2000000, tier: 'cheap' },
@@ -96,6 +98,17 @@ const PROVIDER_COSTS: Record<ProviderType, { inputCost: number; outputCost: numb
   'together': { inputCost: 0.0002, outputCost: 0.0002, contextWindow: 32000, tier: 'cheap' },
   'mistral': { inputCost: 0.0007, outputCost: 0.0007, contextWindow: 32000, tier: 'moderate' },
   'cohere': { inputCost: 0.0015, outputCost: 0.0015, contextWindow: 128000, tier: 'moderate' },
+  // Additional cloud providers
+  'nvidia-nim': { inputCost: 0.0003, outputCost: 0.0003, contextWindow: 128000, tier: 'cheap' },
+  'fireworks': { inputCost: 0.0002, outputCost: 0.0002, contextWindow: 128000, tier: 'cheap' },
+  'replicate': { inputCost: 0.0005, outputCost: 0.0005, contextWindow: 8192, tier: 'moderate' },
+  'deepseek': { inputCost: 0.00014, outputCost: 0.00028, contextWindow: 128000, tier: 'cheap' },
+  'xai': { inputCost: 0.005, outputCost: 0.015, contextWindow: 131072, tier: 'expensive' },
+  'ai21': { inputCost: 0.0002, outputCost: 0.0004, contextWindow: 256000, tier: 'cheap' },
+  'cerebras': { inputCost: 0.0001, outputCost: 0.0001, contextWindow: 8192, tier: 'cheap' },
+  'sambanova': { inputCost: 0.0001, outputCost: 0.0001, contextWindow: 8192, tier: 'cheap' },
+  'lepton': { inputCost: 0.0002, outputCost: 0.0002, contextWindow: 8192, tier: 'cheap' },
+  // CLI tools (subscription-based, effectively free per-call)
   'claude-cli': { inputCost: 0, outputCost: 0, contextWindow: 200000, tier: 'free' },
   'gemini-cli': { inputCost: 0, outputCost: 0, contextWindow: 2000000, tier: 'free' },
   'aider': { inputCost: 0, outputCost: 0, contextWindow: 128000, tier: 'free' },

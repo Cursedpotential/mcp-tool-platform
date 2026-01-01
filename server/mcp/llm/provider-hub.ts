@@ -31,12 +31,34 @@ export type ProviderType =
   | 'together'
   | 'mistral'
   | 'cohere'
-  // CLI Tools
+  // Additional Cloud Providers
+  | 'nvidia-nim'
+  | 'fireworks'
+  | 'replicate'
+  | 'deepseek'
+  | 'xai'
+  | 'ai21'
+  | 'cerebras'
+  | 'sambanova'
+  | 'lepton'
+  // CLI Tools (via remote bridge or local)
   | 'claude-cli'
   | 'gemini-cli'
   | 'aider';
 
 export type TaskComplexity = 'simple' | 'medium' | 'complex';
+
+// Routing mode determines which providers to prefer
+export type RoutingMode = 'api' | 'cli' | 'auto' | 'local';
+
+// Remote CLI bridge configuration
+export interface RemoteCLIBridgeConfig {
+  endpoint: string;  // e.g., http://vps.tailnet:8787
+  apiKey: string;
+  connectionType: 'tailscale' | 'cloudflare' | 'direct';
+  healthCheckInterval?: number;  // seconds
+  timeout?: number;  // ms
+}
 
 export interface LLMMessage {
   role: 'system' | 'user' | 'assistant';
@@ -51,6 +73,7 @@ export interface LLMRequest {
   stream?: boolean;
   task?: string; // For smart routing
   complexity?: TaskComplexity;
+  routingMode?: RoutingMode; // Override global routing mode for this request
 }
 
 export interface LLMResponse {
@@ -212,7 +235,81 @@ const DEFAULT_CONFIGS: Record<ProviderType, Partial<ProviderConfig>> = {
     capabilities: { chat: true, embeddings: true, streaming: true, functionCalling: false },
   },
 
-  // CLI Tools (Use your subscriptions)
+  // Additional Cloud Providers
+  'nvidia-nim': {
+    type: 'nvidia-nim',
+    baseUrl: 'https://integrate.api.nvidia.com/v1',
+    defaultModel: 'meta/llama-3.1-8b-instruct',
+    priority: 19,
+    costPer1kTokens: { input: 0.0003, output: 0.0003 },
+    capabilities: { chat: true, embeddings: true, streaming: true, functionCalling: true },
+  },
+  fireworks: {
+    type: 'fireworks',
+    baseUrl: 'https://api.fireworks.ai/inference/v1',
+    defaultModel: 'accounts/fireworks/models/llama-v3p1-8b-instruct',
+    priority: 20,
+    costPer1kTokens: { input: 0.0002, output: 0.0002 },
+    capabilities: { chat: true, embeddings: true, streaming: true, functionCalling: true },
+  },
+  replicate: {
+    type: 'replicate',
+    baseUrl: 'https://api.replicate.com/v1',
+    defaultModel: 'meta/meta-llama-3-8b-instruct',
+    priority: 21,
+    costPer1kTokens: { input: 0.0005, output: 0.0005 },
+    capabilities: { chat: true, embeddings: false, streaming: true, functionCalling: false },
+  },
+  deepseek: {
+    type: 'deepseek',
+    baseUrl: 'https://api.deepseek.com/v1',
+    defaultModel: 'deepseek-chat',
+    priority: 22,
+    costPer1kTokens: { input: 0.00014, output: 0.00028 },
+    capabilities: { chat: true, embeddings: false, streaming: true, functionCalling: true },
+  },
+  xai: {
+    type: 'xai',
+    baseUrl: 'https://api.x.ai/v1',
+    defaultModel: 'grok-beta',
+    priority: 23,
+    costPer1kTokens: { input: 0.005, output: 0.015 },
+    capabilities: { chat: true, embeddings: false, streaming: true, functionCalling: true },
+  },
+  ai21: {
+    type: 'ai21',
+    baseUrl: 'https://api.ai21.com/studio/v1',
+    defaultModel: 'jamba-1.5-mini',
+    priority: 24,
+    costPer1kTokens: { input: 0.0002, output: 0.0004 },
+    capabilities: { chat: true, embeddings: false, streaming: true, functionCalling: false },
+  },
+  cerebras: {
+    type: 'cerebras',
+    baseUrl: 'https://api.cerebras.ai/v1',
+    defaultModel: 'llama3.1-8b',
+    priority: 25,
+    costPer1kTokens: { input: 0.0001, output: 0.0001 },
+    capabilities: { chat: true, embeddings: false, streaming: true, functionCalling: false },
+  },
+  sambanova: {
+    type: 'sambanova',
+    baseUrl: 'https://api.sambanova.ai/v1',
+    defaultModel: 'Meta-Llama-3.1-8B-Instruct',
+    priority: 26,
+    costPer1kTokens: { input: 0.0001, output: 0.0001 },
+    capabilities: { chat: true, embeddings: false, streaming: true, functionCalling: false },
+  },
+  lepton: {
+    type: 'lepton',
+    baseUrl: 'https://llama3-1-8b.lepton.run/api/v1',
+    defaultModel: 'llama3.1-8b',
+    priority: 27,
+    costPer1kTokens: { input: 0.0002, output: 0.0002 },
+    capabilities: { chat: true, embeddings: false, streaming: true, functionCalling: false },
+  },
+
+  // CLI Tools (Use your subscriptions via remote bridge or local)
   'claude-cli': {
     type: 'claude-cli',
     priority: 20,
@@ -275,9 +372,154 @@ class LLMProviderHub {
   private configs: Map<ProviderType, ProviderConfig> = new Map();
   private stats: Map<ProviderType, ProviderStats> = new Map();
   private availableProviders: Set<ProviderType> = new Set();
+  
+  // Global routing mode (can be overridden per-request)
+  private routingMode: RoutingMode = 'auto';
+  
+  // Remote CLI bridge configuration
+  private remoteCLIBridge: RemoteCLIBridgeConfig | null = null;
+  private remoteCLIHealthy: boolean = false;
+  private lastHealthCheck: number = 0;
 
   constructor() {
     this.initializeDefaults();
+  }
+
+  // -------------------------------------------------------------------------
+  // Routing Mode Management
+  // -------------------------------------------------------------------------
+
+  /**
+   * Set the global routing mode
+   * - 'api': Prefer cloud APIs (OpenAI, Anthropic, etc.)
+   * - 'cli': Prefer CLI tools (Claude Code, Gemini CLI) via remote bridge
+   * - 'local': Prefer local providers (Ollama, LM Studio)
+   * - 'auto': Smart routing based on task complexity
+   */
+  setRoutingMode(mode: RoutingMode): void {
+    this.routingMode = mode;
+  }
+
+  getRoutingMode(): RoutingMode {
+    return this.routingMode;
+  }
+
+  // -------------------------------------------------------------------------
+  // Remote CLI Bridge Management
+  // -------------------------------------------------------------------------
+
+  /**
+   * Configure the remote CLI bridge (Docker container on VPS)
+   */
+  configureRemoteCLIBridge(config: RemoteCLIBridgeConfig): void {
+    this.remoteCLIBridge = config;
+    this.remoteCLIHealthy = false;
+    this.lastHealthCheck = 0;
+    // Trigger initial health check
+    this.checkRemoteCLIHealth();
+  }
+
+  getRemoteCLIBridgeConfig(): RemoteCLIBridgeConfig | null {
+    return this.remoteCLIBridge;
+  }
+
+  isRemoteCLIHealthy(): boolean {
+    return this.remoteCLIHealthy;
+  }
+
+  /**
+   * Check health of remote CLI bridge
+   */
+  async checkRemoteCLIHealth(): Promise<boolean> {
+    if (!this.remoteCLIBridge) {
+      return false;
+    }
+
+    const now = Date.now();
+    const interval = (this.remoteCLIBridge.healthCheckInterval || 60) * 1000;
+    
+    // Skip if recently checked
+    if (now - this.lastHealthCheck < interval) {
+      return this.remoteCLIHealthy;
+    }
+
+    try {
+      const response = await fetch(`${this.remoteCLIBridge.endpoint}/health`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.remoteCLIBridge.apiKey}`,
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+
+      this.remoteCLIHealthy = response.ok;
+      this.lastHealthCheck = now;
+
+      if (response.ok) {
+        // Mark CLI providers as available
+        this.availableProviders.add('claude-cli');
+        this.availableProviders.add('gemini-cli');
+        this.availableProviders.add('aider');
+      }
+
+      return this.remoteCLIHealthy;
+    } catch {
+      this.remoteCLIHealthy = false;
+      this.lastHealthCheck = now;
+      return false;
+    }
+  }
+
+  /**
+   * Invoke a CLI tool via the remote bridge
+   */
+  async invokeRemoteCLI(tool: 'claude' | 'gemini' | 'aider', request: LLMRequest): Promise<LLMResponse> {
+    if (!this.remoteCLIBridge) {
+      throw new Error('Remote CLI bridge not configured');
+    }
+
+    const startTime = Date.now();
+    const timeout = this.remoteCLIBridge.timeout || 120000;
+
+    const response = await fetch(`${this.remoteCLIBridge.endpoint}/api/v1/tools/${tool}/invoke`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.remoteCLIBridge.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        messages: request.messages,
+        options: {
+          timeout,
+        },
+      }),
+      signal: AbortSignal.timeout(timeout),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Remote CLI error: ${error}`);
+    }
+
+    const result = await response.json() as {
+      success: boolean;
+      content: string;
+      tool: string;
+      latencyMs: number;
+      tokensUsed?: { input: number; output: number };
+    };
+
+    return {
+      content: result.content,
+      model: `${tool}-cli-remote`,
+      provider: `${tool}-cli` as ProviderType,
+      tokensUsed: result.tokensUsed ? {
+        prompt: result.tokensUsed.input,
+        completion: result.tokensUsed.output,
+        total: result.tokensUsed.input + result.tokensUsed.output,
+      } : undefined,
+      latencyMs: Date.now() - startTime,
+    };
   }
 
   private initializeDefaults(): void {
@@ -389,23 +631,62 @@ class LLMProviderHub {
   }
 
   /**
-   * Get the best provider for a task based on routing rules
+   * Get the best provider for a task based on routing rules and routing mode
    */
-  getProviderForTask(task: string, complexity?: TaskComplexity): ProviderType | null {
-    // Find matching route
+  getProviderForTask(task: string, complexity?: TaskComplexity, requestRoutingMode?: RoutingMode): ProviderType | null {
+    // Use request-level override or global routing mode
+    const mode = requestRoutingMode || this.routingMode;
+    
+    // Define provider groups
+    const apiProviders: ProviderType[] = ['openai', 'anthropic', 'google', 'groq', 'openrouter', 'perplexity', 'together', 'mistral', 'cohere'];
+    const cliProviders: ProviderType[] = ['claude-cli', 'gemini-cli', 'aider'];
+    const localProviders: ProviderType[] = ['ollama', 'lmstudio', 'llamacpp'];
+    
+    // Filter providers based on routing mode
+    let allowedProviders: ProviderType[];
+    switch (mode) {
+      case 'api':
+        allowedProviders = apiProviders;
+        break;
+      case 'cli':
+        allowedProviders = cliProviders;
+        break;
+      case 'local':
+        allowedProviders = localProviders;
+        break;
+      case 'auto':
+      default:
+        // Auto mode uses task-based routing
+        allowedProviders = [...localProviders, ...apiProviders, ...cliProviders];
+        break;
+    }
+
+    // Find matching route for auto mode
     const route = TASK_ROUTES.find(r => 
       r.tasks.includes(task) || (complexity && r.complexity === complexity)
     );
 
-    const preferredOrder = route?.preferredProviders || 
-      Array.from(this.configs.entries())
-        .filter(([, c]) => c.enabled)
-        .sort((a, b) => a[1].priority - b[1].priority)
-        .map(([type]) => type);
+    let preferredOrder: ProviderType[];
+    if (mode === 'auto' && route) {
+      // Use task-based routing, filtered by allowed providers
+      preferredOrder = route.preferredProviders.filter(p => allowedProviders.includes(p));
+    } else {
+      // Use mode-based ordering
+      preferredOrder = allowedProviders;
+    }
 
     // Return first available provider
     for (const provider of preferredOrder) {
-      if (this.availableProviders.has(provider) || this.configs.get(provider)?.enabled) {
+      // Check if CLI provider and remote bridge is configured
+      if (cliProviders.includes(provider)) {
+        if (this.remoteCLIBridge && this.remoteCLIHealthy) {
+          return provider;
+        }
+        // Also check local CLI availability
+        if (this.availableProviders.has(provider)) {
+          return provider;
+        }
+      } else if (this.availableProviders.has(provider) || this.configs.get(provider)?.enabled) {
         return provider;
       }
     }
@@ -419,46 +700,74 @@ class LLMProviderHub {
   async chat(request: LLMRequest): Promise<LLMResponse> {
     const startTime = Date.now();
     
-    // Determine provider
+    // Determine provider (respecting routing mode)
     const provider = request.task 
-      ? this.getProviderForTask(request.task, request.complexity)
-      : this.getProviderForTask('general', 'medium');
+      ? this.getProviderForTask(request.task, request.complexity, request.routingMode)
+      : this.getProviderForTask('general', 'medium', request.routingMode);
 
     if (!provider) {
-      throw new Error('No LLM provider available. Please configure at least one provider.');
+      throw new Error('No LLM provider available. Please configure at least one provider or check your routing mode settings.');
     }
 
     const config = this.configs.get(provider)!;
+    const cliProviders: ProviderType[] = ['claude-cli', 'gemini-cli', 'aider'];
     
     try {
       let response: LLMResponse;
 
-      switch (provider) {
-        case 'ollama':
-          response = await this.chatOllama(request, config);
-          break;
-        case 'lmstudio':
-        case 'openai':
-        case 'groq':
-        case 'openrouter':
-        case 'together':
-        case 'mistral':
-          response = await this.chatOpenAICompatible(request, config);
-          break;
-        case 'anthropic':
-          response = await this.chatAnthropic(request, config);
-          break;
-        case 'google':
-          response = await this.chatGoogle(request, config);
-          break;
-        case 'claude-cli':
-          response = await this.chatClaudeCLI(request);
-          break;
-        case 'gemini-cli':
-          response = await this.chatGeminiCLI(request);
-          break;
-        default:
-          throw new Error(`Provider ${provider} not implemented`);
+      // Check if this is a CLI provider and we should use remote bridge
+      if (cliProviders.includes(provider) && this.remoteCLIBridge && this.remoteCLIHealthy) {
+        const cliTool = provider === 'claude-cli' ? 'claude' : provider === 'gemini-cli' ? 'gemini' : 'aider';
+        response = await this.invokeRemoteCLI(cliTool, request);
+      } else {
+        switch (provider) {
+          case 'ollama':
+            response = await this.chatOllama(request, config);
+            break;
+          // OpenAI-compatible providers (use same API format)
+          case 'lmstudio':
+          case 'llamacpp':
+          case 'openai':
+          case 'groq':
+          case 'openrouter':
+          case 'together':
+          case 'mistral':
+          case 'nvidia-nim':
+          case 'fireworks':
+          case 'deepseek':
+          case 'xai':
+          case 'cerebras':
+          case 'sambanova':
+          case 'lepton':
+            response = await this.chatOpenAICompatible(request, config);
+            break;
+          case 'anthropic':
+            response = await this.chatAnthropic(request, config);
+            break;
+          case 'google':
+            response = await this.chatGoogle(request, config);
+            break;
+          case 'cohere':
+            response = await this.chatCohere(request, config);
+            break;
+          case 'ai21':
+            response = await this.chatAI21(request, config);
+            break;
+          case 'replicate':
+            response = await this.chatReplicate(request, config);
+            break;
+          case 'claude-cli':
+            response = await this.chatClaudeCLI(request);
+            break;
+          case 'gemini-cli':
+            response = await this.chatGeminiCLI(request);
+            break;
+          case 'aider':
+            response = await this.chatAider(request);
+            break;
+          default:
+            throw new Error(`Provider ${provider} not implemented`);
+        }
       }
 
       // Update stats
@@ -774,6 +1083,187 @@ class LLMProviderHub {
 
       proc.on('error', (err) => {
         reject(new Error(`Gemini CLI not found: ${err.message}`));
+      });
+    });
+  }
+
+  // ============================================================================
+  // Additional Provider Implementations
+  // ============================================================================
+
+  private async chatCohere(request: LLMRequest, config: ProviderConfig): Promise<LLMResponse> {
+    const startTime = Date.now();
+    const model = request.model || config.defaultModel || 'command-r';
+
+    const response = await fetch(`${config.baseUrl}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        message: request.messages[request.messages.length - 1]?.content || '',
+        chat_history: request.messages.slice(0, -1).map(m => ({
+          role: m.role === 'assistant' ? 'CHATBOT' : 'USER',
+          message: m.content,
+        })),
+        temperature: request.temperature,
+        max_tokens: request.maxTokens,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Cohere error: ${error}`);
+    }
+
+    const data = await response.json() as {
+      text: string;
+      meta?: { tokens?: { input_tokens?: number; output_tokens?: number } };
+    };
+
+    return {
+      content: data.text,
+      model,
+      provider: 'cohere',
+      tokensUsed: data.meta?.tokens ? {
+        prompt: data.meta.tokens.input_tokens || 0,
+        completion: data.meta.tokens.output_tokens || 0,
+        total: (data.meta.tokens.input_tokens || 0) + (data.meta.tokens.output_tokens || 0),
+      } : undefined,
+      latencyMs: Date.now() - startTime,
+    };
+  }
+
+  private async chatAI21(request: LLMRequest, config: ProviderConfig): Promise<LLMResponse> {
+    const startTime = Date.now();
+    const model = request.model || config.defaultModel || 'jamba-1.5-mini';
+
+    const response = await fetch(`${config.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        model,
+        messages: request.messages,
+        temperature: request.temperature,
+        max_tokens: request.maxTokens,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`AI21 error: ${error}`);
+    }
+
+    const data = await response.json() as {
+      choices: Array<{ message: { content: string } }>;
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
+    };
+
+    return {
+      content: data.choices[0]?.message?.content || '',
+      model,
+      provider: 'ai21',
+      tokensUsed: data.usage ? {
+        prompt: data.usage.prompt_tokens || 0,
+        completion: data.usage.completion_tokens || 0,
+        total: data.usage.total_tokens || 0,
+      } : undefined,
+      latencyMs: Date.now() - startTime,
+    };
+  }
+
+  private async chatReplicate(request: LLMRequest, config: ProviderConfig): Promise<LLMResponse> {
+    const startTime = Date.now();
+    const model = request.model || config.defaultModel || 'meta/meta-llama-3-8b-instruct';
+
+    // Replicate uses a prediction API
+    const createResponse = await fetch(`${config.baseUrl}/predictions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Token ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        version: model,
+        input: {
+          prompt: request.messages.map(m => `${m.role}: ${m.content}`).join('\n\n'),
+          temperature: request.temperature || 0.7,
+          max_new_tokens: request.maxTokens || 512,
+        },
+      }),
+    });
+
+    if (!createResponse.ok) {
+      const error = await createResponse.text();
+      throw new Error(`Replicate error: ${error}`);
+    }
+
+    const prediction = await createResponse.json() as { id: string; urls: { get: string } };
+
+    // Poll for completion
+    let result: { status: string; output?: string[] } = { status: 'starting' };
+    const maxAttempts = 60;
+    let attempts = 0;
+
+    while (result.status !== 'succeeded' && result.status !== 'failed' && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      const pollResponse = await fetch(prediction.urls.get, {
+        headers: { 'Authorization': `Token ${config.apiKey}` },
+      });
+      result = await pollResponse.json() as { status: string; output?: string[] };
+      attempts++;
+    }
+
+    if (result.status === 'failed') {
+      throw new Error('Replicate prediction failed');
+    }
+
+    return {
+      content: Array.isArray(result.output) ? result.output.join('') : (result.output || ''),
+      model,
+      provider: 'replicate',
+      latencyMs: Date.now() - startTime,
+    };
+  }
+
+  private async chatAider(request: LLMRequest): Promise<LLMResponse> {
+    const startTime = Date.now();
+    
+    const prompt = request.messages
+      .map(m => `${m.role}: ${m.content}`)
+      .join('\n\n');
+
+    return new Promise((resolve, reject) => {
+      const proc = spawn('aider', ['--message', prompt, '--yes'], {
+        timeout: 120000,
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      proc.stdout.on('data', (data) => { stdout += data.toString(); });
+      proc.stderr.on('data', (data) => { stderr += data.toString(); });
+
+      proc.on('close', (code) => {
+        if (code === 0) {
+          resolve({
+            content: stdout.trim(),
+            model: 'aider',
+            provider: 'aider',
+            latencyMs: Date.now() - startTime,
+          });
+        } else {
+          reject(new Error(`Aider error: ${stderr}`));
+        }
+      });
+
+      proc.on('error', (err) => {
+        reject(new Error(`Aider not found: ${err.message}`));
       });
     });
   }
