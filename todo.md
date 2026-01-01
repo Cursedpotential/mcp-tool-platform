@@ -498,3 +498,18 @@
 - [ ] Image properties analysis (quality, manipulation detection)
 - [ ] Batch processing for multiple images
 - [ ] Integration with forensics pipeline for evidence tagging
+
+
+## Screenshot-to-Structured-Conversation Pipeline (Priority)
+- [ ] OCR extraction with bounding boxes for message regions
+- [ ] Message bubble detection (sender identification via position/color)
+- [ ] Timestamp extraction and normalization
+- [ ] Platform detection (iMessage, WhatsApp, Messenger, Instagram, SMS, etc.)
+- [ ] Read receipt and delivery status detection
+- [ ] Reaction/emoji detection
+- [ ] Conversation threading and assembly logic
+- [ ] EXIF metadata extraction for ordering
+- [ ] Duplicate message detection across screenshots
+- [ ] Gap detection in conversation flow
+- [ ] Structured JSON output for forensics pipeline
+- [ ] Confidence scoring for extracted content
