@@ -79,7 +79,15 @@ export type ToolPermission =
   | 'write:network'
   | 'execute:process'
   | 'access:llm'
-  | 'access:vectordb';
+  | 'access:vectordb'
+  | 'access:graphdb'
+  | 'access:mem0'
+  | 'access:n8n'
+  | 'access:notebooklm'
+  | 'fs_read'
+  | 'fs_write'
+  | 'network'
+  | 'write';
 
 export interface CostEstimate {
   tokens?: number;

@@ -903,3 +903,101 @@
 - [ ] Chroma = Machine-generated embeddings (semantic search, coordination)
 - [ ] Both accessible via MCP tools for any calling agent
 - [ ] Coordination namespace for multi-agent collaboration
+
+
+## =============================================================================
+## COMPREHENSIVE DATABASE & SERVICE ARCHITECTURE
+## =============================================================================
+
+## Vector Database (Configurable)
+- [ ] Qdrant integration (primary option for self-hosted)
+- [ ] pgvector integration (Supabase-native option)
+- [ ] Vector DB config UI (select provider, connection string, collection settings)
+- [ ] Unified vector.* tools that route to configured provider
+- [ ] Migration tools between vector DBs
+
+## Relational Database
+- [ ] PostgreSQL via Supabase (current)
+- [ ] Drizzle ORM integration (already in use)
+- [ ] Connection pooling configuration
+- [ ] Read replica support (future)
+
+## Cache Database (Optional)
+- [ ] Dragonfly integration (Redis-compatible, optional)
+- [ ] Cache config toggle (enable/disable)
+- [ ] Cache invalidation strategies
+- [ ] Session/rate-limit caching
+
+## Graph Database
+- [ ] Neo4j integration (backing store)
+- [ ] Graphiti integration (knowledge graph layer on Neo4j)
+- [ ] Entity relationship extraction → Neo4j
+- [ ] Graph query tools (Cypher via MCP)
+- [ ] Graph visualization export
+
+## Document Storage
+- [ ] Directus integration (headless CMS for full docs)
+- [ ] Asset management via Directus
+- [ ] Directus API wrapper tools
+- [ ] File versioning and metadata
+
+## Shared Context (mem0)
+- [ ] mem0 integration for persistent agent memory
+- [ ] mem0 Docker container on VPS
+- [ ] mem0 MCP tools: memory.add, memory.search, memory.get, memory.delete
+- [ ] Cross-agent context sharing
+- [ ] Memory scoping (per-agent, per-project, global)
+
+## n8n Integration
+- [ ] n8n webhook endpoints for triggering workflows
+- [ ] MCP tools callable from n8n nodes
+- [ ] n8n credential passthrough
+- [ ] Workflow trigger tools (start n8n workflow from MCP)
+- [ ] Event emission to n8n (on job complete, on pattern detected, etc.)
+
+## Headless Browser & LLM Search
+- [ ] Playwright/Puppeteer headless browser tools
+- [ ] browser.navigate, browser.screenshot, browser.extract
+- [ ] LLM-optimized search (Perplexity API, Tavily, SerpAPI)
+- [ ] Search result parsing and structuring
+- [ ] Web scraping with content extraction
+- [ ] JavaScript rendering for SPAs
+
+## StirlingPDF Integration (Docker VPS)
+- [ ] StirlingPDF Docker container setup
+- [ ] PDF operations: merge, split, compress, OCR, convert
+- [ ] pdf.merge, pdf.split, pdf.ocr, pdf.to_images tools
+- [ ] Secure API endpoint exposure (Tailscale/Cloudflare)
+- [ ] Batch PDF processing workflows
+
+## Architecture Summary
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      MCP TOOL SHOP                              │
+├─────────────────────────────────────────────────────────────────┤
+│  INTERNAL (Processing)        │  EXTERNAL (Exposed Tools)       │
+│  ─────────────────────        │  ────────────────────────       │
+│  Chroma (working memory)      │  vector.* → Qdrant/pgvector     │
+│  Drizzle ORM                  │  graph.* → Graphiti/Neo4j       │
+│  Local file cache             │  memory.* → mem0                │
+│                               │  doc.* → Directus               │
+│                               │  pdf.* → StirlingPDF            │
+│                               │  browser.* → Playwright         │
+│                               │  search.* → Tavily/Perplexity   │
+│                               │  n8n.* → n8n webhooks           │
+├─────────────────────────────────────────────────────────────────┤
+│  VPS Docker Stack:                                              │
+│  - StirlingPDF, mem0, Ollama Cloud, CLI Bridge                  │
+│  - Connected via Tailscale/Cloudflare Tunnel                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+
+## Chroma Retention Policy (Internal Working Memory)
+- [ ] TTL-based retention (configurable, default 24-72 hours)
+- [ ] Job-scoped collections with timestamps
+- [ ] Cross-job pattern detection during retention window
+- [ ] Manual clear option for admin
+- [ ] Auto-cleanup scheduler (cron-based)
+- [ ] Retention config in settings UI
+- [ ] Memory pressure monitoring (auto-clear if disk full)
