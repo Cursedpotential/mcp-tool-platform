@@ -513,3 +513,70 @@
 - [ ] Gap detection in conversation flow
 - [ ] Structured JSON output for forensics pipeline
 - [ ] Confidence scoring for extracted content
+
+
+## MCP Tool Architecture - COMPLETE CATALOG
+
+### Atomic Tools to Implement:
+- [ ] ocr.extract_text
+- [ ] ocr.extract_from_pdf
+- [ ] ocr.detect_text_regions
+- [ ] ocr.detect_handwriting
+- [ ] screenshot.detect_platform
+- [ ] screenshot.extract_messages
+- [ ] screenshot.extract_timestamps
+- [ ] screenshot.detect_reactions
+- [ ] screenshot.detect_read_receipts
+- [ ] screenshot.extract_metadata
+- [ ] content.analyze_sentiment
+- [ ] content.detect_toxicity
+- [ ] content.detect_manipulation
+- [ ] content.extract_entities
+- [ ] content.detect_pii
+- [ ] content.redact_pii
+- [ ] content.classify_intent
+- [ ] content.detect_language
+- [ ] image.detect_harmful_content
+- [ ] image.detect_faces
+- [ ] image.detect_objects
+- [ ] image.analyze_quality
+- [ ] image.compare_images
+- [ ] forensics.analyze_patterns
+- [ ] forensics.detect_gaslighting
+- [ ] forensics.detect_coercive_control
+- [ ] forensics.detect_love_bombing
+- [ ] forensics.score_severity
+- [ ] forensics.generate_timeline
+- [ ] forensics.analyze_hurtlex
+- [ ] forensics.detect_contradictions
+- [ ] llm.chat
+- [ ] llm.embed
+- [ ] llm.summarize
+- [ ] llm.classify
+- [ ] llm.extract_structured
+- [ ] document.parse
+- [ ] document.chunk
+- [ ] document.extract_tables
+- [ ] document.extract_forms
+- [ ] schema.detect
+- [ ] schema.validate
+- [ ] schema.transform
+- [ ] schema.resolve_platform
+
+### Workflow Tools to Implement:
+- [ ] workflow.screenshot_to_conversation
+- [ ] workflow.analyze_communication
+- [ ] workflow.process_evidence_batch
+- [ ] workflow.extract_and_classify
+- [ ] workflow.legal_evidence_package
+
+### Tool Infrastructure:
+- [ ] Design atomic tool registration pattern with JSON Schema
+- [ ] Create workflow tool pattern for orchestrated pipelines
+- [ ] workflow.screenshot_to_conversation (full screenshot parsing pipeline)
+- [ ] workflow.analyze_communication (full forensics pipeline)
+- [ ] workflow.process_evidence_batch (batch processing with all analysis)
+- [ ] workflow.extract_and_classify (OCR + entity extraction + classification)
+- [ ] Ensure all tools return structured, parseable JSON
+- [ ] Add confidence scores to all tool outputs
+- [ ] Add warnings/errors array to all tool outputs
