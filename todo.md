@@ -612,3 +612,184 @@
 - [ ] Similarity search for retrieval
 - [ ] Filtered queries (by file, date range, content type)
 - [ ] Collection cleanup and maintenance
+
+
+## Gap Analysis - P0 Critical (Blocks Core Functionality)
+
+### Human-in-the-Loop Gating (MISSING)
+- [ ] Approval request system with `requires_approval` flag
+- [ ] Preview/diff generation for destructive operations
+- [ ] Rollback capability for approved operations
+- [ ] `approve(approval_id, option)` endpoint
+- [ ] Audit trail storage (JSONL or SQLite)
+- [ ] Approval timeout and expiration
+- [ ] Multi-approver support for sensitive operations
+
+### Large-Doc Streaming (PARTIAL)
+- [ ] Streaming XML parser (SAX/iterparse)
+- [ ] Streaming HTML parser
+- [ ] Memory-efficient processing (never load full file)
+- [ ] Stable chunk IDs (content-addressed)
+
+## Gap Analysis - P1 High Priority
+
+### Vector Store Integration (MISSING)
+- [ ] Chroma integration (pluggable)
+- [ ] FAISS integration (pluggable)
+- [ ] Vector store abstraction layer
+- [ ] Collection management UI
+
+### Hot-Reload Plugins (MISSING)
+- [ ] Watch plugins/ directory for changes
+- [ ] Full plugin manifest schema (version, dependencies, runtime)
+- [ ] Plugin dependency resolution
+- [ ] Plugin sandboxing/isolation
+
+### Reliability Patterns (PARTIAL)
+- [ ] Retry logic with exponential backoff
+- [ ] Circuit breaker pattern
+- [ ] Rate limiting per client/API key
+- [ ] Health check endpoints
+- [ ] Graceful degradation
+
+## Gap Analysis - P2 Medium Priority
+
+### Remote Runner Improvements
+- [ ] gRPC transport for remote runners
+- [ ] General tool routing rules (not just LLM)
+- [ ] Runner health checks and automatic failover
+- [ ] Load balancing across multiple runners
+
+### Large-Doc Pipeline Enhancements
+- [ ] Hierarchical summarization (chunk→section→doc)
+- [ ] Citation tracking through summary levels
+- [ ] BM25 retrieval alongside vector search
+
+### Storage Enhancements
+- [ ] Full lineage/provenance tracking
+- [ ] Transformation history
+
+### Observability
+- [ ] Metrics export (Prometheus/OpenTelemetry)
+
+## Gap Analysis - P3 Low Priority
+
+### Documentation
+- [ ] CHANGELOG.md with version history
+- [ ] DEPLOYMENT.md with deployment instructions
+- [ ] API documentation (OpenAPI/Swagger)
+- [ ] Architecture diagrams
+- [ ] Contributing guidelines
+
+### NLP Enhancements
+- [ ] Project-level NLP provider configuration
+- [ ] Annotation/review loop for NLP results
+- [ ] NLP result caching
+
+
+## ============================================
+## PUNCH LIST GAPS (Original Requirements)
+## ============================================
+
+## Documentation Deliverables (MISSING)
+- [ ] CHANGELOG.md (Keep a Changelog format; Unreleased + v0.1.0)
+- [ ] DEPLOYMENT.md (local/hybrid/remote, secrets/auth/TLS, observability, backup/rollback, hardening checklist)
+
+## Runner/Worker Swarm Gaps
+- [ ] Retry logic with exponential backoff
+- [ ] Per-task budgets (max bytes/time)
+- [ ] gRPC transport for remote runners
+- [ ] Checkpoint/resume improvements
+- [ ] Queue depth metrics
+
+## Database Schema Gaps (Document Intelligence)
+- [ ] sections table (id, doc_id, parent_id, title, level, start_offset, end_offset)
+- [ ] chunks table (id, section_id, content_hash, start_offset, end_offset, token_count)
+- [ ] spans table (id, chunk_id, type, start_offset, end_offset, metadata)
+- [ ] summaries table (id, target_type, target_id, level, abstract, key_claims, compression_ratio)
+- [ ] entities table (id, chunk_id, type, value, start_offset, end_offset, confidence)
+- [ ] keywords table (id, chunk_id, term, score, method)
+- [ ] findings table (id, doc_id, type, severity, description, citations)
+- [ ] approvals table (id, action_type, target, plan_json, diff_preview, status, approver, created_at, resolved_at)
+
+## Search Plugin Gaps
+- [ ] search.ugrep implementation
+- [ ] search.smart (auto-select best engine)
+- [ ] Fallback to JS search if binaries missing
+
+## NLP Plugin Gaps
+- [ ] nlp.make_outline (generate document outline)
+- [ ] Human review/annotation loop stored in DB
+- [ ] Per-project NLP provider configuration
+
+## ML Plugin Gaps
+- [ ] ml.classify(text_ref, labels) -> probabilities
+- [ ] Optional GPU remote runner configuration
+
+## Rules Engine Plugin (ENTIRE PLUGIN MISSING)
+- [ ] rules.load_set(set_name) - Load rule set from YAML/JSON
+- [ ] rules.list_sets() - List available rule sets
+- [ ] rules.describe_set(set_name) - Get rule set details
+- [ ] rules.evaluate(text_ref, set_name) - Evaluate text against rules
+- [ ] rules.suggest_set(text_ref) - Suggest applicable rule sets
+- [ ] YAML/JSON rule set format definition
+- [ ] Rule types: regex, keywords, path patterns, structural hints
+- [ ] Rule actions: move, delete, merge, label (all require approval)
+
+## Diff/Merge/FS Gaps
+- [ ] merge.propose -> patch + rationale + risks
+- [ ] fs.move_path (with approval gating)
+- [ ] fs.delete_path (with approval gating)
+- [ ] fs.write_file approval gating
+
+## Human-in-the-Loop Gating (ENTIRE SYSTEM MISSING)
+- [ ] Approval request model with approval_id
+- [ ] PLAN generation for destructive actions
+- [ ] Preview/diff generation
+- [ ] Rollback capability
+- [ ] approve(approval_id, option) endpoint
+- [ ] reject(approval_id, reason) endpoint
+- [ ] Approval timeout and expiration
+- [ ] Interactive CLI review UI
+- [ ] Batch approval support
+- [ ] Audit trail (JSONL or SQLite)
+
+## Hierarchical Summarization Pipeline (MISSING)
+- [ ] Chunk-level map: summarize individual chunks
+- [ ] Section-level reduce: combine chunk summaries
+- [ ] Doc-level reduce: combine section summaries
+- [ ] Corpus-level reduce: combine doc summaries (optional)
+- [ ] Summary JSON schema with: abstract, key_claims, entities, keywords, open_questions, risks, citations, compression_stats
+- [ ] Citation format: {ref, chunk_id, start_offset, end_offset, page?, line_range?}
+
+## Retrieval System (MISSING)
+- [ ] BM25 index creation and storage
+- [ ] BM25 indexing fields: title, headings, body, snippets
+- [ ] retrieve_spans(question, scope, top_k, filters) API
+- [ ] retrieve_outline(doc_ref) API
+- [ ] retrieve_section(doc_ref, section_id, paging) API
+- [ ] Context stitching algorithm
+- [ ] Max-bytes/tokens rules for context assembly
+- [ ] Hybrid retrieval (BM25 + embeddings)
+
+## Document Segmentation Gaps
+- [ ] Structure-aware segmentation (headings/pages/blocks first)
+- [ ] Semantic chunking within structure
+- [ ] Stable chunk IDs (content_hash + structural_path)
+- [ ] Versioning strategy for normalization/OCR changes
+- [ ] Sizing rules (tokens/chars/semantic boundaries)
+- [ ] Overlap strategy configuration
+
+## Observability Gaps
+- [ ] Queue depth metrics
+- [ ] Bytes processed metrics
+- [ ] Cache hit metrics
+- [ ] Health check endpoints (/health, /ready)
+- [ ] Prometheus/OpenTelemetry export
+
+## Processing Pipeline Contracts (MISSING)
+- [ ] convert_to_markdown output contract (JSON schema)
+- [ ] ocr output contract (JSON schema)
+- [ ] clean_normalize output contract (JSON schema)
+- [ ] segment output contract (JSON schema)
+- [ ] Task graph checkpoint markers format
