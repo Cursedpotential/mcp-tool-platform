@@ -48,6 +48,9 @@ export default function Config() {
   const [searchQuery, setSearchQuery] = useState('');
   const [newPatternOpen, setNewPatternOpen] = useState(false);
   const [newBehaviorOpen, setNewBehaviorOpen] = useState(false);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [importContent, setImportContent] = useState('');
+  const [importMerge, setImportMerge] = useState(true);
   
   const { data: patterns, isLoading: patternsLoading, refetch: refetchPatterns } = trpc.config.listPatterns.useQuery();
   const { data: behaviors, isLoading: behaviorsLoading, refetch: refetchBehaviors } = trpc.config.listBehaviors.useQuery();
@@ -87,6 +90,44 @@ export default function Config() {
     },
     onError: (err) => toast.error(err.message),
   });
+
+  const importAllMutation = trpc.config.importAll.useMutation({
+    onSuccess: (result) => {
+      toast.success(`Imported: ${result.imported.patterns} patterns, ${result.imported.behaviors} behaviors, ${result.imported.dictionaries} dictionaries`);
+      if (result.errors.length > 0) {
+        toast.warning(`${result.errors.length} errors during import`);
+      }
+      setImportDialogOpen(false);
+      setImportContent('');
+      refetchPatterns();
+      refetchBehaviors();
+      refetchDictionaries();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  const handleImport = () => {
+    try {
+      const config = JSON.parse(importContent);
+      importAllMutation.mutate({
+        config,
+        options: { merge: importMerge, overwrite: !importMerge },
+      });
+    } catch (e) {
+      toast.error('Invalid JSON format');
+    }
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setImportContent(event.target?.result as string);
+      };
+      reader.readAsText(file);
+    }
+  };
 
   const isLoading = authLoading || patternsLoading || behaviorsLoading || dictionariesLoading;
 
@@ -147,10 +188,66 @@ export default function Config() {
               <Download className="h-4 w-4 mr-2" />
               Export All
             </Button>
-            <Button variant="outline" size="sm">
-              <Upload className="h-4 w-4 mr-2" />
-              Import
-            </Button>
+            <Dialog open={importDialogOpen} onOpenChange={setImportDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Import Configuration</DialogTitle>
+                  <DialogDescription>
+                    Import patterns, behaviors, and dictionaries from a JSON file or paste content directly
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Upload File</Label>
+                    <Input
+                      type="file"
+                      accept=".json"
+                      onChange={handleFileUpload}
+                      className="cursor-pointer"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Or Paste JSON Content</Label>
+                    <Textarea
+                      value={importContent}
+                      onChange={(e) => setImportContent(e.target.value)}
+                      placeholder='{"patterns": [], "behaviors": [], "dictionaries": []}'
+                      className="font-mono text-sm h-[200px]"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                    <div>
+                      <Label htmlFor="merge-mode">Merge Mode</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {importMerge ? 'Add to existing definitions' : 'Replace all existing definitions'}
+                      </p>
+                    </div>
+                    <Switch
+                      id="merge-mode"
+                      checked={importMerge}
+                      onCheckedChange={setImportMerge}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setImportDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleImport}
+                    disabled={!importContent || importAllMutation.isPending}
+                  >
+                    {importAllMutation.isPending ? 'Importing...' : 'Import'}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
 

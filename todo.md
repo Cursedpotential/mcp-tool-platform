@@ -390,3 +390,34 @@
 ## High Priority from Audit (P1)
 - [x] Implement tool testing UI (now functional with parameter inputs and result display)
 - [ ] Add import functionality to Config page
+
+
+## ETL & Ingestion Pipeline Integration
+- [ ] Forensics analysis runs during ETL ingestion (not standalone UI)
+- [ ] Surface-level pattern tagging for meta-analysis in Supabase
+- [ ] Support multi-platform corpus (conversations across backups/platforms)
+
+## Import/Export Features
+- [ ] Config page import functionality (upload JSON/YAML configs)
+- [ ] Import MCP config files (claude_desktop_config.json, etc.)
+- [ ] Auto-discover MCPs from imported configs for migration
+
+## AI Schema Detection
+- [ ] AI-assisted schema detection for unknown file formats
+- [ ] Call LLM to analyze and identify data structures
+- [ ] Generate schema resolvers for new formats
+
+## Platform Customization (Claude/Gemini/etc)
+- [ ] Platform-specific customization UI (Claude plugins vs Gemini extensions)
+- [ ] AI integration to fetch/read latest platform documentation
+- [ ] Context7 or documentation service integration
+- [ ] Customizable prompts for building platform extensions
+- [ ] Template generation for each platform's extension format
+
+
+## Document Parsing (Unstructured Library)
+- [ ] Integrate Unstructured library for multi-format document parsing
+- [ ] Support PDF, DOCX, HTML, PPTX, images, and more
+- [ ] Auto-detect document type and apply appropriate parser
+- [ ] Extract structured elements (tables, headers, lists, images)
+- [ ] Chunk documents intelligently for embedding/analysis
