@@ -1013,3 +1013,30 @@
 - [x] Create vitest tests for new plugin handlers
 - [x] All 61 tests passing
 
+
+## Agent-Friendly MCP Gateway Enhancements
+- [ ] Add listTools endpoint for full tool catalog discovery
+- [ ] Add listCategories endpoint for category-based navigation
+- [ ] Add getToolsByCategory endpoint for grouped discovery
+- [ ] Add workflow templates discovery endpoint
+- [ ] Add semantic tool routing (match intent to best tool)
+- [ ] Add tool usage examples in ToolSpec
+- [ ] Add related tools suggestions in describeTool response
+- [ ] Add workflow composition endpoint (chain tools)
+- [ ] Add tool capability matrix for agent planning
+- [ ] Enhance tool descriptions with when-to-use guidance
+
+
+## Phase 2 - Critical Infrastructure (User Requested)
+- [x] Database Connection UI - Settings for Neo4j, Supabase, Vector DB endpoints with connection testing
+- [x] Multi-service orchestration - Redis queue, worker coordination (in-memory fallback implemented)
+- [x] Agent-friendly gateway: listTools endpoint for full catalog discovery
+- [x] Agent-friendly gateway: listCategories endpoint for category-based navigation
+- [x] Agent-friendly gateway: getToolsByCategory endpoint for grouped discovery
+- [x] Agent-friendly gateway: workflow templates discovery endpoint (listWorkflows, getWorkflow)
+- [x] Agent-friendly gateway: semantic tool routing (match intent to best tool)
+- [x] Agent-friendly gateway: related tools suggestions (getRelatedTools endpoint)
+- [x] Agent-friendly gateway: workflow composition endpoint (chain tools)
+- [x] Agent-friendly gateway: tool capability matrix for agent planning
+- [x] Agent-friendly gateway: enhance tool descriptions with when-to-use guidance
+

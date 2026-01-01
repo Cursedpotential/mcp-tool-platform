@@ -144,6 +144,7 @@ export default function Settings() {
         <Tabs defaultValue="providers" className="space-y-4">
           <TabsList>
             <TabsTrigger value="providers">LLM Providers</TabsTrigger>
+            <TabsTrigger value="databases">Databases</TabsTrigger>
             <TabsTrigger value="routing">Task Routing</TabsTrigger>
             <TabsTrigger value="system">System</TabsTrigger>
           </TabsList>
@@ -329,6 +330,179 @@ export default function Settings() {
                       </div>
                     );
                   })}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="databases" className="space-y-6">
+            {/* Neo4j Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Server className="h-5 w-5" />
+                  Neo4j Graph Database
+                </CardTitle>
+                <CardDescription>Configure Neo4j connection for entity relationships and knowledge graphs</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="neo4j-uri">URI</Label>
+                      <Input
+                        id="neo4j-uri"
+                        placeholder="neo4j://localhost:7687"
+                        defaultValue=""
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="neo4j-database">Database</Label>
+                      <Input
+                        id="neo4j-database"
+                        placeholder="neo4j"
+                        defaultValue="neo4j"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="neo4j-username">Username</Label>
+                      <Input
+                        id="neo4j-username"
+                        placeholder="neo4j"
+                        defaultValue=""
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="neo4j-password">Password</Label>
+                      <Input
+                        id="neo4j-password"
+                        type="password"
+                        placeholder="••••••••"
+                        defaultValue=""
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm">
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Test Connection
+                    </Button>
+                    <Button size="sm">
+                      <Save className="h-4 w-4 mr-2" />
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Supabase Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Cloud className="h-5 w-5" />
+                  Supabase
+                </CardTitle>
+                <CardDescription>Configure Supabase connection for structured data and authentication</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="supabase-url">Project URL</Label>
+                    <Input
+                      id="supabase-url"
+                      placeholder="https://your-project.supabase.co"
+                      defaultValue=""
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="supabase-anon-key">Anon Key</Label>
+                    <Input
+                      id="supabase-anon-key"
+                      type="password"
+                      placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      defaultValue=""
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="supabase-service-key">Service Role Key (Optional)</Label>
+                    <Input
+                      id="supabase-service-key"
+                      type="password"
+                      placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                      defaultValue=""
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm">
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Test Connection
+                    </Button>
+                    <Button size="sm">
+                      <Save className="h-4 w-4 mr-2" />
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Vector Database Settings */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5" />
+                  Vector Database
+                </CardTitle>
+                <CardDescription>Configure vector database for embeddings and semantic search</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="vectordb-provider">Provider</Label>
+                    <Input
+                      id="vectordb-provider"
+                      placeholder="chroma, qdrant, pinecone, or weaviate"
+                      defaultValue="chroma"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="vectordb-url">URL</Label>
+                    <Input
+                      id="vectordb-url"
+                      placeholder="http://localhost:8000"
+                      defaultValue=""
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="vectordb-api-key">API Key (if required)</Label>
+                    <Input
+                      id="vectordb-api-key"
+                      type="password"
+                      placeholder="Optional for cloud providers"
+                      defaultValue=""
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="vectordb-collection">Default Collection</Label>
+                    <Input
+                      id="vectordb-collection"
+                      placeholder="preprocessing_embeddings"
+                      defaultValue="preprocessing_embeddings"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm">
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Test Connection
+                    </Button>
+                    <Button size="sm">
+                      <Save className="h-4 w-4 mr-2" />
+                      Save
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

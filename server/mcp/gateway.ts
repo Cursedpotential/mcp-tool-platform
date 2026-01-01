@@ -23,6 +23,7 @@ import type {
   ContentRef,
   ApiResponse,
 } from '../../shared/mcp-types';
+import type { WorkflowTemplate } from '../../shared/workflow-types';
 import { nanoid } from 'nanoid';
 
 // ============================================================================
@@ -316,6 +317,389 @@ export const mcpGatewayRouter = router({
           success: false,
           error: {
             code: 'LIST_REFS_FAILED',
+            message: error instanceof Error ? error.message : 'Unknown error',
+          },
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+          },
+        };
+      }
+    }),
+
+  /**
+   * list_tools - List all available tools (full catalog)
+   * 
+   * Returns complete tool catalog for agent discovery.
+   * Agents can browse all tools without needing to search.
+   */
+  listTools: publicProcedure
+    .input(z.object({
+      category: z.string().optional(),
+      limit: z.number().int().min(1).max(500).default(100),
+      offset: z.number().int().min(0).default(0),
+    }).optional())
+    .query(async ({ input }): Promise<ApiResponse<{ tools: ToolCard[]; total: number }>> => {
+      const traceId = nanoid();
+      const startTime = Date.now();
+
+      try {
+        const registry = await getPluginRegistry();
+        let tools: ToolSpec[];
+
+        if (input?.category) {
+          tools = registry.getToolsByCategory(input.category);
+        } else {
+          // Get all tools from all categories
+          const categories = registry.getCategories();
+          tools = categories.flatMap(cat => registry.getToolsByCategory(cat));
+        }
+
+        const total = tools.length;
+        const offset = input?.offset || 0;
+        const limit = input?.limit || 100;
+        const paged = tools.slice(offset, offset + limit);
+
+        const cards: ToolCard[] = paged.map((tool) => ({
+          name: tool.name,
+          category: tool.category,
+          description: tool.description,
+          tags: tool.tags,
+        }));
+
+        return {
+          success: true,
+          data: { tools: cards, total },
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+            cached: false,
+          },
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: {
+            code: 'LIST_TOOLS_FAILED',
+            message: error instanceof Error ? error.message : 'Unknown error',
+          },
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+          },
+        };
+      }
+    }),
+
+  /**
+   * list_categories - List all tool categories
+   * 
+   * Returns available categories for category-based navigation.
+   */
+  listCategories: publicProcedure
+    .query(async (): Promise<ApiResponse<{ categories: Array<{ name: string; count: number }> }>> => {
+      const traceId = nanoid();
+      const startTime = Date.now();
+
+      try {
+        const registry = await getPluginRegistry();
+        const categories = registry.getCategories();
+        
+        const categoriesWithCounts = categories.map(cat => ({
+          name: cat,
+          count: registry.getToolsByCategory(cat).length,
+        }));
+
+        return {
+          success: true,
+          data: { categories: categoriesWithCounts },
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+          },
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: {
+            code: 'LIST_CATEGORIES_FAILED',
+            message: error instanceof Error ? error.message : 'Unknown error',
+          },
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+          },
+        };
+      }
+    }),
+
+  /**
+   * get_tools_by_category - Get all tools in a specific category
+   */
+  getToolsByCategory: publicProcedure
+    .input(z.object({ category: z.string() }))
+    .query(async ({ input }): Promise<ApiResponse<ToolCard[]>> => {
+      const traceId = nanoid();
+      const startTime = Date.now();
+
+      try {
+        const registry = await getPluginRegistry();
+        const tools = registry.getToolsByCategory(input.category);
+
+        const cards: ToolCard[] = tools.map((tool) => ({
+          name: tool.name,
+          category: tool.category,
+          description: tool.description,
+          tags: tool.tags,
+        }));
+
+        return {
+          success: true,
+          data: cards,
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+          },
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: {
+            code: 'GET_TOOLS_BY_CATEGORY_FAILED',
+            message: error instanceof Error ? error.message : 'Unknown error',
+          },
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+          },
+        };
+      }
+    }),
+
+  /**
+   * get_related_tools - Get tools related to a specific tool
+   * 
+   * Returns tools that are commonly used together or serve similar purposes.
+   */
+  getRelatedTools: publicProcedure
+    .input(z.object({ toolName: z.string(), limit: z.number().int().min(1).max(20).default(5) }))
+    .query(async ({ input }): Promise<ApiResponse<ToolCard[]>> => {
+      const traceId = nanoid();
+      const startTime = Date.now();
+
+      try {
+        const registry = await getPluginRegistry();
+        const tool = registry.getTool(input.toolName);
+
+        if (!tool) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: `Tool not found: ${input.toolName}`,
+          });
+        }
+
+        // Find related tools by:
+        // 1. Same category
+        // 2. Shared tags
+        const categoryTools = registry.getToolsByCategory(tool.category)
+          .filter(t => t.name !== input.toolName);
+
+        const scored = categoryTools.map(t => {
+          let score = 1; // Same category baseline
+          
+          // Add points for shared tags
+          const sharedTags = tool.tags.filter(tag => t.tags.includes(tag));
+          score += sharedTags.length * 2;
+
+          return { tool: t, score };
+        });
+
+        scored.sort((a, b) => b.score - a.score);
+        const related = scored.slice(0, input.limit).map(s => s.tool);
+
+        const cards: ToolCard[] = related.map((t) => ({
+          name: t.name,
+          category: t.category,
+          description: t.description,
+          tags: t.tags,
+        }));
+
+        return {
+          success: true,
+          data: cards,
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+          },
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        return {
+          success: false,
+          error: {
+            code: 'GET_RELATED_TOOLS_FAILED',
+            message: error instanceof Error ? error.message : 'Unknown error',
+          },
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+          },
+        };
+      }
+    }),
+
+  /**
+   * list_workflows - List available workflow templates
+   * 
+   * Returns pre-built tool chains for common tasks.
+   */
+  listWorkflows: publicProcedure
+    .input(z.object({ category: z.string().optional() }).optional())
+    .query(async ({ input }): Promise<ApiResponse<WorkflowTemplate[]>> => {
+      const traceId = nanoid();
+      const startTime = Date.now();
+
+      try {
+        const { WORKFLOW_TEMPLATES } = await import('../../shared/workflow-types');
+        
+        let workflows = WORKFLOW_TEMPLATES;
+        if (input?.category) {
+          workflows = workflows.filter(w => w.category === input.category);
+        }
+
+        return {
+          success: true,
+          data: workflows,
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+          },
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: {
+            code: 'LIST_WORKFLOWS_FAILED',
+            message: error instanceof Error ? error.message : 'Unknown error',
+          },
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+          },
+        };
+      }
+    }),
+
+  /**
+   * get_workflow - Get a specific workflow template
+   */
+  getWorkflow: publicProcedure
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input }): Promise<ApiResponse<WorkflowTemplate | null>> => {
+      const traceId = nanoid();
+      const startTime = Date.now();
+
+      try {
+        const { WORKFLOW_TEMPLATES } = await import('../../shared/workflow-types');
+        const workflow = WORKFLOW_TEMPLATES.find(w => w.id === input.id);
+
+        return {
+          success: true,
+          data: workflow || null,
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+          },
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: {
+            code: 'GET_WORKFLOW_FAILED',
+            message: error instanceof Error ? error.message : 'Unknown error',
+          },
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+          },
+        };
+      }
+    }),
+
+  /**
+   * semantic_route - Match user intent to best tool or workflow
+   * 
+   * Helps agents discover the right tool without knowing exact names.
+   */
+  semanticRoute: publicProcedure
+    .input(z.object({ intent: z.string() }))
+    .query(async ({ input }): Promise<ApiResponse<{
+      recommendedTool: string;
+      alternativeTools?: string[];
+      workflow?: string;
+      confidence: number;
+    }>> => {
+      const traceId = nanoid();
+      const startTime = Date.now();
+
+      try {
+        const { SEMANTIC_ROUTES } = await import('../../shared/workflow-types');
+        
+        const query = input.intent.toLowerCase();
+        
+        // Find best matching route
+        let bestMatch: typeof SEMANTIC_ROUTES[0] | null = null;
+        let bestScore = 0;
+
+        for (const route of SEMANTIC_ROUTES) {
+          let score = 0;
+          
+          // Check if intent matches
+          if (query.includes(route.intent.replace(/_/g, ' '))) {
+            score += 10;
+          }
+
+          // Check keyword matches
+          for (const keyword of route.keywords) {
+            if (query.includes(keyword)) {
+              score += 2;
+            }
+          }
+
+          if (score > bestScore) {
+            bestScore = score;
+            bestMatch = route;
+          }
+        }
+
+        if (!bestMatch) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'No matching tool found for intent',
+          });
+        }
+
+        const confidence = Math.min(bestScore / 10, 1.0);
+
+        return {
+          success: true,
+          data: {
+            recommendedTool: bestMatch.recommendedTool,
+            alternativeTools: bestMatch.alternativeTools,
+            workflow: bestMatch.workflow,
+            confidence,
+          },
+          meta: {
+            traceId,
+            executionTimeMs: Date.now() - startTime,
+          },
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        return {
+          success: false,
+          error: {
+            code: 'SEMANTIC_ROUTE_FAILED',
             message: error instanceof Error ? error.message : 'Unknown error',
           },
           meta: {
