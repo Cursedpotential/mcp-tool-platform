@@ -850,6 +850,9 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
       properties: {
         content: { type: 'string' },
         metadata: { type: 'object' },
+        userId: { type: 'string' },
+        agentId: { type: 'string' },
+        projectId: { type: 'string' },
         scope: { type: 'string', enum: ['agent', 'project', 'user', 'global'] },
       },
       required: ['content'],
@@ -868,6 +871,9 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
       type: 'object',
       properties: {
         query: { type: 'string' },
+        userId: { type: 'string' },
+        agentId: { type: 'string' },
+        projectId: { type: 'string' },
         scope: { type: 'string' },
         limit: { type: 'number', default: 10 },
       },
@@ -889,6 +895,7 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
         fromAgentId: { type: 'string' },
         toAgentId: { type: 'string' },
         query: { type: 'string' },
+        limit: { type: 'number' },
       },
       required: ['fromAgentId', 'toAgentId', 'query'],
     },
@@ -1030,6 +1037,63 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
       required: ['url'],
     },
     outputSchema: { type: 'object', properties: { screenshot: { type: 'string' }, format: { type: 'string' } } },
+    permissions: ['network'],
+  });
+
+  registry.registerTool({
+    name: 'browser.extract',
+    category: 'browser',
+    description: 'Extract structured content from a webpage',
+    version: '1.0.0',
+    tags: ['browser', 'extract', 'scrape', 'content'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string' },
+        selectors: { type: 'object', description: 'Map of field name to CSS selector' },
+        format: { type: 'string', enum: ['text', 'html', 'markdown'] },
+      },
+      required: ['url'],
+    },
+    outputSchema: { type: 'object', properties: { extracted: { type: 'object' } } },
+    permissions: ['network'],
+  });
+
+  registry.registerTool({
+    name: 'browser.click',
+    category: 'browser',
+    description: 'Click an element on a webpage',
+    version: '1.0.0',
+    tags: ['browser', 'click', 'interaction'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string' },
+        selector: { type: 'string' },
+        waitForNavigation: { type: 'boolean', default: true },
+      },
+      required: ['url', 'selector'],
+    },
+    outputSchema: { type: 'object', properties: { success: { type: 'boolean' }, newUrl: { type: 'string' } } },
+    permissions: ['network'],
+  });
+
+  registry.registerTool({
+    name: 'browser.fill',
+    category: 'browser',
+    description: 'Fill and optionally submit a form on a webpage',
+    version: '1.0.0',
+    tags: ['browser', 'form', 'fill', 'interaction'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string' },
+        fields: { type: 'object', description: 'Map of CSS selector to value' },
+        submitSelector: { type: 'string' },
+      },
+      required: ['url', 'fields'],
+    },
+    outputSchema: { type: 'object', properties: { success: { type: 'boolean' }, resultUrl: { type: 'string' } } },
     permissions: ['network'],
   });
 
@@ -1188,7 +1252,7 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
       type: 'object',
       properties: {
         question: { type: 'string' },
-        notebookId: { type: 'string' },
+        notebook_url: { type: 'string' },
       },
       required: ['question'],
     },
@@ -1205,15 +1269,202 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
     inputSchema: {
       type: 'object',
       properties: {
-        content: { type: 'string' },
-        title: { type: 'string' },
-        notebookId: { type: 'string' },
-        tags: { type: 'array', items: { type: 'string' } },
+        url: { type: 'string' },
+        name: { type: 'string' },
+        tags: { type: 'string', description: 'Comma-separated tags' },
+        description: { type: 'string' },
       },
-      required: ['content'],
+      required: ['url', 'name'],
     },
     outputSchema: { type: 'object', properties: { added: { type: 'boolean' }, sourceId: { type: 'string' } } },
     permissions: ['access:notebooklm', 'write'],
+  });
+
+  registry.registerTool({
+    name: 'notebooklm.list',
+    category: 'integration',
+    description: 'List notebooks in the NotebookLM library',
+    version: '1.0.0',
+    tags: ['notebooklm', 'list', 'knowledge'],
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+    outputSchema: { type: 'object', properties: { notebooks: { type: 'array' } } },
+    permissions: ['access:notebooklm'],
+  });
+
+  registry.registerTool({
+    name: 'notebooklm.select',
+    category: 'integration',
+    description: 'Select a notebook by name or URL',
+    version: '1.0.0',
+    tags: ['notebooklm', 'select', 'knowledge'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        identifier: { type: 'string' },
+      },
+      required: ['identifier'],
+    },
+    outputSchema: { type: 'object', properties: { success: { type: 'boolean' } } },
+    permissions: ['access:notebooklm'],
+  });
+
+  registry.registerTool({
+    name: 'notebooklm.search',
+    category: 'integration',
+    description: 'Search notebooks by tags or name',
+    version: '1.0.0',
+    tags: ['notebooklm', 'search', 'knowledge'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        query: { type: 'string' },
+      },
+      required: ['query'],
+    },
+    outputSchema: { type: 'object', properties: { notebooks: { type: 'array' } } },
+    permissions: ['access:notebooklm'],
+  });
+
+  registry.registerTool({
+    name: 'notebooklm.remove',
+    category: 'integration',
+    description: 'Remove a notebook from the library',
+    version: '1.0.0',
+    tags: ['notebooklm', 'remove', 'knowledge'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        identifier: { type: 'string' },
+      },
+      required: ['identifier'],
+    },
+    outputSchema: { type: 'object', properties: { success: { type: 'boolean' } } },
+    permissions: ['access:notebooklm', 'write'],
+  });
+
+  registry.registerTool({
+    name: 'notebooklm.stats',
+    category: 'integration',
+    description: 'Get NotebookLM library stats',
+    version: '1.0.0',
+    tags: ['notebooklm', 'stats', 'knowledge'],
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+    outputSchema: { type: 'object', properties: { totalNotebooks: { type: 'number' }, totalQueries: { type: 'number' }, tagCounts: { type: 'object' } } },
+    permissions: ['access:notebooklm'],
+  });
+
+  // ============================================================================
+  // LLAMAINDEX (TYPESCRIPT)
+  // ============================================================================
+
+  registry.registerTool({
+    name: 'llamaindex.chunk_text',
+    category: 'llamaindex',
+    description: 'Chunk text with LlamaIndex sentence splitter',
+    version: '1.0.0',
+    tags: ['llamaindex', 'chunk', 'split', 'document'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+        chunkSize: { type: 'number' },
+        chunkOverlap: { type: 'number' },
+      },
+      required: ['text'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        chunks: { type: 'array' },
+        count: { type: 'number' },
+      },
+    },
+    permissions: [],
+  });
+
+  // ============================================================================
+  // LANGCHAIN / LANGGRAPH
+  // ============================================================================
+
+  registry.registerTool({
+    name: 'langchain.format_prompt',
+    category: 'langchain',
+    description: 'Format a prompt template with variables using LangChain',
+    version: '1.0.0',
+    tags: ['langchain', 'prompt', 'template', 'format'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        template: { type: 'string' },
+        variables: { type: 'object', additionalProperties: { type: 'string' } },
+      },
+      required: ['template'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        prompt: { type: 'string' },
+      },
+    },
+    permissions: [],
+  });
+
+  registry.registerTool({
+    name: 'langchain.split_text',
+    category: 'langchain',
+    description: 'Split text into chunks using LangChain text splitters',
+    version: '1.0.0',
+    tags: ['langchain', 'split', 'chunk', 'text'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+        chunkSize: { type: 'number' },
+        chunkOverlap: { type: 'number' },
+        separator: { type: 'string' },
+      },
+      required: ['text'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        chunks: { type: 'array', items: { type: 'string' } },
+      },
+    },
+    permissions: [],
+  });
+
+  registry.registerTool({
+    name: 'langgraph.run',
+    category: 'langgraph',
+    description: 'Run a simple flow using LangGraph (fallback to linear execution)',
+    version: '1.0.0',
+    tags: ['langgraph', 'workflow', 'graph', 'execute'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        states: { type: 'array', items: { type: 'object' } },
+        edges: { type: 'array', items: { type: 'object' } },
+        start: { type: 'string' },
+        end: { type: 'string' },
+      },
+      required: ['states', 'edges', 'start', 'end'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        trace: { type: 'array' },
+      },
+    },
+    permissions: [],
   });
 
   // ============================================================================
@@ -1505,6 +1756,30 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
     permissions: ['fs_read'],
   });
 
+  registry.registerTool({
+    name: 'py.llamaindex',
+    category: 'library',
+    description: 'Chunk text with LlamaIndex (Python)',
+    version: '1.0.0',
+    tags: ['python', 'llamaindex', 'chunk', 'split'],
+    inputSchema: {
+      type: 'object',
+      properties: {
+        text: { type: 'string' },
+        chunkSize: { type: 'number' },
+        chunkOverlap: { type: 'number' },
+      },
+      required: ['text'],
+    },
+    outputSchema: {
+      type: 'object',
+      properties: {
+        chunks: { type: 'array' },
+      },
+    },
+    permissions: [],
+  });
+
   // ============================================================================
   // DOCUMENT PROCESSING TOOLS
   // ============================================================================
@@ -1609,4 +1884,3 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
     permissions: [],
   });
 }
-

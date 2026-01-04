@@ -1,3 +1,5 @@
+**NOTE: Archived reference version — kept for historical context.**
+
 # Phase 2: Complete Database Plugin Implementation
 
 **Status:** Ready for implementation  

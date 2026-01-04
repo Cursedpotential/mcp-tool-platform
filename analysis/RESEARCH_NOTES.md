@@ -1,3 +1,5 @@
+**NOTE: Archived reference version — kept for historical context.**
+
 # Research Notes: MCP Preprocessing Tool Shop
 
 > **Purpose**: This document synthesizes research findings from 7 parallel research tracks to inform the architecture and implementation of a preprocessing tool shop designed for 85%+ token reduction.

@@ -273,6 +273,14 @@ export async function classify(args: ClassifyArgs): Promise<{
 }
 
 /**
+ * Generate a single embedding vector for a raw text string
+ */
+export async function embedText(args: { text: string; model?: string }): Promise<number[]> {
+  const model = args.model ?? config.embeddingModel;
+  return generateSingleEmbedding(args.text, model);
+}
+
+/**
  * Clear embeddings for a document
  */
 export async function clearEmbeddings(args: { textRef: string }): Promise<{ success: boolean }> {

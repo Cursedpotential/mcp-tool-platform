@@ -1,3 +1,5 @@
+**NOTE: Archived reference version — kept for historical context.**
+
 # Punch List Gap Analysis
 
 Comprehensive comparison of original planning requirements vs current implementation.

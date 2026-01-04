@@ -320,6 +320,27 @@ export class TaskExecutor {
       return searchUgrep(args as unknown as { root: string; query: string; include?: string; exclude?: string; maxResults?: number });
     });
 
+    this.registerHandler('search.web', async (args) => {
+      const { search } = await import('../plugins/browser-search');
+      const { query, type, maxResults, provider } = args as {
+        query: string;
+        type?: 'web' | 'news' | 'research';
+        maxResults?: number;
+        provider?: 'tavily' | 'perplexity' | 'serpapi';
+      };
+      return search({ query, type, maxResults, preferredProvider: provider });
+    });
+
+    this.registerHandler('search.news', async (args) => {
+      const { searchNews } = await import('../plugins/browser-search');
+      return searchNews(args as { query: string; maxResults?: number });
+    });
+
+    this.registerHandler('search.research', async (args) => {
+      const { searchResearch } = await import('../plugins/browser-search');
+      return searchResearch(args as { query: string; maxResults?: number });
+    });
+
     this.registerHandler('doc.convert_to_markdown', async (args) => {
       const { convertToMarkdown } = await import('../plugins/document');
       return convertToMarkdown(args as { path: string; format?: string; extractMetadata?: boolean });
@@ -370,6 +391,11 @@ export class TaskExecutor {
       return readFile(args as { path: string; encoding?: BufferEncoding });
     });
 
+    this.registerHandler('fs.write_file', async (args) => {
+      const { writeFile } = await import('../plugins/filesystem');
+      return writeFile(args as { path: string; contentRef: string; createDirs?: boolean });
+    });
+
     this.registerHandler('rules.evaluate', async (args) => {
       const { evaluateRules } = await import('../plugins/rules');
       return evaluateRules(args as { textRef: string; ruleSetId: string });
@@ -390,6 +416,14 @@ export class TaskExecutor {
       return semanticSearch(args as { query: string; scopeRefs?: string[]; topK?: number; threshold?: number });
     });
 
+    this.registerHandler('ml.classify', async (args) => {
+      const { classify } = await import('../plugins/ml');
+      const { text, labels } = args as { text: string; labels: string[] };
+      const store = await getContentStore();
+      const stored = await store.put(text, 'text/plain');
+      return classify({ textRef: stored.ref, labels });
+    });
+
     this.registerHandler('summarize.hierarchical', async (args) => {
       const { hierarchicalSummarize } = await import('../plugins/summarization');
       return hierarchicalSummarize(args as { textRef: string; maxLength?: number; style?: 'concise' | 'detailed' | 'bullet'; preserveCitations?: boolean });
@@ -398,6 +432,174 @@ export class TaskExecutor {
     this.registerHandler('retrieve.supporting_spans', async (args) => {
       const { retrieveSupportingSpans } = await import('../plugins/retrieval');
       return retrieveSupportingSpans(args as { question: string; docRef: string; topK?: number; useEmbeddings?: boolean });
+    });
+
+    // ========================================================================
+    // VECTOR DB HANDLERS
+    // ========================================================================
+
+    this.registerHandler('vector.store', async (args) => {
+      const { vectorStore } = await import('../plugins/vector-db');
+      return vectorStore(args as {
+        collection: string;
+        vectors: Array<{ id: string; vector: number[]; metadata: Record<string, unknown>; content?: string }>;
+        createCollection?: boolean;
+      });
+    });
+
+    this.registerHandler('vector.search', async (args) => {
+      const { vectorSearch } = await import('../plugins/vector-db');
+      const { embedText } = await import('../plugins/ml');
+      const { collection, query, topK, filter, scoreThreshold } = args as {
+        collection: string;
+        query: string | number[];
+        topK?: number;
+        filter?: Record<string, unknown>;
+        scoreThreshold?: number;
+      };
+      const vector = Array.isArray(query) ? query : await embedText({ text: query });
+      return vectorSearch({ collection, vector, topK, filter, scoreThreshold });
+    });
+
+    this.registerHandler('vector.delete', async (args) => {
+      const { vectorDelete } = await import('../plugins/vector-db');
+      return vectorDelete(args as { collection: string; ids?: string[]; filter?: Record<string, unknown> });
+    });
+
+    // ========================================================================
+    // GRAPH DB HANDLERS
+    // ========================================================================
+
+    this.registerHandler('graph.create_entity', async (args) => {
+      const { addEntity } = await import('../plugins/graph-db');
+      return addEntity(args as { type: string; name: string; properties?: Record<string, unknown>; sourceRef?: string });
+    });
+
+    this.registerHandler('graph.create_relationship', async (args) => {
+      const { addRelationship } = await import('../plugins/graph-db');
+      const { fromId, toId, type, properties } = args as { fromId: string; toId: string; type: string; properties?: Record<string, unknown> };
+      return addRelationship({ sourceId: fromId, targetId: toId, type, properties });
+    });
+
+    this.registerHandler('graph.search', async (args) => {
+      const { searchEntities } = await import('../plugins/graph-db');
+      return searchEntities(args as { type?: string; query?: string; properties?: Record<string, unknown>; limit?: number });
+    });
+
+    this.registerHandler('graph.query', async (args) => {
+      const { runCypher } = await import('../plugins/graph-db');
+      return runCypher(args as { cypher: string; params?: Record<string, unknown> });
+    });
+
+    // ========================================================================
+    // BROWSER/NOTEBOOKLM/N8N/MEM0 HANDLERS
+    // ========================================================================
+
+    this.registerHandler('browser.navigate', async (args) => {
+      const { navigate } = await import('../plugins/browser-search');
+      return navigate(args as { url: string; waitFor?: string; timeout?: number; javascript?: boolean });
+    });
+
+    this.registerHandler('browser.screenshot', async (args) => {
+      const { screenshot } = await import('../plugins/browser-search');
+      return screenshot(args as { url: string; fullPage?: boolean; selector?: string; format?: 'png' | 'jpeg'; quality?: number });
+    });
+
+    this.registerHandler('browser.extract', async (args) => {
+      const { extractContent } = await import('../plugins/browser-search');
+      return extractContent(args as { url: string; selectors?: Record<string, string>; format?: 'text' | 'html' | 'markdown' });
+    });
+
+    this.registerHandler('browser.fill', async (args) => {
+      const { fillForm } = await import('../plugins/browser-search');
+      return fillForm(args as { url: string; fields: Record<string, string>; submitSelector?: string });
+    });
+
+    this.registerHandler('browser.click', async (args) => {
+      const { click } = await import('../plugins/browser-search');
+      return click(args as { url: string; selector: string; waitForNavigation?: boolean });
+    });
+
+    this.registerHandler('notebooklm.ask', async (args) => {
+      const { executeNotebookLMTool } = await import('../plugins/notebooklm');
+      return executeNotebookLMTool('notebooklm.ask', args);
+    });
+
+    this.registerHandler('notebooklm.list', async () => {
+      const { executeNotebookLMTool } = await import('../plugins/notebooklm');
+      return executeNotebookLMTool('notebooklm.list', {});
+    });
+
+    this.registerHandler('notebooklm.select', async (args) => {
+      const { executeNotebookLMTool } = await import('../plugins/notebooklm');
+      return executeNotebookLMTool('notebooklm.select', args);
+    });
+
+    this.registerHandler('notebooklm.add', async (args) => {
+      const { executeNotebookLMTool } = await import('../plugins/notebooklm');
+      return executeNotebookLMTool('notebooklm.add', args);
+    });
+
+    this.registerHandler('notebooklm.search', async (args) => {
+      const { executeNotebookLMTool } = await import('../plugins/notebooklm');
+      return executeNotebookLMTool('notebooklm.search', args);
+    });
+
+    this.registerHandler('notebooklm.remove', async (args) => {
+      const { executeNotebookLMTool } = await import('../plugins/notebooklm');
+      return executeNotebookLMTool('notebooklm.remove', args);
+    });
+
+    this.registerHandler('notebooklm.stats', async () => {
+      const { executeNotebookLMTool } = await import('../plugins/notebooklm');
+      return executeNotebookLMTool('notebooklm.stats', {});
+    });
+
+    this.registerHandler('mem0.add', async (args) => {
+      const { addMemory } = await import('../plugins/mem0');
+      return addMemory(args as {
+        content: string;
+        metadata?: Record<string, unknown>;
+        userId?: string;
+        agentId?: string;
+        projectId?: string;
+        scope?: 'agent' | 'project' | 'user' | 'global';
+      });
+    });
+
+    this.registerHandler('mem0.search', async (args) => {
+      const { searchMemories } = await import('../plugins/mem0');
+      return searchMemories(args as {
+        query: string;
+        userId?: string;
+        agentId?: string;
+        projectId?: string;
+        scope?: 'agent' | 'project' | 'user' | 'global';
+        limit?: number;
+      });
+    });
+
+    this.registerHandler('mem0.share_context', async (args) => {
+      const { shareContext } = await import('../plugins/mem0');
+      return shareContext(args as {
+        fromAgentId: string;
+        toAgentId: string;
+        query: string;
+        limit?: number;
+      });
+    });
+
+    this.registerHandler('n8n.trigger', async (args) => {
+      const { triggerWorkflow } = await import('../plugins/n8n');
+      const { workflowId, data } = args as { workflowId: string; data?: Record<string, unknown> };
+      const { execution } = await triggerWorkflow({ id: workflowId, data });
+      return { executionId: execution.id, execution };
+    });
+
+    this.registerHandler('n8n.status', async (args) => {
+      const { getExecution } = await import('../plugins/n8n');
+      const { executionId } = args as { executionId: string };
+      return getExecution({ id: executionId });
     });
 
     // ============================================================================
@@ -552,6 +754,39 @@ export class TaskExecutor {
       return { text: await ocrImage(inputPath, language), format: 'image-ocr' };
     });
 
+    // ========================================================================
+    // DOCUMENT PROCESSING HANDLERS
+    // ========================================================================
+
+    this.registerHandler('pandoc.convert', async (args) => {
+      const { pandocConvert } = await import('../plugins/document-processors');
+      return pandocConvert(args as {
+        input: string;
+        from?: string;
+        to: string;
+        options?: string[];
+      });
+    });
+
+    this.registerHandler('tesseract.ocr', async (args) => {
+      const { tesseractOcr } = await import('../plugins/document-processors');
+      return tesseractOcr(args as { image: string; language?: string; psm?: number });
+    });
+
+    this.registerHandler('stirlingpdf.process', async (args) => {
+      const { stirlingPdfProcess } = await import('../plugins/document-processors');
+      return stirlingPdfProcess(args as {
+        operation: 'merge' | 'split' | 'compress' | 'ocr' | 'rotate' | 'watermark' | 'extract_images';
+        files: string[];
+        options?: Record<string, unknown>;
+      });
+    });
+
+    this.registerHandler('unstructured.partition', async (args) => {
+      const { unstructuredPartition } = await import('../plugins/document-processors');
+      return unstructuredPartition(args as { file: string; strategy?: string; extractImages?: boolean });
+    });
+
     // ============================================================================
     // SCHEMA RESOLVER PLUGIN HANDLERS
     // ============================================================================
@@ -686,6 +921,152 @@ export class TaskExecutor {
         return { hash: hashContent(content), algorithm: 'sha256', type: 'content' };
       }
       throw new Error('Either filePath or content required');
+    });
+
+    // ========================================================================
+    // LIBRARY TOOLS (JS)
+    // ========================================================================
+
+    this.registerHandler('js.cheerio', async (args) => {
+      const { runCheerio } = await import('../plugins/library-tools');
+      return runCheerio(args as {
+        html: string;
+        selector?: string;
+        operation?: 'text' | 'html' | 'attr' | 'find' | 'each';
+        attribute?: string;
+      });
+    });
+
+    this.registerHandler('js.xml_parse', async (args) => {
+      const { parseXml } = await import('../plugins/library-tools');
+      return parseXml(args as { xml: string; options?: Record<string, unknown> });
+    });
+
+    this.registerHandler('js.json5', async (args) => {
+      const { parseJson5 } = await import('../plugins/library-tools');
+      return parseJson5(args as { text: string });
+    });
+
+    this.registerHandler('js.yaml', async (args) => {
+      const { handleYaml } = await import('../plugins/library-tools');
+      return handleYaml(args as { input: string; operation?: 'parse' | 'stringify' });
+    });
+
+    this.registerHandler('js.csv', async (args) => {
+      const { handleCsv } = await import('../plugins/library-tools');
+      return handleCsv(args as { input: string; operation?: 'parse' | 'stringify'; options?: Record<string, unknown> });
+    });
+
+    this.registerHandler('js.natural', async (args) => {
+      const { runNatural } = await import('../plugins/library-tools');
+      return runNatural(args as {
+        text: string;
+        operation: 'tokenize' | 'stem' | 'phonetics' | 'sentiment' | 'classify';
+        options?: Record<string, unknown>;
+      });
+    });
+
+    this.registerHandler('js.compromise', async (args) => {
+      const { runCompromise } = await import('../plugins/library-tools');
+      return runCompromise(args as {
+        text: string;
+        operation: 'nouns' | 'verbs' | 'people' | 'places' | 'dates' | 'topics';
+      });
+    });
+
+    this.registerHandler('js.franc', async (args) => {
+      const { detectFranc } = await import('../plugins/library-tools');
+      return detectFranc(args as { text: string; minLength?: number });
+    });
+
+    this.registerHandler('js.string_similarity', async (args) => {
+      const { compareStrings } = await import('../plugins/library-tools');
+      return compareStrings(args as { string1: string; string2: string; algorithm?: 'dice' | 'levenshtein' | 'jaro-winkler' });
+    });
+
+    // ========================================================================
+    // LLAMAINDEX (TYPESCRIPT)
+    // ========================================================================
+
+    this.registerHandler('llamaindex.chunk_text', async (args) => {
+      const { chunkText } = await import('../plugins/llamaindex');
+      return chunkText(args as { text: string; chunkSize?: number; chunkOverlap?: number });
+    });
+
+    // ========================================================================
+    // LIBRARY TOOLS (PYTHON)
+    // ========================================================================
+
+    this.registerHandler('py.spacy', async (args) => {
+      const { runSpacy } = await import('../plugins/python-tools');
+      return runSpacy(args as { text: string; operations?: string[]; model?: string });
+    });
+
+    this.registerHandler('py.nltk', async (args) => {
+      const { runNltk } = await import('../plugins/python-tools');
+      return runNltk(args as { text: string; operation: 'tokenize' | 'stem' | 'lemmatize' | 'chunk' | 'wordnet' });
+    });
+
+    this.registerHandler('py.transformers', async (args) => {
+      const { runTransformers } = await import('../plugins/python-tools');
+      return runTransformers(args as {
+        text: string;
+        operation: 'encode' | 'similarity' | 'classify' | 'qa';
+        model?: string;
+        options?: Record<string, unknown>;
+      });
+    });
+
+    this.registerHandler('py.beautifulsoup', async (args) => {
+      const { runBeautifulSoup } = await import('../plugins/python-tools');
+      return runBeautifulSoup(args as {
+        html: string;
+        selector?: string;
+        operation: 'find' | 'find_all' | 'select' | 'text' | 'attrs';
+      });
+    });
+
+    this.registerHandler('py.pdfplumber', async (args) => {
+      const { runPdfPlumber } = await import('../plugins/python-tools');
+      return runPdfPlumber(args as { path: string; pages?: number[]; extractTables?: boolean });
+    });
+
+    this.registerHandler('py.pandas', async (args) => {
+      const { runPandas } = await import('../plugins/python-tools');
+      return runPandas(args as {
+        input: string;
+        operation: 'read' | 'filter' | 'groupby' | 'merge' | 'pivot' | 'describe';
+        options?: Record<string, unknown>;
+      });
+    });
+
+    this.registerHandler('py.llamaindex', async (args) => {
+      const { runLlamaIndexChunk } = await import('../plugins/python-tools');
+      return runLlamaIndexChunk(args as { text: string; chunkSize?: number; chunkOverlap?: number });
+    });
+
+    // ========================================================================
+    // LANGCHAIN / LANGGRAPH (PYTHON)
+    // ========================================================================
+
+    this.registerHandler('langchain.format_prompt', async (args) => {
+      const { runLangChainPrompt } = await import('../plugins/python-tools');
+      return runLangChainPrompt(args as { template: string; variables?: Record<string, string> });
+    });
+
+    this.registerHandler('langchain.split_text', async (args) => {
+      const { runLangChainSplit } = await import('../plugins/python-tools');
+      return runLangChainSplit(args as { text: string; chunkSize?: number; chunkOverlap?: number; separator?: string });
+    });
+
+    this.registerHandler('langgraph.run', async (args) => {
+      const { runLangGraphFlow } = await import('../plugins/python-tools');
+      return runLangGraphFlow(args as {
+        states: Array<{ id: string; payload?: Record<string, unknown> }>;
+        edges: Array<{ from: string; to: string }>;
+        start: string;
+        end: string;
+      });
     });
   }
 }
