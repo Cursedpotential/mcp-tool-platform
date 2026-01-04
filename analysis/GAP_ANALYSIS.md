@@ -1,3 +1,5 @@
+**NOTE: Archived reference version — kept for historical context.**
+
 # Gap Analysis: Planning Requirements vs Implementation
 
 This document compares the planning requirements against the current MCP Tool Shop implementation.

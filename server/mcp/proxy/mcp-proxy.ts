@@ -210,6 +210,12 @@ class MCPProxyManager {
     return Array.from(this.servers.values());
   }
 
+  async clearServers(): Promise<void> {
+    for (const serverId of Array.from(this.servers.keys())) {
+      await this.unregisterServer(serverId);
+    }
+  }
+
   // -------------------------------------------------------------------------
   // Connection & Discovery
   // -------------------------------------------------------------------------
