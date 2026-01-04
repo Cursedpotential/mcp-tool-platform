@@ -1,3 +1,5 @@
+**NOTE: Archived reference version — kept for historical context.**
+
 # MCP Preprocessing Tool Shop - TODO
 
 ## Core Infrastructure

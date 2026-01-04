@@ -1,3 +1,5 @@
+**NOTE: Archived reference version — kept for historical context.**
+
 # Behavioral Analysis Tool - Research Findings
 
 ## Tool Naming Options

@@ -1,3 +1,5 @@
+**NOTE: Archived reference version — kept for historical context.**
+
 # MCP Tool Shop - Comprehensive Codebase Audit Report
 
 **Date**: January 2026  

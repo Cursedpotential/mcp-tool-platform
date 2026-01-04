@@ -1,3 +1,5 @@
+**NOTE: Archived reference version — kept for historical context.**
+
 # Phase 2 Quick-Start Guide
 
 **Status:** Ready to execute  

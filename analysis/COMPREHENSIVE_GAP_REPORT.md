@@ -1,3 +1,5 @@
+**NOTE: Archived reference version — kept for historical context.**
+
 # Comprehensive Gap Report
 
 **Generated:** Session audit of all registered tools vs actual implementations

@@ -1,6 +1,15 @@
+**NOTE: Archived reference version — kept for historical context.**
+
 # MCP Tool Shop - Comprehensive Status Report
 
 Generated: January 2026
+
+## Phase 1 Execution Update (Partial)
+
+Recent wiring and exposure improvements:
+- **Executor wiring:** search web/news/research, browser navigation/extract/click/fill/screenshot, NotebookLM list/select/search/remove/stats, mem0 add/search/share, n8n trigger/status.
+- **Registry alignment:** NotebookLM schemas updated to match MCP inputs; added missing NotebookLM and browser tools.
+- **Note:** Playwright/NotebookLM/mem0/n8n still require external services to be enabled/configured.
 
 ## 1. Libraries & Dependencies
 
