@@ -18,3 +18,7 @@ pyyaml>=6.0.0
 
 # Utilities
 numpy>=1.24.0
+
+# Graph and temporal reasoning
+graphiti-core>=0.3.0
+neo4j>=5.0.0

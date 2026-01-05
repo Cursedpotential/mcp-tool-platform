@@ -69,7 +69,7 @@ const registerMcpServerInput = z.object({
   transport: z.enum(['http', 'websocket', 'stdio']).default('http'),
   endpoint: z.string().min(1),
   apiKey: z.string().optional(),
-  headers: z.record(z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
   timeout: z.number().int().positive().optional(),
   retryAttempts: z.number().int().nonnegative().optional(),
   enabled: z.boolean().default(true),
@@ -332,9 +332,10 @@ export const mcpGatewayRouter = router({
 
           const result: InvokeResult = {
             success: true,
-            toolName: input.toolName,
-            output: proxyResult.data,
+            data: proxyResult.data,
             meta: {
+              toolName: input.toolName,
+              traceId: traceId,
               cacheHit: false,
               executionTimeMs: proxyResult.latencyMs,
             },

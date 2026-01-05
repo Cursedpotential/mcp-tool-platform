@@ -11,6 +11,9 @@
 
 import { getContentStore } from '../store/content-store';
 import type { ContentRef } from '../../../shared/mcp-types';
+import { promises as fs } from 'fs';
+import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 
 // ============================================================================
 // Configuration
@@ -77,6 +80,78 @@ interface ChromaCollection {
 
 const chromaCollections: Map<string, ChromaCollection> = new Map();
 
+// Persistent storage path
+const CHROMA_STORAGE_PATH = process.env.CHROMA_STORAGE_PATH || './data/chroma';
+
+// Ensure storage directory exists
+if (!existsSync(CHROMA_STORAGE_PATH)) {
+  mkdirSync(CHROMA_STORAGE_PATH, { recursive: true });
+}
+
+/**
+ * Load collection from disk
+ */
+async function loadCollectionFromDisk(name: string): Promise<ChromaCollection | null> {
+  const filePath = join(CHROMA_STORAGE_PATH, `${name}.json`);
+  try {
+    const data = await fs.readFile(filePath, 'utf-8');
+    const parsed = JSON.parse(data);
+    return {
+      ...parsed,
+      embeddings: new Map(Object.entries(parsed.embeddings || {})),
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Save collection to disk
+ */
+async function saveCollectionToDisk(collection: ChromaCollection): Promise<void> {
+  const filePath = join(CHROMA_STORAGE_PATH, `${collection.name}.json`);
+  const serialized = {
+    ...collection,
+    embeddings: Object.fromEntries(collection.embeddings),
+  };
+  await fs.writeFile(filePath, JSON.stringify(serialized, null, 2), 'utf-8');
+}
+
+/**
+ * Delete collection from disk
+ */
+async function deleteCollectionFromDisk(name: string): Promise<void> {
+  const filePath = join(CHROMA_STORAGE_PATH, `${name}.json`);
+  try {
+    await fs.unlink(filePath);
+  } catch (error) {
+    // Ignore if file doesn't exist
+  }
+}
+
+/**
+ * Load all collections from disk on startup
+ */
+async function loadAllCollections(): Promise<void> {
+  try {
+    const files = await fs.readdir(CHROMA_STORAGE_PATH);
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        const name = file.replace('.json', '');
+        const collection = await loadCollectionFromDisk(name);
+        if (collection) {
+          chromaCollections.set(name, collection);
+        }
+      }
+    }
+  } catch (error) {
+    // Directory doesn't exist yet, will be created
+  }
+}
+
+// Load collections on module initialization
+loadAllCollections().catch(console.error);
+
 /**
  * Create or get a Chroma collection (internal working memory)
  */
@@ -84,12 +159,21 @@ export async function getChromaCollection(name: string): Promise<ChromaCollectio
   let collection = chromaCollections.get(name);
   
   if (!collection) {
-    collection = {
-      id: `chroma-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      name,
-      createdAt: Date.now(),
-      embeddings: new Map(),
-    };
+    // Try loading from disk first
+    const loaded = await loadCollectionFromDisk(name);
+    collection = loaded || undefined;
+    
+    if (!collection) {
+      // Create new collection
+      collection = {
+        id: `chroma-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        name,
+        createdAt: Date.now(),
+        embeddings: new Map(),
+      };
+      await saveCollectionToDisk(collection);
+    }
+    
     chromaCollections.set(name, collection);
   }
   
@@ -116,6 +200,9 @@ export async function chromaAdd(
       document: documents?.[i],
     });
   }
+  
+  // Persist to disk
+  await saveCollectionToDisk(collection);
 }
 
 /**
@@ -172,12 +259,19 @@ export async function chromaCleanup(): Promise<{ removed: number; remaining: num
   const now = Date.now();
   let removed = 0;
   
+  const toRemove: string[] = [];
   chromaCollections.forEach((collection, name) => {
     if (now - collection.createdAt > retentionMs) {
-      chromaCollections.delete(name);
-      removed++;
+      toRemove.push(name);
     }
   });
+  
+  // Remove from memory and disk
+  for (const name of toRemove) {
+    chromaCollections.delete(name);
+    await deleteCollectionFromDisk(name);
+    removed++;
+  }
   
   return { removed, remaining: chromaCollections.size };
 }

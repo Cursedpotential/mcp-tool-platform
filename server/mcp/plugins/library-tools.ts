@@ -146,7 +146,8 @@ export async function runNatural(args: {
       return { result: natural.PorterStemmer.stem(args.text) };
     }
     case 'phonetics': {
-      return { result: natural.SoundEx.process(args.text) };
+      const soundex = new natural.SoundEx();
+      return { result: soundex.process(args.text) };
     }
     case 'sentiment': {
       const analyzer = new natural.SentimentAnalyzer('English', natural.PorterStemmer, 'afinn');
@@ -184,7 +185,7 @@ export async function runCompromise(args: {
     case 'places':
       return { result: doc.places().out('array') };
     case 'dates':
-      return { result: doc.dates().out('array') };
+      return { result: ((doc as any).dates?.() || doc).out('array') };
     case 'topics':
       return { result: doc.topics().out('array') };
     default:

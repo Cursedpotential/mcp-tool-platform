@@ -12,7 +12,7 @@ const mcpServerEntrySchema = z.object({
   endpoint: z.string().optional(),
   transport: z.enum(['http', 'websocket', 'stdio']).optional(),
   apiKey: z.string().optional(),
-  headers: z.record(z.string()).optional(),
+  headers: z.record(z.string(), z.string()).optional(),
   timeout: z.number().int().positive().optional(),
   retryAttempts: z.number().int().nonnegative().optional(),
   enabled: z.boolean().optional(),
@@ -22,7 +22,7 @@ const mcpServerEntrySchema = z.object({
 });
 
 const mcpServersSchema = z.object({
-  mcpServers: z.record(mcpServerEntrySchema),
+  mcpServers: z.record(z.string(), mcpServerEntrySchema),
 });
 
 const genericServersSchema = z.object({
@@ -31,7 +31,7 @@ const genericServersSchema = z.object({
     endpoint: z.string(),
     transport: z.enum(['http', 'websocket', 'stdio']).optional(),
     apiKey: z.string().optional(),
-    headers: z.record(z.string()).optional(),
+    headers: z.record(z.string(), z.string()).optional(),
     timeout: z.number().int().positive().optional(),
     retryAttempts: z.number().int().nonnegative().optional(),
     enabled: z.boolean().optional(),
@@ -70,7 +70,7 @@ export function importMcpServersFromConfig(payload: unknown): ImportedMcpServer[
           transport: normalizeTransport(entry.transport),
           endpoint,
           apiKey: entry.apiKey,
-          headers: entry.headers,
+          headers: entry.headers as Record<string, string> | undefined,
           timeout: entry.timeout,
           retryAttempts: entry.retryAttempts,
           enabled: entry.enabled ?? true,
@@ -93,7 +93,7 @@ export function importMcpServersFromConfig(payload: unknown): ImportedMcpServer[
           transport: normalizeTransport(entry.transport),
           endpoint: entry.endpoint,
           apiKey: entry.apiKey,
-          headers: entry.headers,
+          headers: entry.headers as Record<string, string> | undefined,
           timeout: entry.timeout,
           retryAttempts: entry.retryAttempts,
           enabled: entry.enabled ?? true,

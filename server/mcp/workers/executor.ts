@@ -989,6 +989,52 @@ export class TaskExecutor {
     });
 
     // ========================================================================
+    // GRAPHITI (TEMPORAL GRAPH - PYTHON)
+    // ========================================================================
+
+    this.registerHandler('graphiti.add_entity', async (args) => {
+      const { callPython } = await import('../python-bridge');
+      const result = await callPython('add_entity', args, 30000);
+      if (!result.success) throw new Error(result.error || 'Graphiti add_entity failed');
+      return result.data;
+    });
+
+    this.registerHandler('graphiti.add_relationship', async (args) => {
+      const { callPython } = await import('../python-bridge');
+      const result = await callPython('add_relationship', args, 30000);
+      if (!result.success) throw new Error(result.error || 'Graphiti add_relationship failed');
+      return result.data;
+    });
+
+    this.registerHandler('graphiti.search_entities', async (args) => {
+      const { callPython } = await import('../python-bridge');
+      const result = await callPython('search_entities', args, 30000);
+      if (!result.success) throw new Error(result.error || 'Graphiti search_entities failed');
+      return result.data;
+    });
+
+    this.registerHandler('graphiti.get_entity_timeline', async (args) => {
+      const { callPython } = await import('../python-bridge');
+      const result = await callPython('get_entity_timeline', args, 30000);
+      if (!result.success) throw new Error(result.error || 'Graphiti get_entity_timeline failed');
+      return result.data;
+    });
+
+    this.registerHandler('graphiti.detect_contradictions', async (args) => {
+      const { callPython } = await import('../python-bridge');
+      const result = await callPython('detect_contradictions', args, 30000);
+      if (!result.success) throw new Error(result.error || 'Graphiti detect_contradictions failed');
+      return result.data;
+    });
+
+    this.registerHandler('graphiti.query_as_of', async (args) => {
+      const { callPython } = await import('../python-bridge');
+      const result = await callPython('query_as_of', args, 30000);
+      if (!result.success) throw new Error(result.error || 'Graphiti query_as_of failed');
+      return result.data;
+    });
+
+    // ========================================================================
     // LANGCHAIN / LANGGRAPH (PYTHON)
     // ========================================================================
 
