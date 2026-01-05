@@ -1,0 +1,88 @@
+name: Integration tests (minimal)
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: mcp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test" --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Prevent tests from trying to call external embedding/3rd-party APIs.
+      SKIP_EXTERNAL_TESTS: "true"
+      DATABASE_URL: "postgresql://test:test@localhost:5432/mcp_test"
+      REDIS_URL: "redis://localhost:6379"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Ensure pnpm is available
+        run: |
+          corepack enable
+          corepack prepare pnpm@latest --activate
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build --if-present
+
+      - name: Run unit tests
+        run: pnpm test --if-present
+
+      - name: Run integration tests (if present)
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          REDIS_URL: ${{ env.REDIS_URL }}
+          SKIP_EXTERNAL_TESTS: ${{ env.SKIP_EXTERNAL_TESTS }}
+        run: |
+          # If your repo has a dedicated integration script, run it. Otherwise try a common script name.
+          if pnpm run -s test:integration --silent; then
+            echo "Ran pnpm test:integration"
+          elif pnpm run -s integration --silent; then
+            echo "Ran pnpm integration"
+          else
+            echo "No integration test script found; skipping."
+          fi
+
+      - name: Upload test logs (if any)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-logs
+          path: |
+            ./logs/**
+            ./test-results/**
