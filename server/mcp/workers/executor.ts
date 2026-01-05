@@ -435,63 +435,6 @@ export class TaskExecutor {
     });
 
     // ========================================================================
-    // VECTOR DB HANDLERS
-    // ========================================================================
-
-    this.registerHandler('vector.store', async (args) => {
-      const { vectorStore } = await import('../plugins/vector-db');
-      return vectorStore(args as {
-        collection: string;
-        vectors: Array<{ id: string; vector: number[]; metadata: Record<string, unknown>; content?: string }>;
-        createCollection?: boolean;
-      });
-    });
-
-    this.registerHandler('vector.search', async (args) => {
-      const { vectorSearch } = await import('../plugins/vector-db');
-      const { embedText } = await import('../plugins/ml');
-      const { collection, query, topK, filter, scoreThreshold } = args as {
-        collection: string;
-        query: string | number[];
-        topK?: number;
-        filter?: Record<string, unknown>;
-        scoreThreshold?: number;
-      };
-      const vector = Array.isArray(query) ? query : await embedText({ text: query });
-      return vectorSearch({ collection, vector, topK, filter, scoreThreshold });
-    });
-
-    this.registerHandler('vector.delete', async (args) => {
-      const { vectorDelete } = await import('../plugins/vector-db');
-      return vectorDelete(args as { collection: string; ids?: string[]; filter?: Record<string, unknown> });
-    });
-
-    // ========================================================================
-    // GRAPH DB HANDLERS
-    // ========================================================================
-
-    this.registerHandler('graph.create_entity', async (args) => {
-      const { addEntity } = await import('../plugins/graph-db');
-      return addEntity(args as { type: string; name: string; properties?: Record<string, unknown>; sourceRef?: string });
-    });
-
-    this.registerHandler('graph.create_relationship', async (args) => {
-      const { addRelationship } = await import('../plugins/graph-db');
-      const { fromId, toId, type, properties } = args as { fromId: string; toId: string; type: string; properties?: Record<string, unknown> };
-      return addRelationship({ sourceId: fromId, targetId: toId, type, properties });
-    });
-
-    this.registerHandler('graph.search', async (args) => {
-      const { searchEntities } = await import('../plugins/graph-db');
-      return searchEntities(args as { type?: string; query?: string; properties?: Record<string, unknown>; limit?: number });
-    });
-
-    this.registerHandler('graph.query', async (args) => {
-      const { runCypher } = await import('../plugins/graph-db');
-      return runCypher(args as { cypher: string; params?: Record<string, unknown> });
-    });
-
-    // ========================================================================
     // BROWSER/NOTEBOOKLM/N8N/MEM0 HANDLERS
     // ========================================================================
 
