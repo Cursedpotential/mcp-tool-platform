@@ -18,3 +18,16 @@
 - [x] Create server/mcp/plugins/pgvector-supabase.ts with full CRUD operations
 - [x] Install @supabase/supabase-js package
 - [x] Add SQL setup scripts for pgvector table creation
+
+
+## Phase 6 - Database Configuration & Testing
+- [x] Get correct Supabase session pooler URL and API key
+- [x] Get correct Neo4j Aura connection URI
+- [x] Test Supabase connection with session pooler
+- [x] Test Neo4j Aura connection
+- [ ] Document available Supabase extensions (pgvector, PostGIS, pg_cron, etc.)
+- [ ] Create tRPC procedures for database configuration (saveSupabaseConfig, testSupabaseConnection, saveNeo4jConfig, testNeo4jConnection)
+- [ ] Wire Settings UI database forms to backend procedures
+- [ ] Add database stats to monitoring dashboard
+- [ ] Create database migration utilities
+- [ ] Write vitest tests for database operations
