@@ -391,6 +391,11 @@ export class TaskExecutor {
       return readFile(args as { path: string; encoding?: BufferEncoding });
     });
 
+    this.registerHandler('fs.write_file', async (args) => {
+      const { writeFile } = await import('../plugins/filesystem');
+      return writeFile(args as { path: string; contentRef: string; createDirs?: boolean });
+    });
+
     this.registerHandler('rules.evaluate', async (args) => {
       const { evaluateRules } = await import('../plugins/rules');
       return evaluateRules(args as { textRef: string; ruleSetId: string });
@@ -409,6 +414,14 @@ export class TaskExecutor {
     this.registerHandler('ml.semantic_search', async (args) => {
       const { semanticSearch } = await import('../plugins/ml');
       return semanticSearch(args as { query: string; scopeRefs?: string[]; topK?: number; threshold?: number });
+    });
+
+    this.registerHandler('ml.classify', async (args) => {
+      const { classify } = await import('../plugins/ml');
+      const { text, labels } = args as { text: string; labels: string[] };
+      const store = await getContentStore();
+      const stored = await store.put(text, 'text/plain');
+      return classify({ textRef: stored.ref, labels });
     });
 
     this.registerHandler('summarize.hierarchical', async (args) => {
@@ -682,6 +695,39 @@ export class TaskExecutor {
         return { text: await ocrPdf(inputPath, language), format: 'pdf-ocr' };
       }
       return { text: await ocrImage(inputPath, language), format: 'image-ocr' };
+    });
+
+    // ========================================================================
+    // DOCUMENT PROCESSING HANDLERS
+    // ========================================================================
+
+    this.registerHandler('pandoc.convert', async (args) => {
+      const { pandocConvert } = await import('../plugins/document-processors');
+      return pandocConvert(args as {
+        input: string;
+        from?: string;
+        to: string;
+        options?: string[];
+      });
+    });
+
+    this.registerHandler('tesseract.ocr', async (args) => {
+      const { tesseractOcr } = await import('../plugins/document-processors');
+      return tesseractOcr(args as { image: string; language?: string; psm?: number });
+    });
+
+    this.registerHandler('stirlingpdf.process', async (args) => {
+      const { stirlingPdfProcess } = await import('../plugins/document-processors');
+      return stirlingPdfProcess(args as {
+        operation: 'merge' | 'split' | 'compress' | 'ocr' | 'rotate' | 'watermark' | 'extract_images';
+        files: string[];
+        options?: Record<string, unknown>;
+      });
+    });
+
+    this.registerHandler('unstructured.partition', async (args) => {
+      const { unstructuredPartition } = await import('../plugins/document-processors');
+      return unstructuredPartition(args as { file: string; strategy?: string; extractImages?: boolean });
     });
 
     // ============================================================================
