@@ -536,6 +536,41 @@ export async function exportSubgraph(args: {
   };
 }
 
+/**
+ * Execute an arbitrary Cypher query
+ */
+export async function runCypher(args: {
+  cypher: string;
+  params?: Record<string, unknown>;
+}): Promise<{ records: unknown[] }> {
+  if (!config.enabled) {
+    throw new Error('Graph DB is not enabled');
+  }
+
+  const { url, username, password, database } = config.neo4j;
+  const auth = Buffer.from(`${username}:${password}`).toString('base64');
+  const response = await fetch(`${url.replace('bolt://', 'http://').replace(':7687', ':7474')}/db/${database}/tx/commit`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Basic ${auth}`,
+    },
+    body: JSON.stringify({
+      statements: [{
+        statement: args.cypher,
+        parameters: args.params ?? {},
+      }],
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Neo4j query failed: ${response.status}`);
+  }
+
+  const data = await response.json() as { results?: Array<{ data?: unknown[] }> };
+  return { records: data.results?.[0]?.data ?? [] };
+}
+
 // ============================================================================
 // Cypher Execution
 // ============================================================================
