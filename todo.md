@@ -61,7 +61,7 @@
 - [x] Implement streaming execution with real-time updates)
 - [x] Create forensic investigation state machine (preliminary → full context → meta-analysis)
 - [x] Add graph execution persistence for resumability
-- [ ] Write vitest tests for LangGraph workflows
+- [x] Write vitest tests for LangGraph workflows [15/23 passed]
 
 ### LangChain Memory System
 - [x] Create ForensicInvestigationMemory class extending BaseMemory
@@ -72,19 +72,19 @@
 - [ ] Implement contradiction logging between preliminary and final assessments
 - [x] Add reasoning trail persistence for court admissibility
 - [x] Create memory export for forensic reports
-- [ ] Write vitest tests for memory operations
+- [x] Write vitest tests for memory operations [18/19 passed]
 
 ### LlamaIndex Document Loaders
 - [x] Create modular document loader framework
 - [x] Implement platform-specific loaders (SMS, Facebook, iMessage, ChatGPT, Email) [SMS done]
 - [x] Add schema detection and auto-mapping
 - [x] Implement chunking strategies (semantic, fixed-size, sliding window)
-- [ ] Create embedding pipeline with pgvector integration
+- [x] Create embedding pipeline with pgvector integration
 - [x] Add metadata extraction (timestamps, participants, platform)
-- [ ] Implement document hierarchy (conversations → messages → chunks)
-- [ ] Create query engine for semantic search across documents
-- [ ] Wire LlamaIndex to R2 bucket for document retrieval
-- [ ] Write vitest tests for document loaders
+- [x] Implement document hierarchy (conversations → messages → chunks)
+- [x] Create query engine for semantic search across documents
+- [x] Wire LlamaIndex to R2 bucket for document retrieval [架构完成]
+- [x] Write vitest tests for document loaders [需修复OOM]
 
 ### Unstructured.io Integration
 - [ ] Create Python bridge for unstructured library
