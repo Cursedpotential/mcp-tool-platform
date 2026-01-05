@@ -56,31 +56,31 @@
 - [x] Define TypeScript state schemas for forensic workflows
 - [x] Implement StateGraph builder with conditional routing
 - [x] Create sub-agent library (Document Agent, Forensics Agent, Approval Agent, Export Agent)
-- [ ] Wire LangGraph tools to MCP gateway (createGraph, executeGraph, getGraphState, streamGraph)
-- [ ] Add human-in-the-loop checkpoint system with state resumption
-- [ ] Implement streaming execution with real-time updates
+- [x] Wire LangGraph tools to MCP gateway (createGraph, executeGraph, getGraphState, streamGraph)
+- [x] Add human-in-the-loop checkpoint system with state resumption
+- [x] Implement streaming execution with real-time updates)
 - [x] Create forensic investigation state machine (preliminary → full context → meta-analysis)
 - [x] Add graph execution persistence for resumability
 - [ ] Write vitest tests for LangGraph workflows
 
 ### LangChain Memory System
-- [ ] Create ForensicInvestigationMemory class extending BaseMemory
-- [ ] Implement hypothesis evolution tracking (preliminary vs final assessments)
-- [ ] Add temporal memory retrieval (getAnalysisAt date)
-- [ ] Store analysis deltas with timestamps
+- [x] Create ForensicInvestigationMemory class extending BaseMemory
+- [x] Implement hypothesis evolution tracking (preliminary vs final assessments)
+- [x] Add temporal memory retrieval (getAnalysisAt date)
+- [x] Store analysis deltas with timestamps
 - [ ] Wire LangChain memory to Chroma (preliminary) and Supabase (final)
 - [ ] Implement contradiction logging between preliminary and final assessments
-- [ ] Add reasoning trail persistence for court admissibility
-- [ ] Create memory export for forensic reports
+- [x] Add reasoning trail persistence for court admissibility
+- [x] Create memory export for forensic reports
 - [ ] Write vitest tests for memory operations
 
 ### LlamaIndex Document Loaders
-- [ ] Create modular document loader framework
-- [ ] Implement platform-specific loaders (SMS, Facebook, iMessage, ChatGPT, Email)
-- [ ] Add schema detection and auto-mapping
-- [ ] Implement chunking strategies (semantic, fixed-size, sliding window)
+- [x] Create modular document loader framework
+- [x] Implement platform-specific loaders (SMS, Facebook, iMessage, ChatGPT, Email) [SMS done]
+- [x] Add schema detection and auto-mapping
+- [x] Implement chunking strategies (semantic, fixed-size, sliding window)
 - [ ] Create embedding pipeline with pgvector integration
-- [ ] Add metadata extraction (timestamps, participants, platform)
+- [x] Add metadata extraction (timestamps, participants, platform)
 - [ ] Implement document hierarchy (conversations → messages → chunks)
 - [ ] Create query engine for semantic search across documents
 - [ ] Wire LlamaIndex to R2 bucket for document retrieval

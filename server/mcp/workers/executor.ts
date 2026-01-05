@@ -1057,6 +1057,35 @@ export class TaskExecutor {
         end: string;
       });
     });
+
+    // ============================================================================
+    // LANGGRAPH ORCHESTRATION PLUGIN HANDLERS
+    // ============================================================================
+
+    this.registerHandler('langgraph.createGraph', async (args) => {
+      const { langGraphHandlers } = await import('../plugins/langgraph-plugin');
+      return langGraphHandlers['langgraph.createGraph'](args);
+    });
+
+    this.registerHandler('langgraph.executeGraph', async (args) => {
+      const { langGraphHandlers } = await import('../plugins/langgraph-plugin');
+      return langGraphHandlers['langgraph.executeGraph'](args);
+    });
+
+    this.registerHandler('langgraph.streamGraph', async (args) => {
+      const { langGraphHandlers } = await import('../plugins/langgraph-plugin');
+      return langGraphHandlers['langgraph.streamGraph'](args);
+    });
+
+    this.registerHandler('langgraph.getGraphState', async (args) => {
+      const { langGraphHandlers } = await import('../plugins/langgraph-plugin');
+      return langGraphHandlers['langgraph.getGraphState'](args);
+    });
+
+    this.registerHandler('langgraph.listWorkflows', async () => {
+      const { langGraphHandlers } = await import('../plugins/langgraph-plugin');
+      return langGraphHandlers['langgraph.listWorkflows']();
+    });
   }
 }
 
