@@ -341,3 +341,170 @@
 - [x] Add sarcasm detection (high subjectivity + contradictory polarity)
 - [x] Add negation handling and intensity modifiers
 - [x] Override severity with priority flags (custody interference = severity 10)
+
+
+## Phase 17 - Expanded Pattern Library & Utility Integration
+
+### Pattern Import
+- [x] Create database seed script for all patterns (existing + expanded)
+- [ ] Add DARVO patterns (Deny, Attack, Reverse Victim/Offender)
+- [ ] Add overelaboration patterns (location reporting, time reporting, justification)
+- [ ] Add positive manipulation patterns (excessive gratitude, premature intimacy, mirroring, savior complex)
+- [ ] Add medical abuse patterns (medication control, diagnosis weaponization)
+- [ ] Add reproductive coercion patterns
+- [ ] Add power asymmetry patterns (victim deference, abuser directives)
+- [ ] Add statistical linguistic markers (certainty absolutes, hedge words)
+- [x] Execute seed script and verify import (256 patterns imported)
+
+### Text Miner Integration
+- [ ] Wire Text Miner as atomic MCP tool (expose search capabilities)
+- [ ] Add bulk pattern search functionality
+- [ ] Integrate Text Miner into document processing workflow
+- [ ] Add timeline extraction from search results
+- [ ] Add context window retrieval (surrounding lines)
+
+### Advanced Analysis
+- [ ] Implement DARVO sequence detection (Deny → Attack → Reverse in single context)
+- [ ] Implement overelaboration detection (sentence length + justification phrase counting)
+- [ ] Implement pronoun ratio analysis (I-talk vs you-talk)
+- [ ] Implement hedge word vs certainty analysis
+- [ ] Add power asymmetry detection (linguistic markers)
+
+### Utility Wiring
+- [ ] Wire Evidence Hasher for chain of custody
+- [ ] Wire Mem0 for persistent project context
+- [ ] Wire NotebookLM for forensic report generation
+- [ ] Wire ML Plugin for custom model training
+- [ ] Wire Summarization Plugin for conversation summaries
+
+### Multi-Pass Classifier Refactor
+- [ ] Fix Pass 1 to load user patterns from database correctly
+- [ ] Fix Pass 2 to use spaCy for structure/entities correctly
+- [ ] Fix Pass 3 to use NLTK VADER correctly
+- [ ] Fix Pass 4 to use TextBlob correctly
+- [ ] Fix Pass 5 to use Sentence Transformers correctly
+- [ ] Add Pass 7: DARVO sequence detection
+- [ ] Add Pass 8: Overelaboration analysis
+- [ ] Add Pass 9: Pronoun ratio analysis
+- [ ] Fix Pass 6 aggregation to include all new signals
+
+### Testing
+- [ ] Test pattern import with database queries
+- [ ] Test Text Miner bulk search
+- [ ] Test DARVO detection with real examples
+- [ ] Test overelaboration detection
+- [ ] Test pronoun ratio analysis
+- [ ] Test end-to-end pipeline with sample documents
+
+
+## Phase 18 - Conversation Segmentation & Topic Clustering
+
+### Conversation Segmentation
+- [ ] Create conversation segmentation module using Sentence Transformers
+- [ ] Implement semantic similarity calculation between consecutive messages
+- [ ] Add time-window based segmentation (gap > 2 hours = new cluster)
+- [ ] Add entity-based segmentation (entity changes = new cluster)
+- [ ] Implement cluster ID generation (PLAT_YYMM_TOPIC_iii format)
+- [ ] Create topic extraction (6-char topic codes: KAILAH, VISITS, CALLS, etc.)
+- [ ] Store cluster IDs with messages in database
+- [ ] Add cluster metadata table (cluster_id, topic, platform, date_range, message_count)
+
+### Topic Detection
+- [ ] Implement topic code mapping (KAILAH, VISITS, CALLS, SCHOOL, MONEY, HEALTH, SUBST, INFID, THREAT, GENRL)
+- [ ] Use NER (spaCy) to detect entities for topic assignment
+- [ ] Use keyword matching for topic hints
+- [ ] Default to GENRL when topic unclear
+
+### Platform Codes
+- [ ] Define platform code mapping (SMS, FB, IMSG, MAIL, CHAT, WA, DISC, SNAP)
+- [ ] Add platform detection from message source
+
+
+## Phase 19 - Admin UI & Configuration Backend
+
+### Settings Management UI
+- [ ] Create Settings page in client/src/pages/Settings.tsx
+- [ ] Add NLP Configuration section (similarity threshold, time gap threshold, min cluster size)
+- [ ] Add Topic Detection Configuration (BERTopic parameters, topic code mappings)
+- [ ] Add Pattern Library Management (view/add/edit/delete custom patterns)
+- [ ] Add Platform Code Management (add/edit platform codes)
+- [ ] Add Chroma Configuration (TTL settings, collection management)
+- [ ] Add Database Connection Settings (Supabase, Neo4j, pgvector)
+- [ ] Add Workflow Configuration (enable/disable analysis passes, adjust weights)
+
+### API Key Management
+- [ ] Create API Keys page
+- [ ] Add LLM provider key management (OpenAI, Anthropic, Cohere, etc.)
+- [ ] Add external service keys (Perplexity, custom APIs)
+- [ ] Add key validation and testing
+- [ ] Add secure key storage (encrypted in database)
+
+### Import/Export Functionality
+- [ ] Create Import/Export page
+- [ ] Add pattern library export (JSON, CSV)
+- [ ] Add pattern library import (JSON, CSV)
+- [ ] Add analysis results export (JSON, CSV, PDF)
+- [ ] Add conversation clusters export
+- [ ] Add full database backup/restore
+- [ ] Add schema version management
+
+### Pattern Library UI
+- [ ] Create Pattern Library page
+- [ ] Add pattern search and filtering
+- [ ] Add pattern creation form (name, category, pattern, description, severity)
+- [ ] Add pattern editing (inline or modal)
+- [ ] Add pattern deletion with confirmation
+- [ ] Add bulk pattern operations (enable/disable, delete)
+- [ ] Add pattern testing (test against sample text)
+- [ ] Add pattern statistics (match count, last matched, etc.)
+
+### Workflow Configuration UI
+- [ ] Create Workflow Configuration page
+- [ ] Add multi-pass classifier configuration (enable/disable passes)
+- [ ] Add pass weight adjustment (how much each pass contributes to final score)
+- [ ] Add DARVO detection configuration (sequence detection parameters)
+- [ ] Add overelaboration detection configuration (sentence length thresholds)
+- [ ] Add pronoun ratio analysis configuration (thresholds for I-talk vs you-talk)
+- [ ] Add topic segmentation configuration (similarity threshold, time gap)
+- [ ] Add workflow testing (run sample data through configured workflow)
+
+### Database Management UI
+- [ ] Create Database Management page
+- [ ] Add connection status indicators (Supabase, Neo4j, Chroma, pgvector)
+- [ ] Add database statistics (record counts, storage usage)
+- [ ] Add database maintenance tools (vacuum, reindex, cleanup)
+- [ ] Add query console for advanced users
+- [ ] Add schema migration management
+
+
+## Phase 20 - Dynamic Lexicon Import System
+
+### HurtLex Integration
+- [ ] Create lexicon-importer.ts for dynamic GitHub fetching
+- [ ] Fetch HurtLex from valeriobasile/hurtlex repository
+- [ ] Filter for English language only (lang=en)
+- [ ] Parse CSV format and extract categories
+- [ ] Map HurtLex categories to our pattern categories
+- [ ] Import HurtLex terms into behavioralPatterns table
+- [ ] Add lexicon metadata tracking (source, version, last_updated)
+
+### MCL Patterns Integration
+- [ ] Research and find MCL abuse pattern datasets on GitHub
+- [ ] Add MCL dataset to lexicon importer
+- [ ] Map MCL taxonomies to our categories
+- [ ] Import MCL patterns with severity scores
+
+### Extensible Lexicon Architecture
+- [ ] Create lexicon configuration system (add new lexicons via config)
+- [ ] Add lexicon registry (track all imported lexicons)
+- [ ] Add lexicon versioning (track updates, allow rollback)
+- [ ] Add lexicon conflict resolution (handle duplicate patterns)
+- [ ] Add lexicon priority system (which lexicon takes precedence)
+- [ ] Add scheduled lexicon updates (auto-fetch latest versions)
+- [ ] Add lexicon validation (check format, required fields)
+
+### Additional Lexicons (Future)
+- [ ] Add support for additional abuse/hate speech lexicons
+- [ ] Add support for sentiment lexicons (VADER, AFINN, etc.)
+- [ ] Add support for emotion lexicons (NRC, EmoLex)
+- [ ] Add support for custom user lexicons
