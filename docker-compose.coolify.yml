@@ -1,0 +1,517 @@
+version: '3.8'
+
+# ============================================================================
+# Coolify-Ready Docker Compose for Salem Forensics MCP Tool Platform
+# ============================================================================
+#
+# Features:
+# - Traefik labels for automatic routing
+# - Persistent volumes for all services
+# - rclone + Tailscale combined sidecar for R2 access
+# - Optimized for 8GB/4-core VPS
+# - Service tiers: Core (always-on) vs On-Demand (webhook-controlled)
+#
+# Deploy with Coolify:
+# 1. Import this docker-compose.yml
+# 2. Set environment variables in Coolify UI
+# 3. Deploy services
+#
+# ============================================================================
+
+networks:
+  salem-network:
+    driver: bridge
+  traefik:
+    external: true
+
+volumes:
+  # Persistent volumes
+  chroma_data:
+  metamcp_data:
+  n8n_data:
+  tailscale_data:
+  kasm_home:
+  kasm_config:
+  mongo_data:
+  open_webui_data:
+  ollama_data:
+  playwright_cache:
+  # Shared R2 mount (via rclone sidecar)
+  r2_mount:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/r2
+
+services:
+  # ============================================================================
+  # Infrastructure Sidecar - Tailscale VPN + rclone R2 Mount
+  # ============================================================================
+  infrastructure:
+    image: alpine:latest
+    container_name: salem-infrastructure
+    hostname: salem-forensics
+    privileged: true
+    cap_add:
+      - NET_ADMIN
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse
+    environment:
+      # Tailscale
+      - TS_AUTHKEY=${TAILSCALE_AUTH_KEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+      - TS_EXTRA_ARGS=--advertise-tags=tag:salem
+      # rclone R2
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_ENDPOINT=${R2_ENDPOINT}
+      - R2_BUCKET=${R2_BUCKET}
+    volumes:
+      - tailscale_data:/var/lib/tailscale
+      - r2_mount:/mnt/r2:shared
+      - /dev/net/tun:/dev/net/tun
+    command: |
+      sh -c "
+        # Install Tailscale + rclone
+        apk add --no-cache tailscale rclone fuse
+        
+        # Start Tailscale
+        tailscaled --state=/var/lib/tailscale/tailscaled.state --socket=/var/run/tailscale/tailscaled.sock &
+        sleep 5
+        tailscale up --authkey=\$TS_AUTHKEY \$TS_EXTRA_ARGS
+        
+        # Configure rclone for R2
+        mkdir -p /root/.config/rclone
+        cat > /root/.config/rclone/rclone.conf <<EOF
+[r2]
+type = s3
+provider = Cloudflare
+access_key_id = \$R2_ACCESS_KEY_ID
+secret_access_key = \$R2_SECRET_ACCESS_KEY
+endpoint = \$R2_ENDPOINT
+acl = private
+EOF
+        
+        # Mount R2 bucket
+        mkdir -p /mnt/r2
+        rclone mount r2:\$R2_BUCKET /mnt/r2 \
+          --allow-other \
+          --allow-non-empty \
+          --vfs-cache-mode writes \
+          --vfs-cache-max-age 72h \
+          --vfs-cache-max-size 5G \
+          --dir-cache-time 72h \
+          --poll-interval 15s \
+          --log-level INFO
+      "
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    labels:
+      - "coolify.managed=true"
+      - "coolify.type=infrastructure"
+
+  # ============================================================================
+  # CORE SERVICES (Always-On)
+  # ============================================================================
+
+  # Chroma VPS - Persistent vector database
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: salem-chroma
+    environment:
+      - CHROMA_SERVER_AUTH_CREDENTIALS_PROVIDER=chromadb.auth.token.TokenConfigServerAuthCredentialsProvider
+      - CHROMA_SERVER_AUTH_TOKEN_TRANSPORT_HEADER=X-Chroma-Token
+      - CHROMA_SERVER_AUTH_CREDENTIALS=${CHROMA_AUTH_TOKEN}
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    volumes:
+      - chroma_data:/chroma/chroma
+      - r2_mount:/r2:ro
+    restart: unless-stopped
+    networks:
+      - salem-network
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chroma.rule=Host(`chroma.${DOMAIN}`)"
+      - "traefik.http.routers.chroma.entrypoints=websecure"
+      - "traefik.http.routers.chroma.tls.certresolver=letsencrypt"
+      - "traefik.http.services.chroma.loadbalancer.server.port=8000"
+      - "coolify.managed=true"
+      - "coolify.type=database"
+
+  # LiteLLM - Universal LLM proxy
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: salem-litellm
+    environment:
+      - DATABASE_URL=postgresql://${SUPABASE_USER}:${SUPABASE_PASSWORD}@${SUPABASE_HOST}:5432/${SUPABASE_DATABASE}?sslmode=require
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      - LITELLM_LOG=INFO
+      - LITELLM_DROP_PARAMS=true
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - COHERE_API_KEY=${COHERE_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml:ro
+      - r2_mount:/r2:ro
+    command: --config /app/config.yaml --port 4000 --num_workers 2
+    restart: unless-stopped
+    networks:
+      - salem-network
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.litellm.rule=Host(`llm.${DOMAIN}`)"
+      - "traefik.http.routers.litellm.entrypoints=websecure"
+      - "traefik.http.routers.litellm.tls.certresolver=letsencrypt"
+      - "traefik.http.services.litellm.loadbalancer.server.port=4000"
+      - "coolify.managed=true"
+      - "coolify.type=service"
+
+  # MetaMCP - MCP server registry
+  metamcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.metamcp
+    container_name: salem-metamcp
+    environment:
+      - PORT=4001
+      - DATABASE_URL=postgresql://${SUPABASE_USER}:${SUPABASE_PASSWORD}@${SUPABASE_HOST}:5432/${SUPABASE_DATABASE}?sslmode=require
+      - MCP_REGISTRY_URL=https://mcp.run/registry
+    volumes:
+      - ./server/mcp:/app/mcp:ro
+      - metamcp_data:/app/data
+      - r2_mount:/r2:ro
+    restart: unless-stopped
+    networks:
+      - salem-network
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.metamcp.rule=Host(`mcp.${DOMAIN}`)"
+      - "traefik.http.routers.metamcp.entrypoints=websecure"
+      - "traefik.http.routers.metamcp.tls.certresolver=letsencrypt"
+      - "traefik.http.services.metamcp.loadbalancer.server.port=4001"
+      - "coolify.managed=true"
+      - "coolify.type=service"
+
+  # Directus - Headless CMS
+  directus:
+    image: directus/directus:latest
+    container_name: salem-directus
+    environment:
+      - DB_CLIENT=pg
+      - DB_HOST=${SUPABASE_HOST}
+      - DB_PORT=5432
+      - DB_DATABASE=${SUPABASE_DATABASE}
+      - DB_USER=${SUPABASE_USER}
+      - DB_PASSWORD=${SUPABASE_PASSWORD}
+      - DB_SSL=true
+      - ADMIN_EMAIL=${DIRECTUS_ADMIN_EMAIL}
+      - ADMIN_PASSWORD=${DIRECTUS_ADMIN_PASSWORD}
+      - KEY=${DIRECTUS_KEY}
+      - SECRET=${DIRECTUS_SECRET}
+      - STORAGE_LOCATIONS=r2
+      - STORAGE_R2_DRIVER=local
+      - STORAGE_R2_ROOT=/r2/directus
+      - PUBLIC_URL=https://cms.${DOMAIN}
+      - MAX_PAYLOAD_SIZE=100mb
+      - CACHE_ENABLED=false
+    volumes:
+      - r2_mount:/r2
+    restart: unless-stopped
+    networks:
+      - salem-network
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.directus.rule=Host(`cms.${DOMAIN}`)"
+      - "traefik.http.routers.directus.entrypoints=websecure"
+      - "traefik.http.routers.directus.tls.certresolver=letsencrypt"
+      - "traefik.http.services.directus.loadbalancer.server.port=8055"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+
+  # n8n - Workflow automation
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: salem-n8n
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
+      - N8N_HOST=n8n.${DOMAIN}
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://n8n.${DOMAIN}/
+      - GENERIC_TIMEZONE=America/New_York
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - r2_mount:/r2
+    restart: unless-stopped
+    networks:
+      - salem-network
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.${DOMAIN}`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls.certresolver=letsencrypt"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+
+  # ============================================================================
+  # ON-DEMAND SERVICES (Webhook-controlled via n8n)
+  # ============================================================================
+
+  # Kasm Workspace - Debian desktop with AI CLIs
+  kasm-workspace:
+    build:
+      context: .
+      dockerfile: Dockerfile.kasm
+    container_name: salem-kasm-workspace
+    environment:
+      - VNC_PW=${KASM_VNC_PASSWORD}
+      - VNC_RESOLUTION=1920x1080
+      - VNC_COL_DEPTH=24
+      - CLAUDE_API_KEY=${ANTHROPIC_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    volumes:
+      - kasm_home:/home/kasm-user
+      - kasm_config:/home/kasm-user/.config
+      - ./scripts:/scripts:ro
+      - ./data:/data
+      - r2_mount:/r2
+    shm_size: 2gb
+    restart: "no"
+    networks:
+      - salem-network
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kasm.rule=Host(`desktop.${DOMAIN}`)"
+      - "traefik.http.routers.kasm.entrypoints=websecure"
+      - "traefik.http.routers.kasm.tls.certresolver=letsencrypt"
+      - "traefik.http.services.kasm.loadbalancer.server.port=6901"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+      - "n8n.service=on-demand"
+      - "n8n.priority=low"
+
+  # LibreChat - Multi-model chat UI
+  librechat:
+    image: ghcr.io/danny-avila/librechat:latest
+    container_name: salem-librechat
+    environment:
+      - HOST=0.0.0.0
+      - PORT=3080
+      - MONGO_URI=mongodb://mongo:27017/LibreChat
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GOOGLE_API_KEY=${GEMINI_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    volumes:
+      - r2_mount:/r2
+    depends_on:
+      - mongo
+    restart: "no"
+    networks:
+      - salem-network
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.librechat.rule=Host(`chat.${DOMAIN}`)"
+      - "traefik.http.routers.librechat.entrypoints=websecure"
+      - "traefik.http.routers.librechat.tls.certresolver=letsencrypt"
+      - "traefik.http.services.librechat.loadbalancer.server.port=3080"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+      - "n8n.service=on-demand"
+      - "n8n.priority=medium"
+
+  # MongoDB for LibreChat
+  mongo:
+    image: mongo:7
+    container_name: salem-mongo
+    volumes:
+      - mongo_data:/data/db
+      - r2_mount:/r2
+    restart: "no"
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    labels:
+      - "coolify.managed=true"
+      - "coolify.type=database"
+
+  # Open WebUI - ChatGPT-style UI
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: salem-open-webui
+    environment:
+      - WEBUI_SECRET_KEY=${OPENWEBUI_SECRET_KEY}
+      - WEBUI_NAME=Salem Forensics AI
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_BASE_URL=https://api.openai.com/v1
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - ENABLE_RAG=true
+      - ENABLE_SIGNUP=false
+    volumes:
+      - open_webui_data:/app/backend/data
+      - r2_mount:/r2
+    depends_on:
+      - ollama
+    restart: "no"
+    networks:
+      - salem-network
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openwebui.rule=Host(`ui.${DOMAIN}`)"
+      - "traefik.http.routers.openwebui.entrypoints=websecure"
+      - "traefik.http.routers.openwebui.tls.certresolver=letsencrypt"
+      - "traefik.http.services.openwebui.loadbalancer.server.port=8080"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+      - "n8n.service=on-demand"
+      - "n8n.priority=low"
+
+  # Ollama - Local LLM runtime
+  ollama:
+    image: ollama/ollama:latest
+    container_name: salem-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+      - r2_mount:/r2
+    restart: "no"
+    networks:
+      - salem-network
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ollama.rule=Host(`ollama.${DOMAIN}`)"
+      - "traefik.http.routers.ollama.entrypoints=websecure"
+      - "traefik.http.routers.ollama.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ollama.loadbalancer.server.port=11434"
+      - "coolify.managed=true"
+      - "coolify.type=service"
+      - "n8n.service=on-demand"
+      - "n8n.priority=low"
+
+  # Browserless - Headless Chrome
+  browserless:
+    image: browserless/chrome:latest
+    container_name: salem-browserless
+    environment:
+      - TOKEN=${BROWSERLESS_TOKEN}
+      - MAX_CONCURRENT_SESSIONS=2
+      - CONNECTION_TIMEOUT=60000
+      - MAX_QUEUE_LENGTH=5
+      - ENABLE_DEBUGGER=true
+      - PREBOOT_CHROME=false
+    volumes:
+      - r2_mount:/r2
+    restart: "no"
+    networks:
+      - salem-network
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.browserless.rule=Host(`browser.${DOMAIN}`)"
+      - "traefik.http.routers.browserless.entrypoints=websecure"
+      - "traefik.http.routers.browserless.tls.certresolver=letsencrypt"
+      - "traefik.http.services.browserless.loadbalancer.server.port=3000"
+      - "coolify.managed=true"
+      - "coolify.type=service"
+      - "n8n.service=on-demand"
+      - "n8n.priority=medium"
+
+  # Playwright - Headless browser automation
+  playwright:
+    build:
+      context: .
+      dockerfile: Dockerfile.playwright
+    container_name: salem-playwright
+    environment:
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    volumes:
+      - playwright_cache:/ms-playwright
+      - ./scripts/playwright:/scripts:ro
+      - r2_mount:/r2
+    restart: "no"
+    networks:
+      - salem-network
+      - traefik
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.playwright.rule=Host(`playwright.${DOMAIN}`)"
+      - "traefik.http.routers.playwright.entrypoints=websecure"
+      - "traefik.http.routers.playwright.tls.certresolver=letsencrypt"
+      - "traefik.http.services.playwright.loadbalancer.server.port=3000"
+      - "coolify.managed=true"
+      - "coolify.type=service"
+      - "n8n.service=on-demand"
+      - "n8n.priority=medium"
