@@ -508,3 +508,69 @@
 - [ ] Add support for sentiment lexicons (VADER, AFINN, etc.)
 - [ ] Add support for emotion lexicons (NRC, EmoLex)
 - [ ] Add support for custom user lexicons
+
+
+## Phase 21 - Audit Logging & Chain of Custody (Court Admissibility)
+
+### Chain of Custody Tracking
+- [ ] Create audit_logs table (append-only, immutable)
+- [ ] Log file uploads (SHA-256 hash, timestamp, original filename, uploader)
+- [ ] Log file integrity checks (hash verification on every access)
+- [ ] Log file storage (R2 key, upload timestamp, file size, MIME type)
+- [ ] Create file_custody table (file_id, event_type, timestamp, user_id, details)
+- [ ] Add cryptographic signing for audit logs (tamper-proof)
+
+### Analysis Provenance Logging
+- [ ] Log every NLP pass execution (pass_id, message_id, timestamp, results)
+- [ ] Log pattern matches (pattern_id, message_id, confidence, reasoning, detected_by)
+- [ ] Log classification decisions (preliminary vs final, confidence deltas)
+- [ ] Log meta-analysis findings (analysis_id, evidence_refs, contradictions, timestamps)
+- [ ] Create analysis_provenance table (analysis_id, step, tool, input, output, timestamp)
+
+### Data Lineage Mapping
+- [ ] Create lineage graph (Message → Chunk → Cluster → Meta-Analysis)
+- [ ] Link every pattern match to original message + original file
+- [ ] Link every classification to NLP pass + confidence score
+- [ ] Link every meta-analysis finding to preliminary assessments + evidence
+- [ ] Link every contradiction to preliminary statement + final evidence + timestamps
+- [ ] Create lineage_graph table (entity_id, entity_type, parent_id, relationship_type)
+
+### Human Validation Checkpoints
+- [ ] Create validation_checkpoints table (checkpoint_id, analysis_id, validator_id, status, timestamp)
+- [ ] Add "Review Preliminary Analysis" checkpoint (after Pass 6)
+- [ ] Add "Review Meta-Analysis" checkpoint (after full-context analysis)
+- [ ] Add "Review Contradictions" checkpoint (before finalizing report)
+- [ ] Log validator decisions (approved, rejected, flagged, comments)
+- [ ] Add validator signature (cryptographic proof of human review)
+
+### Manual Analysis Trigger (UI)
+- [ ] Create "Start Analysis" button in UI (after all platforms ingested)
+- [ ] Add pre-analysis checklist (all platforms uploaded, files verified, ready to proceed)
+- [ ] Add analysis progress indicator (which pass is running, ETA)
+- [ ] Add analysis pause/resume functionality
+- [ ] Add analysis cancellation with rollback
+- [ ] Log analysis trigger (who started, when, which platforms included)
+
+### Hybrid Model with Overlap
+- [ ] Configure multi-tool overlap (same content analyzed by multiple tools)
+- [ ] Add consensus scoring (tools agree = high confidence, disagree = flag for review)
+- [ ] Add disagreement detection (tools produce different results)
+- [ ] Add human review for disagreements (show all tool outputs, let user decide)
+- [ ] Add confidence weighting (tools with higher accuracy get more weight)
+- [ ] Log consensus decisions (which tools agreed, which disagreed, final decision)
+
+### Audit Trail Export
+- [ ] Create audit trail export functionality (JSON, CSV, PDF)
+- [ ] Include full chain of custody in forensic report
+- [ ] Include analysis provenance (which tool detected what, when)
+- [ ] Include data lineage (trace every finding back to source)
+- [ ] Include human validation records (who reviewed, when, decisions)
+- [ ] Add cryptographic signature to exported audit trail (tamper-proof)
+
+### Best Practices for Custody Cases
+- [ ] Implement append-only audit logs (no deletions, no modifications)
+- [ ] Add SHA-256 hashing for all files (integrity verification)
+- [ ] Add UTC timestamps + local timezone for all events
+- [ ] Add user attribution for all actions (who did what, when)
+- [ ] Add immutable snapshots at key checkpoints (can't be changed after validation)
+- [ ] Add export to court-admissible formats (PDF with signatures)
