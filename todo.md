@@ -263,3 +263,81 @@
 - [ ] Add audit trail visualization UI
 - [ ] Ensure court admissibility (immutable logs, chain of custody)
 - [ ] Write vitest tests for audit trail operations
+
+
+## Phase 15 - End-to-End Document Processing Pipeline
+
+### Document Ingestion (Unstructured.io)
+- [ ] Install and configure unstructured library
+- [ ] Create Python bridge for unstructured parsing
+- [ ] Implement PDF parsing with layout detection
+- [ ] Implement DOCX parsing with structure preservation
+- [ ] Implement HTML/XML parsing
+- [ ] Add table extraction from documents
+- [ ] Create unified document ingestion interface
+- [ ] Handle large documents (>10MB) with streaming
+
+### Real Embedding API Integration
+- [ ] Wire Manus built-in LLM embedding API
+- [ ] Implement batch embedding generation (100+ chunks)
+- [ ] Add retry logic and error handling
+- [ ] Optimize embedding performance (parallel requests)
+- [ ] Add embedding caching to avoid duplicates
+- [ ] Test with real documents (1000+ chunks)
+
+### Supabase Integration
+- [ ] Install @supabase/supabase-js client
+- [ ] Create Supabase client singleton
+- [ ] Implement pgvector insertion (embeddings table)
+- [ ] Implement structured data insertion (documents, chunks, metadata)
+- [ ] Add batch insertion for performance
+- [ ] Implement upsert logic (avoid duplicates)
+- [ ] Add transaction support for atomic operations
+- [ ] Test with real data (100+ documents)
+
+### Classification System
+- [ ] Create sentiment classification (positive, neutral, negative, hostile, abusive)
+- [ ] Create pattern detection (gaslighting, manipulation, coordinated_abuse)
+- [ ] Create severity scoring (1-10 scale)
+- [ ] Add confidence scoring for classifications
+- [ ] Implement batch classification for chunks
+- [ ] Store classifications in Supabase metadata
+- [ ] Add preliminary vs final classification tracking
+
+### End-to-End Pipeline Orchestrator
+- [ ] Create DocumentPipeline class
+- [ ] Implement ingest → chunk → classify → embed → store workflow
+- [ ] Add progress tracking and logging
+- [ ] Implement error recovery (resume from failure)
+- [ ] Add pipeline metrics (processing time, chunk count, etc.)
+- [ ] Create pipeline status API endpoint
+- [ ] Add webhook notifications for completion
+- [ ] Write integration tests for full pipeline
+
+### Testing & Validation
+- [ ] Test with small document (<1MB)
+- [ ] Test with large document (>10MB)
+- [ ] Test with multi-page PDF
+- [ ] Test with DOCX with tables
+- [ ] Test with HTML with images
+- [ ] Verify pgvector semantic search works
+- [ ] Verify Supabase data integrity
+- [ ] Load test with 100+ documents
+
+
+## Phase 16 - Multi-Pass NLP Classification (COMPLETED)
+- [x] Create Pass 0: Priority screener for custody/alienation/child references
+- [x] Add immediate flagging for "Kailah"/"Kyla" mentions
+- [x] Add call blocking, visit blocking, parenting time denial detection
+- [x] Create multi-pass NLP classifier using all tools
+- [x] Pass 1: spaCy (structure, entities, speaker attribution)
+- [x] Pass 2: NLTK VADER (sentiment, negation, sarcasm)
+- [x] Pass 3: Pattern Analyzer (custom patterns from database + built-in)
+- [x] Pass 4: TextBlob (polarity, subjectivity, sarcasm detection)
+- [x] Pass 5: Sentence Transformers (semantic similarity)
+- [x] Pass 6: Aggregation (consensus sentiment from all sources)
+- [x] Load user's 200-hour custom patterns from database before analysis
+- [x] Add dual-polarity detection (negative + positive patterns)
+- [x] Add sarcasm detection (high subjectivity + contradictory polarity)
+- [x] Add negation handling and intensity modifiers
+- [x] Override severity with priority flags (custody interference = severity 10)
