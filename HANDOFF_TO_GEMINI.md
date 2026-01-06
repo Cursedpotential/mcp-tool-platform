@@ -226,11 +226,27 @@ Forensic analysis platform for custody case evidence. Processes messages from mu
 
 ## **Cost Optimization Notes**
 
-**Model Priority (cheapest to most expensive):**
+**Model Selection Strategy:**
+
+**By Speed:**
+1. **Groq** (FASTEST - use for quick tasks, testing, iterations)
+2. OpenAI
+3. Gemini Pro
+4. Claude
+
+**By Cost (cheapest to most expensive):**
 1. OpenRouter free tier (Mistral, Groq)
-2. OpenAI (user has credits)
-3. Gemini Pro (user has subscription) ← **YOU ARE HERE**
-4. Claude (expensive, last resort)
+2. Cohere (testing key - good for embeddings, classification, search)
+3. OpenAI (user has credits)
+4. Gemini Pro (user has subscription) ← **YOU ARE HERE**
+5. Claude (expensive, last resort)
+
+**By Task:**
+- **Groq:** Fast iterations, testing, simple code generation
+- **Cohere:** Embeddings, text classification, semantic search, summarization
+- **OpenAI:** General tasks, code generation, reasoning
+- **Gemini Pro:** Documentation, long-form writing, multi-modal tasks
+- **Claude:** Architecture, complex debugging, critical decisions ONLY
 
 **Use Claude ONLY for:**
 - Architecture decisions
