@@ -325,7 +325,7 @@ volumes:
 ```env
 # Add to MCP Tool Shop .env
 CLI_BRIDGE_ENDPOINT=http://your-vps.tailnet:8787
-CLI_BRIDGE_API_KEY=your-secret-key
+CLI_BRIDGE_API_KEY=
 CLI_BRIDGE_TIMEOUT=120000
 ```
 
