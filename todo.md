@@ -677,3 +677,202 @@
 - [ ] Verify Neo4j entity extraction
 - [ ] Verify Directus/R2 raw file storage
 - [ ] Verify chain of custody tracking
+
+
+---
+
+## **Phase 26: Documentation Generation (Wiki-Style)**
+
+### **Documentation Structure**
+- [ ] Create `/docs` directory in project root
+- [ ] Create `/docs/tools` subdirectory (individual tool docs)
+- [ ] Create `/docs/workflows` subdirectory (workflow docs)
+- [ ] Create `/docs/systems` subdirectory (system component docs)
+- [ ] Create `/docs/guides` subdirectory (user guides)
+- [ ] Create `/docs/api` subdirectory (API reference)
+- [ ] Create `/docs/images` subdirectory (diagrams, screenshots)
+
+### **System Overview Documentation**
+- [ ] `/docs/README.md` - Main documentation index with links to all docs
+- [ ] `/docs/ARCHITECTURE.md` - High-level system architecture (already exists, may need updates)
+- [ ] `/docs/GETTING_STARTED.md` - Quick start guide for new users
+- [ ] `/docs/INSTALLATION.md` - Installation and setup instructions
+- [ ] `/docs/CONFIGURATION.md` - Configuration guide (env vars, settings)
+- [ ] `/docs/DEPLOYMENT.md` - Deployment guide (Manus hosting, Docker)
+- [ ] `/docs/TROUBLESHOOTING.md` - Common issues and solutions
+
+### **Tool Documentation (60+ tools)**
+Each tool needs: Purpose, Parameters, Return Values, Examples, Related Tools
+
+#### Search Tools
+- [ ] `/docs/tools/search-web.md` - Web search tool
+- [ ] `/docs/tools/search-semantic.md` - Semantic search tool
+- [ ] `/docs/tools/search-tavily.md` - Tavily LLM-optimized search
+- [ ] `/docs/tools/search-perplexity.md` - Perplexity search
+
+#### Document Tools
+- [ ] `/docs/tools/document-parse.md` - Document parsing tool
+- [ ] `/docs/tools/document-ocr.md` - OCR tool
+- [ ] `/docs/tools/document-extract.md` - Text extraction tool
+- [ ] `/docs/tools/document-chunk.md` - Document chunking tool
+
+#### NLP Tools
+- [ ] `/docs/tools/nlp-sentiment.md` - Sentiment analysis tool
+- [ ] `/docs/tools/nlp-entities.md` - Entity extraction tool
+- [ ] `/docs/tools/nlp-classify.md` - Text classification tool
+- [ ] `/docs/tools/nlp-summarize.md` - Summarization tool
+- [ ] `/docs/tools/nlp-spacy.md` - spaCy integration
+- [ ] `/docs/tools/nlp-nltk.md` - NLTK integration
+- [ ] `/docs/tools/nlp-textblob.md` - TextBlob integration
+- [ ] `/docs/tools/nlp-transformers.md` - Sentence Transformers
+
+#### Forensics Tools
+- [ ] `/docs/tools/forensics-analyze-patterns.md` - Pattern analysis tool
+- [ ] `/docs/tools/forensics-detect-hurtlex.md` - HurtLex detection
+- [ ] `/docs/tools/forensics-score-severity.md` - Severity scoring
+- [ ] `/docs/tools/forensics-get-modules.md` - Get analysis modules
+- [ ] `/docs/tools/forensics-multi-pass-classifier.md` - Multi-pass NLP classifier
+- [ ] `/docs/tools/forensics-priority-screener.md` - Priority screener (Pass 0)
+
+#### Vector Database Tools
+- [ ] `/docs/tools/vector-add.md` - Add embeddings to vector DB
+- [ ] `/docs/tools/vector-search.md` - Semantic search in vector DB
+- [ ] `/docs/tools/vector-delete.md` - Delete embeddings
+- [ ] `/docs/tools/vector-chroma.md` - Chroma integration
+- [ ] `/docs/tools/vector-pgvector.md` - pgvector/Supabase integration
+- [ ] `/docs/tools/vector-qdrant.md` - Qdrant integration
+
+#### Graph Database Tools
+- [ ] `/docs/tools/graph-add-entity.md` - Add entity to graph
+- [ ] `/docs/tools/graph-add-relationship.md` - Add relationship to graph
+- [ ] `/docs/tools/graph-search-entities.md` - Search entities
+- [ ] `/docs/tools/graph-timeline.md` - Get entity timeline
+- [ ] `/docs/tools/graph-contradictions.md` - Detect contradictions
+- [ ] `/docs/tools/graph-neo4j.md` - Neo4j integration
+- [ ] `/docs/tools/graph-graphiti.md` - Graphiti integration
+
+#### LLM Tools
+- [ ] `/docs/tools/llm-invoke.md` - Invoke LLM
+- [ ] `/docs/tools/llm-embed.md` - Generate embeddings
+- [ ] `/docs/tools/llm-smart-router.md` - Smart LLM routing
+- [ ] `/docs/tools/llm-providers.md` - LLM provider overview
+
+#### Format Conversion Tools
+- [ ] `/docs/tools/format-convert.md` - Format conversion tool
+- [ ] `/docs/tools/format-parse.md` - Format parsing tool
+- [ ] `/docs/tools/format-check-schema.md` - Schema validation
+- [ ] `/docs/tools/format-ocr.md` - OCR tool
+
+#### Evidence Chain Tools
+- [ ] `/docs/tools/evidence-create-chain.md` - Create evidence chain
+- [ ] `/docs/tools/evidence-add-stage.md` - Add stage to chain
+- [ ] `/docs/tools/evidence-verify.md` - Verify evidence integrity
+- [ ] `/docs/tools/evidence-hash-file.md` - Hash file (SHA-256)
+- [ ] `/docs/tools/evidence-export.md` - Export evidence chain
+- [ ] `/docs/tools/evidence-report.md` - Generate evidence report
+
+#### Text Mining Tools
+- [ ] `/docs/tools/text-mine.md` - Text mining tool (ugrep/ripgrep)
+
+#### Schema Tools
+- [ ] `/docs/tools/schema-resolve.md` - Schema resolution
+- [ ] `/docs/tools/schema-apply.md` - Apply schema
+- [ ] `/docs/tools/schema-cache.md` - Schema caching
+
+### **Workflow Documentation**
+Each workflow needs: Purpose, Steps, Input/Output, Diagram, Examples
+
+- [ ] `/docs/workflows/forensic-investigation.md` - 8-stage forensic investigation workflow
+- [ ] `/docs/workflows/document-processing.md` - Document processing workflow
+- [ ] `/docs/workflows/document-analysis.md` - Document analysis workflow
+- [ ] `/docs/workflows/forensic-chat-analysis.md` - Chat analysis workflow
+- [ ] `/docs/workflows/semantic-search-prep.md` - Semantic search preparation
+- [ ] `/docs/workflows/data-extraction-pipeline.md` - Data extraction pipeline
+- [ ] `/docs/workflows/text-mining-workflow.md` - Text mining workflow
+- [ ] `/docs/workflows/format-conversion-chain.md` - Format conversion chain
+
+### **System Component Documentation**
+- [ ] `/docs/systems/mcp-gateway.md` - MCP Gateway API
+- [ ] `/docs/systems/plugin-system.md` - Plugin architecture
+- [ ] `/docs/systems/executor.md` - Tool executor
+- [ ] `/docs/systems/smart-router.md` - Smart LLM routing
+- [ ] `/docs/systems/chroma-storage.md` - Chroma working memory
+- [ ] `/docs/systems/supabase-integration.md` - Supabase integration
+- [ ] `/docs/systems/neo4j-integration.md` - Neo4j/Graphiti integration
+- [ ] `/docs/systems/r2-directus-storage.md` - R2/Directus file storage
+- [ ] `/docs/systems/langgraph-state-machines.md` - LangGraph workflows
+- [ ] `/docs/systems/langchain-memory.md` - LangChain memory system
+- [ ] `/docs/systems/llamaindex-loaders.md` - LlamaIndex document loaders
+- [ ] `/docs/systems/multi-pass-classifier.md` - Multi-pass NLP classification
+- [ ] `/docs/systems/pattern-library.md` - 256-pattern behavioral library
+- [ ] `/docs/systems/embedding-pipeline.md` - Embedding generation pipeline
+- [ ] `/docs/systems/audit-logging.md` - Audit trail and chain of custody
+- [ ] `/docs/systems/hitl-checkpoints.md` - Human-in-the-loop system
+
+### **User Guides**
+- [ ] `/docs/guides/uploading-documents.md` - How to upload documents
+- [ ] `/docs/guides/running-analysis.md` - How to run forensic analysis
+- [ ] `/docs/guides/managing-patterns.md` - How to manage custom patterns
+- [ ] `/docs/guides/configuring-llm-providers.md` - How to configure LLM providers
+- [ ] `/docs/guides/building-workflows.md` - How to build custom workflows
+- [ ] `/docs/guides/creating-agents.md` - How to create custom agents
+- [ ] `/docs/guides/exporting-results.md` - How to export analysis results
+- [ ] `/docs/guides/court-admissibility.md` - Ensuring court-admissible evidence
+
+### **API Reference**
+- [ ] `/docs/api/mcp-gateway.md` - MCP Gateway API reference
+- [ ] `/docs/api/trpc-procedures.md` - tRPC procedures reference
+- [ ] `/docs/api/rest-endpoints.md` - REST API endpoints
+- [ ] `/docs/api/websocket-api.md` - WebSocket API (log streaming)
+- [ ] `/docs/api/authentication.md` - Authentication and authorization
+
+### **Developer Documentation**
+- [ ] `/docs/CONTRIBUTING.md` - How to contribute
+- [ ] `/docs/DEVELOPMENT.md` - Development setup
+- [ ] `/docs/TESTING.md` - Testing guide
+- [ ] `/docs/CODE_STYLE.md` - Code style guide
+- [ ] `/docs/PLUGIN_DEVELOPMENT.md` - How to create plugins
+- [ ] `/docs/TOOL_DEVELOPMENT.md` - How to create tools
+
+### **Documentation Standards**
+Each document should follow this template:
+```markdown
+# [Tool/Workflow/System Name]
+
+## Overview
+Brief description (2-3 sentences)
+
+## Purpose
+What problem does this solve?
+
+## Parameters/Configuration
+List of inputs with types and descriptions
+
+## Return Values/Output
+What does this produce?
+
+## Examples
+Code examples with explanations
+
+## Related Tools/Systems
+Links to related documentation
+
+## Troubleshooting
+Common issues and solutions
+
+## See Also
+Links to related docs
+```
+
+### **Documentation Generation Tasks**
+- [ ] Create documentation template generator script
+- [ ] Generate skeleton markdown files for all tools
+- [ ] Generate skeleton markdown files for all workflows
+- [ ] Generate skeleton markdown files for all systems
+- [ ] Create documentation index with auto-generated table of contents
+- [ ] Add Mermaid diagrams for workflows
+- [ ] Add code examples for all tools
+- [ ] Add screenshots for UI components
+- [ ] Generate API reference from TypeScript types
+- [ ] Create searchable documentation site (MkDocs, Docusaurus, or VitePress)
+
