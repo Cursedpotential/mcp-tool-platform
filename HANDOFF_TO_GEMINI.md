@@ -170,6 +170,76 @@ Then run:
 pip3 freeze > /home/ubuntu/mcp-tool-platform/requirements-frozen.txt
 ```
 
+### **Priority 6: CRITICAL - Missing Backend UI**
+
+**USER FEEDBACK:** "There's no access to configs, builders, import/export, LLM router, prompt customizer, workflow builder, agent/sub-agent builder - NONE of the discussed backend features."
+
+**What's Missing (HIGH PRIORITY):**
+
+1. **Settings/Configuration UI:**
+   - [ ] NLP configuration (similarity thresholds, time gaps, chunking strategies)
+   - [ ] Pattern library management (add/edit/delete custom patterns)
+   - [ ] API key management (LLM providers: OpenAI, Gemini, Cohere, Groq, etc.)
+   - [ ] Database connections (Supabase, Neo4j, Chroma, R2)
+   - [ ] Workflow configuration (enable/disable analysis passes, adjust weights)
+   - [ ] Topic code customization (PLAT_YYMM_TOPIC_iii format)
+   - [ ] Platform code management
+
+2. **Import/Export System:**
+   - [ ] Export analysis results (JSON, CSV, PDF reports)
+   - [ ] Export pattern library (backup custom patterns)
+   - [ ] Import pattern library (restore or add new patterns)
+   - [ ] Export conversation data (forensic reports)
+   - [ ] Import/export workflow definitions
+   - [ ] Import/export agent configurations
+
+3. **LLM Router/Provider Management:**
+   - [ ] Add/remove LLM providers (OpenAI, Gemini, Cohere, Groq, Claude)
+   - [ ] Configure API keys per provider
+   - [ ] Set routing rules (which model for which task)
+   - [ ] Cost tracking per provider
+   - [ ] Fallback configuration (if primary fails)
+   - [ ] Model selection UI (choose model per workflow step)
+
+4. **Prompt Customizer/Builder:**
+   - [ ] Edit system prompts for classification
+   - [ ] Customize prompts for each analysis pass
+   - [ ] Template library for common prompts
+   - [ ] Variable injection ({{message}}, {{context}}, etc.)
+   - [ ] Prompt versioning (rollback to previous)
+   - [ ] Test prompt with sample data
+
+5. **Workflow Builder:**
+   - [ ] Visual workflow editor (drag-drop nodes)
+   - [ ] Define workflow steps (parse → classify → route)
+   - [ ] Configure conditional routing (if severity > 8, flag for review)
+   - [ ] Add human-in-the-loop checkpoints
+   - [ ] Save/load workflow templates
+   - [ ] Test workflow with sample data
+
+6. **Agent/Sub-Agent Builder:**
+   - [ ] Create custom agents (Forensic Agent, Document Agent, etc.)
+   - [ ] Configure agent tools (which NLP tools agent can use)
+   - [ ] Set agent memory (Chroma, LangChain memory)
+   - [ ] Define agent coordination (swarm orchestration)
+   - [ ] Agent template library
+   - [ ] Test agent with sample input
+
+7. **Pattern Library Management UI:**
+   - [ ] View all patterns (256 custom + built-in)
+   - [ ] Add new pattern (name, regex, category, severity)
+   - [ ] Edit existing pattern
+   - [ ] Delete pattern
+   - [ ] Test pattern against sample text
+   - [ ] Import patterns from file (JSON, CSV)
+   - [ ] Export patterns to file
+   - [ ] Pattern usage statistics (how often matched)
+
+**These are CRITICAL for user to actually use the system. Without UI, all the backend is useless.**
+
+**Recommendation for Gemini:**
+After completing Priority 1-5, ADD these backend UI tasks to todo.md as Phase 25. DO NOT implement yet - just document them. User needs to discuss priority with Claude when he's back.
+
 ---
 
 ## **Context You Need**
