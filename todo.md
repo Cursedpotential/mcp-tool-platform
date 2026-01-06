@@ -1007,3 +1007,115 @@ Links to related docs
 - [ ] Add deployment guides
 - [ ] Document API endpoints
 - [ ] Create developer onboarding guide
+
+
+---
+
+## **Phase 32: AWS AI Services Integration**
+
+### AWS SDK Setup
+- [ ] Install AWS SDKs (`@aws-sdk/client-rekognition`, `@aws-sdk/client-comprehend`, `@aws-sdk/client-textract`)
+- [ ] Configure AWS credentials in .env.docker
+- [ ] Initialize AWS clients in server/_core/aws-ai.ts
+- [ ] Test AWS connection and permissions
+
+### Rekognition Integration
+- [ ] Implement detectFaces() for screenshot analysis
+- [ ] Implement detectLabels() for context detection
+- [ ] Implement detectTextInImage() for OCR
+- [ ] Test with sample screenshots
+- [ ] Add error handling and retries
+
+### Comprehend Integration
+- [ ] Implement analyzeSentiment() for conversation tone
+- [ ] Implement extractEntities() for people/places/orgs
+- [ ] Implement detectPII() for redaction
+- [ ] Test with sample conversation text
+- [ ] Add batch processing support
+
+### Textract Integration
+- [ ] Implement extractDocumentText() for simple OCR
+- [ ] Implement analyzeDocument() for tables/forms
+- [ ] Test with receipts, invoices, forms
+- [ ] Add support for multi-page documents
+
+### Screenshot Analysis Pipeline
+- [ ] Implement analyzeScreenshot() complete pipeline
+- [ ] Combine Rekognition + Comprehend results
+- [ ] Store results in Supabase
+- [ ] Add caching to avoid duplicate analysis
+- [ ] Create tRPC procedures for frontend access
+
+---
+
+## **Phase 33: GCP AI Services Integration**
+
+### GCP SDK Setup
+- [ ] Install GCP SDKs (`@google-cloud/documentai`, `@google-cloud/aiplatform`, `@google-cloud/notebooks`)
+- [ ] Create GCP service account with required permissions
+- [ ] Download service account JSON key
+- [ ] Configure GCP credentials in .env.docker
+- [ ] Initialize GCP clients in server/_core/gcp-ai.ts
+
+### Document AI Integration
+- [ ] Enable Document AI API in GCP project
+- [ ] Create processors (Form Parser, Invoice Parser, Receipt Parser)
+- [ ] Implement processDocument() for single documents
+- [ ] Implement batchProcessDocuments() for bulk processing
+- [ ] Test with complex forms and receipts
+- [ ] Compare results with AWS Textract
+
+### Colab Enterprise Setup
+- [ ] Enable Colab Enterprise API in GCP project
+- [ ] Create runtime templates (CPU, GPU, TPU)
+- [ ] Set up GCS bucket for notebook storage
+- [ ] Implement executeNotebook() for on-demand execution
+- [ ] Implement scheduleNotebook() for recurring jobs
+- [ ] Test with sample analysis notebook
+
+### Vertex AI Integration
+- [ ] Enable Vertex AI API in GCP project
+- [ ] Implement predictCustomModel() for inference
+- [ ] Implement deployModel() for model deployment
+- [ ] Test with pre-trained models
+- [ ] Add support for custom forensic classifiers
+
+### Colab Notebook Templates
+- [ ] Create sentiment analysis notebook template
+- [ ] Create entity extraction notebook template
+- [ ] Create pattern detection notebook template
+- [ ] Add data loading from R2/Supabase
+- [ ] Add results export to Supabase
+- [ ] Test end-to-end execution
+
+---
+
+## **Phase 34: Cloud AI Routing & Optimization**
+
+### Intelligent Routing
+- [ ] Update server/_core/router.ts with cloud AI routing
+- [ ] Add cost-based routing (AWS vs GCP)
+- [ ] Add latency-based routing
+- [ ] Add fallback chains (Rekognition → Document AI → Textract)
+- [ ] Implement caching to reduce API calls
+
+### Cost Tracking
+- [ ] Track AWS API costs (Rekognition, Comprehend, Textract)
+- [ ] Track GCP API costs (Document AI, Vertex AI, Colab)
+- [ ] Store cost metrics in Supabase
+- [ ] Create cost dashboard in Manus app
+- [ ] Add budget alerts
+
+### Performance Optimization
+- [ ] Implement parallel processing for batch jobs
+- [ ] Add request batching for Comprehend
+- [ ] Use Colab Enterprise for GPU-intensive tasks
+- [ ] Cache frequently analyzed documents
+- [ ] Optimize image sizes before sending to APIs
+
+### Testing & Validation
+- [ ] Create test suite for AWS AI services
+- [ ] Create test suite for GCP AI services
+- [ ] Test screenshot analysis pipeline end-to-end
+- [ ] Test document analysis pipeline end-to-end
+- [ ] Compare accuracy: AWS vs GCP vs custom models
