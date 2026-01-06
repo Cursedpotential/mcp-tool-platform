@@ -876,3 +876,134 @@ Links to related docs
 - [ ] Generate API reference from TypeScript types
 - [ ] Create searchable documentation site (MkDocs, Docusaurus, or VitePress)
 
+
+
+---
+
+## **Phase 28: VPS Failover & Provider Independence**
+
+### VPS Web App Deployment
+- [ ] Create Dockerfile for full Manus app (client + server)
+- [ ] Add web app service to docker-compose.yml
+- [ ] Configure Nginx reverse proxy for web app
+- [ ] Set up SSL/TLS certificates (Let's Encrypt)
+- [ ] Configure environment variables for VPS deployment
+- [ ] Test web app deployment on VPS
+- [ ] Create deployment script (one-command deploy)
+
+### Database Migration Scripts
+- [ ] Create script to export all data from Manus/Supabase
+- [ ] Create script to import data to VPS databases
+- [ ] Test full database migration (Supabase → VPS Postgres)
+- [ ] Create incremental sync script (keep VPS up-to-date)
+
+### DNS & Traffic Routing
+- [ ] Document DNS configuration for custom domain
+- [ ] Create traffic routing script (switch between Manus ↔ VPS)
+- [ ] Set up health checks for automatic failover
+- [ ] Test manual failover (Manus → VPS)
+- [ ] Test automatic failover on Manus downtime
+
+### Data Synchronization
+- [ ] Set up bidirectional sync for user data
+- [ ] Configure R2 as shared storage layer
+- [ ] Create conflict resolution strategy
+- [ ] Test real-time sync between Manus and VPS
+
+### Monitoring & Alerts
+- [ ] Set up uptime monitoring for both Manus and VPS
+- [ ] Create alert system for failover events
+- [ ] Add cost tracking dashboard (Manus vs VPS)
+- [ ] Document rollback procedure (VPS → Manus)
+
+### Documentation
+- [ ] Create VPS deployment guide
+- [ ] Document failover procedure (step-by-step)
+- [ ] Create troubleshooting guide
+- [ ] Document cost comparison (Manus vs VPS vs hybrid)
+
+---
+
+## **Phase 29: LiteLLM + MetaMCP Integration**
+
+### LiteLLM Server-Side Integration
+- [ ] Implement routeLLM() function in server/_core/router.ts
+- [ ] Add LiteLLM client to server/_core/llm.ts
+- [ ] Update invokeLLM() to use intelligent routing
+- [ ] Add cost tracking for LLM calls
+- [ ] Test fallback routing (Manus → LiteLLM → Direct API)
+- [ ] Add LiteLLM metrics to monitoring dashboard
+
+### MetaMCP Integration
+- [ ] Implement MCP server registration in Dockerfile.metamcp
+- [ ] Add tool discovery API endpoints
+- [ ] Implement routeMCPTool() function in router.ts
+- [ ] Connect local MCP gateway to MetaMCP registry
+- [ ] Add MCP tool caching (Redis)
+- [ ] Test cross-server tool execution
+
+### Chroma Routing
+- [ ] Implement routeVectorSearch() with TTL vs persistent logic
+- [ ] Add Chroma VPS client to server
+- [ ] Update vector operations to use intelligent routing
+- [ ] Test in-process (TTL) vs VPS (persistent) Chroma
+- [ ] Add automatic cleanup for expired TTL collections
+
+### Neo4j Routing
+- [ ] Implement routeGraphQuery() function
+- [ ] Add connection pooling for Neo4j VPS
+- [ ] Test VPS → Aura fallback
+- [ ] Add graph query caching
+
+### Health Checks & Monitoring
+- [ ] Implement checkServiceHealth() for all VPS services
+- [ ] Add automatic failover on service degradation
+- [ ] Create service health dashboard
+- [ ] Add cost tracking for all services
+
+---
+
+## **Phase 30: Kasm Workspace Setup**
+
+### Kasm Configuration
+- [ ] Build Kasm Dockerfile with all CLI tools
+- [ ] Configure rclone for R2 bidirectional sync
+- [ ] Set up auto-sync timer (every 5 minutes)
+- [ ] Test workspace sync (local ↔ R2 ↔ desktop)
+- [ ] Add desktop shortcuts (VS Code, Sync, etc.)
+
+### CLI Tool Configuration
+- [ ] Configure Claude CLI with API key
+- [ ] Configure Gemini CLI with API key
+- [ ] Test Aider (AI pair programming)
+- [ ] Test Cursor (AI code editor)
+- [ ] Configure GitHub CLI authentication
+
+### Agent Access
+- [ ] Create SSH access for agents to Kasm container
+- [ ] Add CLI wrapper scripts for agent calls
+- [ ] Test agent → Claude CLI execution
+- [ ] Test agent → Gemini CLI execution
+- [ ] Add usage tracking for CLI calls
+
+---
+
+## **Phase 31: Documentation Generation (Delegate to Free Model)**
+
+### Tool Documentation (60+ files)
+- [ ] Use DOCUMENTATION_HANDOFF.md to generate tool docs
+- [ ] Review and edit generated documentation
+- [ ] Add code examples to each tool doc
+- [ ] Add usage statistics and best practices
+
+### Workflow Documentation (20+ files)
+- [ ] Generate workflow documentation
+- [ ] Add workflow diagrams
+- [ ] Document input/output schemas
+- [ ] Add troubleshooting sections
+
+### System Documentation (15+ files)
+- [ ] Generate system architecture docs
+- [ ] Add deployment guides
+- [ ] Document API endpoints
+- [ ] Create developer onboarding guide
