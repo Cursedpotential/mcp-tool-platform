@@ -574,3 +574,50 @@
 - [ ] Add user attribution for all actions (who did what, when)
 - [ ] Add immutable snapshots at key checkpoints (can't be changed after validation)
 - [ ] Add export to court-admissible formats (PDF with signatures)
+
+
+## Phase 22 - End-to-End Document Processing Pipeline
+
+### Stubbed Supabase Table Schemas
+- [ ] Create sms_messages table schema (stubbed, user will provide real schema)
+- [ ] Create facebook_messages table schema (stubbed)
+- [ ] Create imessage_messages table schema (stubbed)
+- [ ] Create email_messages table schema (stubbed)
+- [ ] Create chatgpt_conversations table schema (stubbed)
+- [ ] Add common fields (id, text, timestamp, sender, platform, conversation_cluster_id)
+- [ ] Add analysis fields (preliminary_sentiment, preliminary_severity, preliminary_patterns, preliminary_confidence)
+
+### Format-Specific Parsers
+- [ ] Build Facebook HTML parser (handle excessively long files, nested threads)
+- [ ] Build XML SMS parser (handle multi-gig files, streaming parser)
+- [ ] Build PDF iMessage parser (extract text, preserve timestamps, handle attachments)
+- [ ] Build generic CSV parser (flexible column mapping)
+- [ ] Build JSON parser (ChatGPT exports, generic JSON formats)
+- [ ] Add format auto-detection (detect format from file extension + content)
+
+### Complete Pipeline Orchestrator
+- [ ] Create DocumentProcessingPipeline class
+- [ ] Step 1: Format detection + parser selection
+- [ ] Step 2: Parse document → extract messages
+- [ ] Step 3: Run multi-pass NLP classifier on each message
+- [ ] Step 4: Assign conversation cluster IDs
+- [ ] Step 5: Export individual messages to Supabase
+- [ ] Add progress tracking (X of Y messages processed)
+- [ ] Add error handling (skip malformed messages, log errors)
+- [ ] Add resume capability (restart from last processed message)
+
+### Supabase Export Module
+- [ ] Create SupabaseExporter class
+- [ ] Implement batch insertion (100 messages at a time)
+- [ ] Implement upsert logic (avoid duplicates)
+- [ ] Add transaction support (all-or-nothing insertion)
+- [ ] Add retry logic (handle network failures)
+- [ ] Log export operations (audit trail)
+
+### Testing
+- [ ] Test with sample Facebook HTML export
+- [ ] Test with sample XML SMS export (multi-gig simulation)
+- [ ] Test with sample PDF iMessage export
+- [ ] Verify individual messages in Supabase
+- [ ] Verify analysis fields populated correctly
+- [ ] Verify conversation cluster IDs assigned
