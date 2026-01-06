@@ -621,3 +621,59 @@
 - [ ] Verify individual messages in Supabase
 - [ ] Verify analysis fields populated correctly
 - [ ] Verify conversation cluster IDs assigned
+
+
+## Phase 23 - Production Schema & Proper Routing
+
+### Update Database Schemas
+- [ ] Replace stubbed message-schemas.ts with production schema from user
+- [ ] Create messaging_documents table (chain of custody with SHA-256)
+- [ ] Create messaging_conversations table (thread grouping)
+- [ ] Create messaging_messages table (core forensic record with 40+ fields)
+- [ ] Create messaging_attachments table (MMS/media with OCR)
+- [ ] Create messaging_behaviors table (detected patterns with confidence/severity)
+- [ ] Create messaging_evidence_items table (court-ready evidence)
+- [ ] Create messaging_factor_citations table (MCL factor links)
+- [ ] Create mcl_factors reference table (A-L best interest factors)
+- [ ] Create behavior_categories reference table (18 categories)
+- [ ] Add indexes for performance (conversation_id, timestamp, sender, body_lower)
+- [ ] Add RLS policies for multi-user access
+
+### Refactor Pipeline for Large Documents
+- [ ] Add document chunking (split 400-page HTML into manageable chunks)
+- [ ] Store chunks in Chroma during classification (working memory)
+- [ ] Implement streaming classification (process chunks without loading entire file)
+- [ ] Add progress tracking (chunk X of Y)
+- [ ] Ensure LLM doesn't choke on large documents
+- [ ] Clear Chroma after classification complete (72hr TTL)
+
+### Wire Neo4j/Graphiti for Entities
+- [ ] Extract entities from messages (people, places, events, medical terms)
+- [ ] Extract relationships (person A mentioned person B, event X happened at place Y)
+- [ ] Store in Neo4j using Graphiti
+- [ ] Link entities back to source messages (bidirectional)
+- [ ] Add temporal relationships (entity mentions over time)
+
+### Wire Directus for Raw File Storage
+- [ ] Upload raw file to R2 bucket via Directus
+- [ ] Calculate SHA-256 hash before upload
+- [ ] Store file metadata in messaging_documents table
+- [ ] Link processed messages back to source file
+- [ ] Implement chain of custody tracking
+
+### Routing Logic
+- [ ] Individual messages → Supabase (messaging_messages table)
+- [ ] Entities/relationships → Neo4j/Graphiti
+- [ ] Raw file → Directus → R2 bucket
+- [ ] Chunks during classification → Chroma (temporary, 72hr TTL)
+- [ ] Ensure all routes happen in correct order
+
+### Testing
+- [ ] Create 400-page Facebook HTML test file
+- [ ] Run through complete pipeline
+- [ ] Verify chunking works (no LLM choking)
+- [ ] Verify Chroma storage during classification
+- [ ] Verify Supabase message insertion
+- [ ] Verify Neo4j entity extraction
+- [ ] Verify Directus/R2 raw file storage
+- [ ] Verify chain of custody tracking
