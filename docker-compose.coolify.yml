@@ -332,11 +332,19 @@ EOF
       - "traefik.http.routers.kasm.rule=Host(`desktop.${DOMAIN}`)"
       - "traefik.http.routers.kasm.entrypoints=websecure"
       - "traefik.http.routers.kasm.tls.certresolver=letsencrypt"
+      # Basic auth middleware for backup browser access
+      - "traefik.http.routers.kasm.middlewares=kasm-auth"
+      - "traefik.http.middlewares.kasm-auth.basicauth.users=${KASM_BASIC_AUTH}"
+      # Alternative: IP whitelist for extra security
+      # - "traefik.http.middlewares.kasm-auth.ipwhitelist.sourcerange=0.0.0.0/0"
       - "traefik.http.services.kasm.loadbalancer.server.port=6901"
       - "coolify.managed=true"
       - "coolify.type=application"
       - "n8n.service=on-demand"
       - "n8n.priority=low"
+      # Access methods:
+      # Primary: Tailscale (http://salem-forensics:6901)
+      # Backup: Browser with auth (https://desktop.${DOMAIN})
 
   # LibreChat - Multi-model chat UI
   librechat:
