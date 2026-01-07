@@ -1,7 +1,17 @@
-# MCP Tool Platform - Claude Context Document
+# Context Document for Claude
 
-**Last Updated:** January 2025  
-**Project:** Forensic Communication Analysis Platform with MCP Gateway & Multi-Agent Orchestration
+**Last Updated:** January 7, 2026 - 10:00 PM EST  
+**Project:** Forensic Communication Analysis Platform with MCP Gateway & Multi-Agent Orchestration  
+**Status:** 40% Complete - Backend scaffolded, VPS deployment in progress, UI wiring needed
+
+---
+
+## CRITICAL STATUS UPDATE
+
+### Token Budget: ~125k remaining (started with 200k)
+### Funding: $20 plan exhausted, need $70 to upgrade to $200 plan tomorrow
+### Deployment: Groq agents deploying salem-nexus services via Coolify
+### Next Session: Wire backend UI, complete routing layer, test file ingestion
 
 ---
 
@@ -97,229 +107,326 @@ Example: `SMS_2401_KAILAH_001` (SMS, Jan 2024, about Kailah, sequence 1)
 
 ---
 
+## CRITICAL GAPS (MUST ADDRESS NEXT SESSION)
+
+### 1. Backend UI Wiring (Settings Page)
+**Status:** Scaffolds exist, procedures have TODOs, NO wiring
+
+**Files:**
+- `client/src/pages/Settings.tsx` - UI skeleton
+- `server/routers/settings.ts` - 25+ procedures with TODOs
+- `drizzle/settings-schema.ts` - 12 tables created
+
+**Missing:**
+- [ ] Wire database procedures to UI forms
+- [ ] Implement API key encryption (crypto module)
+- [ ] Test connection buttons for Neo4j/Supabase/Vector DBs
+- [ ] NLP configuration (model selection, thresholds)
+- [ ] LLM provider management (add/edit/delete/test)
+- [ ] Routing rules configuration
+- [ ] Export/import settings
+
+### 2. Pattern Library Wiring
+**Status:** UI exists, backend has TODOs
+
+**Files:**
+- `client/src/pages/PatternLibrary.tsx` - UI skeleton
+- `server/routers/patterns.ts` - 15+ procedures with TODOs
+
+**Missing:**
+- [ ] Load patterns from database (procedure exists, UI not wired)
+- [ ] Add/edit/delete patterns (UI exists, backend TODOs)
+- [ ] Test pattern against sample text (UI exists, backend stub)
+- [ ] Import/export patterns (UI exists, no backend)
+
+### 3. Routing Layer Implementation
+**Status:** Skeleton with TODOs
+
+**File:** `server/_core/router.ts`
+
+**Missing:**
+- [ ] routeLLMRequest() - Manus → LiteLLM → External APIs
+- [ ] routeMCPRequest() - Manus → MetaMCP → Remote MCPs
+- [ ] routeVectorSearch() - Manus → Chroma VPS → Cloud vectors
+- [ ] routeGraphQuery() - Manus → Neo4j Aura → Graphiti
+- [ ] routeStorageOperation() - Manus → R2 → Directus/PhotoPrism
+- [ ] Health checks, retry logic, load balancing
+- [ ] Cost/latency tracking
+
+### 4. VPS Service Integration
+**Status:** Docker compose ready, NOT deployed or integrated
+
+**LiteLLM:**
+- [ ] Deploy to salem-forge (waiting for reformat)
+- [ ] Connect platform to LiteLLM
+- [ ] Implement failover from Manus → LiteLLM
+- [ ] Cost tracking
+
+**MetaMCP:**
+- [ ] Deploy to salem-forge
+- [ ] Connect platform to MetaMCP
+- [ ] Remote MCP server registration
+- [ ] Tool discovery
+
+**Chroma VPS:**
+- [ ] Deploy to salem-forge
+- [ ] Connect platform to Chroma VPS
+- [ ] Vector search routing
+
+### 5. MCP Tool Executors
+**Status:** 60+ tools registered, 20 have executors, 40 are stubs
+
+**File:** `server/mcp/executor.ts`
+
+**Missing Executors:**
+- [ ] Vector DB tools (Qdrant, pgvector, Chroma)
+- [ ] Graph DB tools (Neo4j, Graphiti)
+- [ ] mem0 shared context tools
+- [ ] n8n workflow triggers
+- [ ] Browser automation tools (Browserless, Playwright)
+- [ ] Python library tools (pandas, Transformers, pdfplumber)
+- [ ] JavaScript library tools (Cheerio, Natural, Compromise)
+
+### 6. Frontend Pages NOT Created
+- [ ] LLM Router monitoring page
+- [ ] Prompt Builder page
+- [ ] Workflow Builder page
+- [ ] Agent Builder page
+
+---
+
+## VPS Infrastructure
+
+### salem-nexus (116.203.199.238) - Storage/CMS
+**Status:** Coolify master running, Groq agents deploying services
+
+**Services (Being Deployed):**
+- PostgreSQL (postgres:16-alpine)
+- FerretDB (MongoDB-compatible layer)
+- Directus (CMS, file management)
+- PhotoPrism (image analysis)
+- n8n (workflow automation)
+- Tailscale (VPN)
+
+**Volume:** salem-vault (60GB XFS) at /mnt/salem-vault
+
+### salem-forge (116.203.198.77) - AI/Compute
+**Status:** Being reformatted to clean Debian
+
+**Planned Services (NOT deployed):**
+- LiteLLM (LLM routing/proxy)
+- MetaMCP (MCP server registry)
+- Chroma (vector store)
+- LibreChat (chat UI)
+- Open WebUI (alternative chat UI)
+- Ollama (local LLM runtime)
+- Kasm Workspace (remote desktop with Claude/Gemini CLI)
+- Browserless (headless Chrome)
+- Playwright (browser automation)
+
+---
+
 ## Database Schema (Key Tables)
 
-### Platform-Specific Message Tables
-```
-sms_messages, facebook_messages, imessage_messages, email_messages, chatgpt_conversations
-- id, text, timestamp, sender, platform
-- conversation_cluster_id (PLAT_YYMM_TOPIC_iii)
-- preliminary_sentiment, preliminary_severity, preliminary_patterns
-- preliminary_confidence, preliminary_analyzed_at, preliminary_reasoning
-```
+### Supabase PostgreSQL
 
-### Unified Conversation Groups
-```
-conversation_groups
-- id, case_id, participants[], date_range, platforms[]
-- message_refs: [{platform, message_id}]
-```
+**Message Storage:**
+- `messaging_documents` - Document metadata (file_hash, platform, upload_timestamp)
+- `messaging_conversations` - Conversation groups (cluster_id, participants, date_range)
+- `messaging_messages` - Individual messages (text, timestamp, sender, preliminary_sentiment, preliminary_severity)
+- `messaging_behaviors` - Detected patterns (pattern_name, severity, confidence, mcl_factor)
+- `messaging_attachments` - Media files (file_url, mime_type, ocr_text)
+- `messaging_evidence_items` - Chain of custody (sha256_hash, custody_log)
 
-### Meta-Analyses
-```
-meta_analyses
-- id, conversation_group_id (FK)
-- analysis_type (pattern_detection | timeline | contradiction | psychological_profile)
-- final_sentiment, final_severity, final_patterns[]
-- coordinated_abuse_score, gaslighting_evidence (JSON)
-- contradictions_found: [{preliminary_assessment, final_assessment, evidence_refs}]
-- forensic_significance, analyzed_at, human_validated
-```
+**Analysis Storage:**
+- `meta_analyses` - Full-context analysis results
+- `contradictions` - Detected contradictions between preliminary and final
+- `audit_trail` - Immutable log of all operations
 
-### Behavioral Patterns
-```
-behavioralPatterns
-- id, name, category, pattern (text or regex)
-- description, severity (1-10), isRegex, isEnabled
-- metadata: {source_lexicon, source_category, language}
-```
+**Configuration:**
+- `nlpConfig` - spaCy/NLTK/Sentence Transformer settings
+- `llmProviders` - Provider credentials and configs
+- `routingRules` - Task-based/cost-based/latency-based routing
+- `workflows` - Saved workflow definitions
+- `agents` - Agent configurations
+- `topicCodes` - Custom topic codes
+- `platformCodes` - Custom platform codes
+- `promptVersions` - Prompt template versioning
+- `exportHistory` - Export/import audit trail
+- `behavioralPatterns` - Custom user patterns (256 loaded)
 
-### Embeddings (pgvector)
-```
-embeddings
-- id, content, embedding (vector(384))
-- source_table, source_id, metadata
-- HNSW index for fast similarity search
-```
+### Neo4j Aura (Graphiti)
 
----
+**Nodes:**
+- Person, Address, Place, Organization, Property
+- GpsPoint, Phone, Email, VoterRecord, Event
 
-## Critical Implementation Details
+**Relationships:**
+- Familial, Romantic, Professional, Residential, Contact
+- Spatial, Temporal
 
-### **Priority Flags (Pass 0 - Immediate Detection)**
-**MUST flag immediately with HIGH severity:**
-- **Parental Alienation:** "can't see Kailah", "blocked my calls", "denied visitation"
-- **Child References:** "Kailah", "Kyla" (voice recognition variant), "my daughter", "our daughter"
-- **Custody Interference:** refusing handoffs, canceling scheduled time
+### Chroma Collections
 
-### **DARVO Sequence Detection (Single-Context)**
-Detect all three components in one message or conversation thread (within 3-5 messages):
-1. **Deny:** "I never did that", "that didn't happen"
-2. **Attack:** "you're crazy", "you're the abusive one"
-3. **Reverse:** "I'm the victim here", "you're attacking me"
+**Evidence Processing (72hr TTL):**
+- Preliminary analysis chunks
+- Embeddings for semantic search
+- Auto-cleanup after 72 hours
 
-**Severity:** 9-10 (hallmark of abusive behavior)
-
-### **User Custom Patterns**
-- Stored in `behavioralPatterns` table
-- Loaded via `CommunicationPatternAnalyzer.loadUserConfig(userId)`
-- **200+ hours of manual pattern curation by user**
-- MUST be loaded BEFORE running analysis
-
-### **Dual-Polarity Analysis**
-- Detect BOTH positive (love bombing, affirmations) AND negative (gaslighting, threats)
-- **Why:** "I love you" (Day 1) + cheating evidence (Day 3) = manipulative love bombing
-- Meta-analysis compares positive statements with contradictory actions
+**Project Context (Persistent):**
+- User preferences
+- Project goals
+- Workflow settings
 
 ---
 
-## Key Files & Directories
+## Testing Status
 
-```
-server/
-  mcp/
-    orchestration/
-      langgraph-adapter.ts          # LangGraph state machine framework
-      sub-agents.ts                 # Document, Forensics, Approval, Export agents
-      forensic-workflow.ts          # Pre-built forensic investigation workflow
-      langchain-memory.ts           # ForensicInvestigationMemory class
-    loaders/
-      base-loader.ts                # Document loader interface
-      sms-loader.ts                 # SMS/iMessage parser
-      unstructured-loader.ts        # Unstructured.io wrapper
-      embedding-pipeline.ts         # Embedding generation + pgvector storage
-      document-hierarchy.ts         # Cases → Conversations → Documents → Chunks
-      lexicon-importer.ts           # Dynamic GitHub lexicon fetching (HurtLex, MCL)
-    analysis/
-      multi-pass-classifier.ts      # 6-pass NLP analysis system
-      priority-screener.ts          # Pass 0: Custody/alienation immediate flags
-      conversation-segmentation.ts  # Topic change detection + cluster ID generation
-      classifier.ts                 # (DEPRECATED - use multi-pass-classifier.ts)
-    storage/
-      chroma-client.ts              # Dual-collection Chroma (72hr TTL + persistent)
-      supabase-client.ts            # Supabase + pgvector integration
-    forensics/
-      pattern-analyzer.ts           # Custom pattern matching + MCL factors
-    plugins/
-      langgraph-plugin.ts           # MCP tools: createGraph, executeGraph, streamGraph
-      text-miner.ts                 # Bulk pattern search (ugrep/ripgrep)
-      nlp.ts                        # NLP provider integrations
-    workers/
-      executor.ts                   # MCP tool executor (LangGraph handlers registered)
-  python-tools/
-    nlp_runner.py                   # spaCy, NLTK, sentiment analysis, entity extraction
-    langgraph_runner.py             # Python bridge for complex LangGraph execution
-    unstructured_parser.py          # Unstructured.io document parsing
-    topic_detector.py               # BERTopic topic detection (NOT YET WORKING - hdbscan compile issues)
-    get_embedding.py                # Sentence Transformers embeddings
-  scripts/
-    seed-patterns.ts                # Database seed script (256 patterns imported)
-  db.ts                             # Database helpers
-  routers.ts                        # tRPC procedures
+### Vitest Tests
+- **LangGraph:** 15/23 passing (65%)
+- **LangChain Memory:** 18/19 passing (95%)
+- **Document Loaders:** OOM error (needs optimization)
+- **Total:** 52/63 tests passing (83%)
 
-drizzle/
-  schema.ts                         # Database schema (Drizzle ORM)
-
-docs/
-  ANALYSIS_LIBRARY_ARCHITECTURE.md  # Pattern library architecture + NLP tool mapping
-  EXPANDED_PATTERN_LIBRARY.md       # Research-backed pattern additions
-  MCP_UTILITIES_INDEX.txt            # Index of available MCP utilities
-
-todo.md                              # Comprehensive task tracking (400+ items)
-```
+### Integration Tests
+- [ ] End-to-end file ingestion NOT tested yet
+- [ ] VPS service integration NOT tested
+- [ ] Routing layer NOT tested
 
 ---
 
-## What's NOT Done Yet
+## Deployment Files
 
-### **High Priority**
-- [ ] Text Miner integration (expose as atomic tool + workflow component)
-- [ ] DARVO sequence detection implementation
-- [ ] Overelaboration detection (sentence length analysis)
-- [ ] Pronoun ratio analysis (I-talk vs you-talk)
-- [ ] Evidence Hasher integration (chain of custody)
-- [ ] Mem0 integration (persistent project context)
-- [ ] NotebookLM integration (audio summary generation)
-- [ ] BERTopic installation (stuck on hdbscan compilation - fallback to keyword-based topic detection)
-- [ ] Real embedding API wiring (currently using sentence-transformers locally)
-- [ ] End-to-end pipeline testing with real documents
+### Docker Compose
+- `docker-compose.vps1-storage.yml` - salem-nexus services
+- `docker-compose.vps2-compute.yml` - salem-forge services
+- `litellm-config.yaml` - LiteLLM model routing rules
 
-### **Admin UI (50+ Tasks)**
-- [ ] Settings page (NLP configuration, topic detection, pattern library management)
-- [ ] API key management (LLM providers, external services)
-- [ ] Import/export functionality (patterns, analysis results, backups)
-- [ ] Pattern library UI (search, create, edit, delete, test patterns)
-- [ ] Workflow configuration UI (enable/disable passes, adjust weights)
-- [ ] Database management UI (connection status, statistics, maintenance)
+### Handoff Documents
+- `GROQ_COMPOUND_HANDOFF.md` - Deployment instructions for Groq agents
+- `AGENT_HANDOFF.md` - 9 parallel work streams for delegation
+- `DOCUMENTATION_HANDOFF.md` - 100+ docs for free models to write
 
-### **Lexicon Integration**
-- [ ] HurtLex import execution (importer built, not yet run)
-- [ ] MCL patterns research + import
-- [ ] Scheduled lexicon updates (auto-fetch latest versions)
+### Analysis Documents
+- `ARCHITECTURE.md` - 7500+ word system design
+- `ARCHITECTURE_DIFF_ANALYSIS.md` - Comparison with conversation ingestion system
+- `PUNCHLIST_GAP_ANALYSIS.md` - 28% complete, 52% missing
+- `COMPREHENSIVE_GAP_REPORT.md` - 60+ tools registered, 40 need executors
+- `STATUS_REPORT_JAN7.md` - THIS SESSION'S COMPREHENSIVE STATUS
 
 ---
 
-## Important Conventions
+## Key Code Files
 
-### **Naming**
-- **Daughter's name:** Kailah (correct spelling), also match "Kyla" (voice recognition variant)
-- **Cluster IDs:** `PLAT_YYMM_TOPIC_iii` (18 chars max, human-readable, sortable)
-- **Categories:** snake_case (gaslighting, blame_shifting, parental_alienation)
+### Backend Core
+- `server/_core/router.ts` - Routing layer (TODOs)
+- `server/_core/llm.ts` - Manus built-in LLM (works)
+- `server/_core/context.ts` - tRPC context
+- `server/_core/env.ts` - Environment variables
 
-### **Severity Scoring**
-- **1-3:** Low (minor negativity, no abuse indicators)
-- **4-6:** Medium (concerning patterns, potential manipulation)
-- **7-8:** High (clear abuse indicators, multiple patterns)
-- **9-10:** Critical (DARVO, parental alienation, threats, coordinated abuse)
+### MCP System
+- `server/mcp/gateway.ts` - MCP gateway (functional)
+- `server/mcp/executor.ts` - Tool executors (20/60 done)
+- `server/mcp/plugins/` - 15 plugin files (~3500 lines)
 
-### **Analysis Philosophy**
-- **Preliminary:** Fast, objective, surface-level (what words are literally present)
-- **Meta-Analysis:** Slow, contextual, retrospective (what patterns emerge across time/platforms)
-- **NO LLM in preliminary** (use regex, keyword matching, statistical NLP)
-- **LLM only in meta-analysis** (nuanced contradiction detection, psychological profiling)
+### Orchestration
+- `server/mcp/orchestration/langgraph-adapter.ts` - State machines
+- `server/mcp/orchestration/langchain-memory.ts` - Hypothesis tracking
+- `server/mcp/orchestration/sub-agents.ts` - Agent library
+- `server/mcp/orchestration/forensic-workflow.ts` - Pre-built workflows
 
----
+### Document Processing
+- `server/mcp/loaders/base-loader.ts` - Abstract loader
+- `server/mcp/loaders/sms-loader.ts` - SMS parser
+- `server/mcp/loaders/embedding-pipeline.ts` - pgvector integration
+- `server/mcp/loaders/document-hierarchy.ts` - Case management
+- `server/mcp/parsers/facebook-html-parser.ts` - Streaming parser
+- `server/mcp/parsers/xml-sms-parser.ts` - Streaming parser
+- `server/mcp/parsers/pdf-imessage-parser.ts` - PDF parser
 
-## Testing & Validation
+### NLP
+- `server/python-tools/multi_pass_classifier.py` - 6-pass classifier
+- `server/python-tools/graphiti_runner.py` - Neo4j integration
 
-### **Vitest Tests**
-- `server/mcp/orchestration/langgraph.test.ts` - 15/23 passed (state persistence needs work)
-- `server/mcp/orchestration/langchain-memory.test.ts` - 18/19 passed (95% success)
-- `server/mcp/loaders/document-loaders.test.ts` - OOM error (needs fix)
+### tRPC Routers
+- `server/routers/settings.ts` - 25+ procedures (TODOs)
+- `server/routers/patterns.ts` - 15+ procedures (TODOs)
+- `server/routers.ts` - Main router
 
-### **Pattern Seed Script**
-```bash
-node --import tsx server/scripts/seed-patterns.ts
-# ✅ Successfully seeded 256 patterns across 26 categories
-```
+### Database
+- `drizzle/schema.ts` - User/auth tables
+- `drizzle/settings-schema.ts` - 12 config tables
+- `server/db.ts` - Database helpers
 
----
-
-## Next Steps for Claude
-
-1. **Complete Text Miner integration** - Expose as MCP tool, integrate into workflows
-2. **Implement DARVO sequence detection** - Check for Deny → Attack → Reverse within 3-5 messages
-3. **Build admin UI** - Start with Settings page (NLP config, pattern management)
-4. **Test end-to-end pipeline** - Ingest sample SMS export, verify preliminary → meta-analysis flow
-5. **Fix BERTopic installation** - Or finalize fallback to keyword-based topic detection
-6. **Wire real embedding API** - Replace local sentence-transformers with Manus built-in LLM API
-
----
-
-## Critical Reminders
-
-- **ALWAYS load user custom patterns** from database before analysis (`loadUserConfig(userId)`)
-- **NEVER skip preliminary analysis** - it's required for delta tracking in meta-analysis
-- **Chroma has TWO collections** - evidence (72hr TTL) and project context (persistent)
-- **R2 is single source of truth** for files - PhotoPrism/Directus read from R2, don't store files themselves
-- **Cluster IDs are platform-specific** - cross-platform linking happens in meta-analysis via `conversation_groups`
-- **Priority flags (Pass 0) are non-negotiable** - custody/alienation patterns MUST be flagged immediately
+### Frontend
+- `client/src/pages/Home.tsx` - Landing page
+- `client/src/pages/Settings.tsx` - Settings UI (not wired)
+- `client/src/pages/PatternLibrary.tsx` - Pattern UI (not wired)
+- `client/src/components/DashboardLayout.tsx` - Layout
 
 ---
 
-## Contact & Context
+## Next Session Priorities
 
-**User:** Forensic analysis for custody case, focus on parental alienation and manipulation patterns  
-**Daughter:** Kailah (also "Kyla" in voice transcriptions)  
-**Key Evidence:** SMS, Facebook Messenger, iMessage, ChatGPT conversations, emails  
-**Goal:** Court-admissible forensic reports showing pattern evolution over time
+### 1. Verify Groq Deployment (30 min)
+- Check Coolify UI at https://nexus.mitechconsult.com
+- Verify PostgreSQL, Directus, PhotoPrism, n8n are running
+- Test shared media storage
+- Document credentials
+
+### 2. Wire Backend UI (4-6 hours)
+- Complete Settings page database procedures
+- Implement API key encryption
+- Wire Pattern Library CRUD operations
+- Test all procedures with vitest
+
+### 3. Implement Routing Layer (4-6 hours)
+- Complete router.ts with failover logic
+- Add health checks for VPS services
+- Implement retry logic
+- Add cost/latency tracking
+
+### 4. Deploy salem-forge (2-3 hours)
+- Add as Coolify remote server
+- Deploy AI/Compute services
+- Configure Tailscale VPN
+- Test cross-VPS communication
+
+### 5. Test File Ingestion (2-3 hours)
+- Upload sample Facebook HTML to Directus
+- Create n8n preprocessing workflow
+- Test end-to-end pipeline
+- Debug with live data
+
+---
+
+## Important Notes
+
+### Proxy/Router/Coordinator Status
+**ALL STUBS - NO IMPLEMENTATION:**
+- routeLLMRequest() - Returns placeholder
+- routeMCPRequest() - Returns placeholder
+- routeVectorSearch() - Returns placeholder
+- routeGraphQuery() - Returns placeholder
+- routeStorageOperation() - Returns placeholder
+
+**LiteLLM Integration:** Docker compose ready, NOT deployed, NO platform integration
+
+**MetaMCP Integration:** Docker compose ready, NOT deployed, NO platform integration
+
+**MCP Gateway:** 60+ tools registered, 20 have executors, 40 are stubs
+
+### GitHub Sync
+- User made changes via GitHub Copilot
+- Added `.github/copilot-instructions.md` (360 lines)
+- Scrubbed API keys from documentation files
+- All changes pulled and synced
+
+### Funding Constraint
+- $20 plan exhausted
+- Need $70 to upgrade to $200 plan
+- Cannot continue development tonight
+- Resume tomorrow with funding
+
+---
+
+**End of Context Document**
