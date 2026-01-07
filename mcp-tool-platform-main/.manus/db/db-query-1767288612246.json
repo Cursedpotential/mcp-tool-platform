@@ -1,9 +1,0 @@
-{
-  "query": "CREATE TABLE IF NOT EXISTS `documentEntities` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `documentId` int NOT NULL,\n  `entityType` varchar(64) NOT NULL,\n  `entityValue` varchar(512) NOT NULL,\n  `normalizedValue` varchar(512),\n  `occurrenceCount` int DEFAULT 1,\n  `firstOccurrence` int,\n  `confidence` int,\n  `extractorModel` varchar(128),\n  `metadata` text,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `documentEntities_documentId_idx` (`documentId`),\n  KEY `documentEntities_entityType_idx` (`entityType`),\n  KEY `documentEntities_entityValue_idx` (`entityValue`),\n  CONSTRAINT `documentEntities_documentId_fk` FOREIGN KEY (`documentId`) REFERENCES `documents` (`id`) ON DELETE CASCADE\n);",
-  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2QJxepF6RkxixEF.root --database CrKBAyYZGWJki2G2dH59p7 --execute CREATE TABLE IF NOT EXISTS `documentEntities` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `documentId` int NOT NULL,\n  `entityType` varchar(64) NOT NULL,\n  `entityValue` varchar(512) NOT NULL,\n  `normalizedValue` varchar(512),\n  `occurrenceCount` int DEFAULT 1,\n  `firstOccurrence` int,\n  `confidence` int,\n  `extractorModel` varchar(128),\n  `metadata` text,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `documentEntities_documentId_idx` (`documentId`),\n  KEY `documentEntities_entityType_idx` (`entityType`),\n  KEY `documentEntities_entityValue_idx` (`entityValue`),\n  CONSTRAINT `documentEntities_documentId_fk` FOREIGN KEY (`documentId`) REFERENCES `documents` (`id`) ON DELETE CASCADE\n);",
-  "rows": [],
-  "messages": [],
-  "stdout": "",
-  "stderr": "",
-  "execution_time_ms": 253
-}
