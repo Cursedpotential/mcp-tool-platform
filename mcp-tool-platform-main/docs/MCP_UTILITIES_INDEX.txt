@@ -1,0 +1,372 @@
+=== server/mcp/analysis/classifier.ts ===
+export interface Classification {
+export interface BatchClassification {
+export const NEGATIVE_PATTERNS = [
+export const POSITIVE_PATTERNS = [
+export const ALL_PATTERNS = [...NEGATIVE_PATTERNS, ...POSITIVE_PATTERNS] as const;
+
+=== server/mcp/analysis/multi-pass-classifier.ts ===
+export interface MultiPassClassification {
+export class MultiPassClassifier {
+export const multiPassClassifier = new MultiPassClassifier();
+
+=== server/mcp/analysis/nlp-classifier.ts ===
+export interface NLPClassification {
+export class NLPClassifier {
+export function aggregateNLPClassifications(
+export const nlpClassifier = new NLPClassifier();
+
+=== server/mcp/analysis/priority-screener.ts ===
+export interface PriorityFlag {
+export interface PriorityScreenResult {
+export class PriorityScreener {
+export const priorityScreener = new PriorityScreener();
+
+=== server/mcp/approval/approval-system.ts ===
+export const approvalTools = [
+
+=== server/mcp/auth/api-keys.ts ===
+export interface ApiKeyPermission {
+export interface CreateApiKeyRequest {
+export interface ApiKeyWithPlaintext extends Omit<ApiKey, 'keyHash'> {
+export interface ApiKeyValidationResult {
+export function generateApiKey(): string {
+
+=== server/mcp/chroma/stream-processor.ts ===
+export interface ProcessingOptions extends Partial<ChunkingOptions> {
+export interface ProcessingProgress {
+export interface ChunkData {
+export interface ProcessingResult {
+export class StreamProcessor {
+
+=== server/mcp/chroma/working-memory.ts ===
+export interface ChromaConfig {
+export interface ProcessingJob {
+export interface Chunk {
+export interface Collection {
+export interface SearchResult {
+
+=== server/mcp/config/config-manager.ts ===
+export interface PatternDefinition {
+export interface Pattern {
+export interface BehavioralDefinition {
+export interface BehavioralIndicator {
+export interface CustomDictionary {
+
+=== server/mcp/config/mcp-generator.ts ===
+export type Platform = 'claude' | 'gemini' | 'openai' | 'generic';
+export interface MCPSkill {
+export interface ClaudeMCPConfig {
+export interface GeminiExtensionConfig {
+export interface OpenAIFunctionConfig {
+
+=== server/mcp/export/pipeline.ts ===
+export interface ExportConfig {
+export interface ExportResult {
+export interface ProcessedDocument {
+export interface GraphNode {
+export interface GraphRelationship {
+
+=== server/mcp/forensics/forensics-router.ts ===
+export const forensicsRouter = router({
+
+=== server/mcp/forensics/hurtlex-fetcher.ts ===
+export interface HurtLexTerm {
+export interface HurtLexCategory {
+export interface SyncStatus {
+export const HURTLEX_CATEGORIES: HurtLexCategory[] = [
+export class HurtLexFetcher {
+
+=== server/mcp/forensics/pattern-analyzer.test.ts ===
+
+=== server/mcp/forensics/pattern-analyzer.ts ===
+export interface AnalysisModule {
+export interface PatternMatch {
+export interface AnalysisResult {
+export interface Contradiction {
+export interface TimelineEvent {
+
+=== server/mcp/forking/tool-fork.ts ===
+export type PlatformType = 'generic' | 'claude-mcp' | 'gemini-extension' | 'openai-function';
+export interface ToolFork {
+export interface ToolCustomization {
+export function getToolForkManager(): ToolForkManager {
+export type {
+
+=== server/mcp/gateway.agent.test.ts ===
+
+=== server/mcp/gateway.test.ts ===
+
+=== server/mcp/gateway.ts ===
+export const mcpGatewayRouter = router({
+export type McpGatewayRouter = typeof mcpGatewayRouter;
+
+=== server/mcp/hitl/approval.ts ===
+export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
+export type ActionType = 'write' | 'delete' | 'move' | 'merge' | 'execute';
+export interface ApprovalRequest {
+export interface ApprovalResult {
+export function getApprovalRequest(id: string): ApprovalRequest | null {
+
+=== server/mcp/llm/openrouter-models.ts ===
+export interface OpenRouterModel {
+export function filterFreeModels(models: OpenRouterModel[]): OpenRouterModel[] {
+
+=== server/mcp/llm/provider-hub.ts ===
+export type ProviderType = 
+export type TaskComplexity = 'simple' | 'medium' | 'complex';
+export type RoutingMode = 'api' | 'cli' | 'auto' | 'local';
+export interface RemoteCLIBridgeConfig {
+export interface LLMMessage {
+
+=== server/mcp/llm/smart-router.ts ===
+export type TaskType = 'simple' | 'complex' | 'creative' | 'long-context' | 'embedding' | 'code' | 'math' | 'speed' | 'multimodal';
+export type CostTier = 'free' | 'cheap' | 'moderate' | 'expensive';
+export interface RoutingPolicy {
+export interface ProviderMetrics {
+export interface RoutingDecision {
+
+=== server/mcp/loaders/base-loader.ts ===
+export interface LoadedDocument {
+export interface DocumentMetadata {
+export interface DocumentChunk {
+export interface ExtractedEntity {
+export interface DetectedSchema {
+
+=== server/mcp/loaders/document-hierarchy.ts ===
+export interface Case {
+export interface Conversation {
+export interface DocumentReference {
+export interface ChunkReference {
+export class DocumentHierarchyManager {
+
+=== server/mcp/loaders/document-loaders.test.ts ===
+
+=== server/mcp/loaders/embedding-pipeline.ts ===
+export interface EmbeddingVector {
+export interface EmbeddingMetadata {
+export interface SemanticSearchQuery {
+export interface SearchFilters {
+export interface SearchResult {
+
+=== server/mcp/loaders/real-embedding-service.ts ===
+export interface EmbeddingRequest {
+export interface BatchEmbeddingRequest {
+export interface EmbeddingResponse {
+export interface BatchEmbeddingResponse {
+export class RealEmbeddingService {
+
+=== server/mcp/loaders/sms-loader.ts ===
+export interface SMSMessage {
+export interface SMSThread {
+export class SMSDocumentLoader extends BaseDocumentLoader {
+
+=== server/mcp/loaders/unstructured-loader.ts ===
+export interface UnstructuredParseOptions {
+export interface UnstructuredResult {
+export class UnstructuredLoader {
+export const unstructuredLoader = new UnstructuredLoader();
+
+=== server/mcp/observability/tracing.ts ===
+export function startTrace(
+export function endSpan(spanId: string): TraceContext | null {
+export function addTag(spanId: string, key: string, value: string): void {
+export function addLog(
+export function getSpan(spanId: string): TraceContext | null {
+
+=== server/mcp/orchestration/forensic-workflow.ts ===
+export function createForensicInvestigationWorkflow(
+export function createDocumentProcessingWorkflow(
+export const forensicWorkflows = {
+
+=== server/mcp/orchestration/langchain-memory.test.ts ===
+
+=== server/mcp/orchestration/langchain-memory.ts ===
+export interface Hypothesis {
+export interface AnalysisDelta {
+export interface ForensicMemoryVariables {
+export class ForensicInvestigationMemory {
+export function createForensicMemory(
+
+=== server/mcp/orchestration/langgraph-adapter.ts ===
+export interface BaseWorkflowState {
+export interface ForensicInvestigationState extends BaseWorkflowState {
+export interface DocumentProcessingState extends BaseWorkflowState {
+export interface ClassificationSnapshot {
+export interface PatternSequence {
+
+=== server/mcp/orchestration/langgraph.test.ts ===
+
+=== server/mcp/orchestration/sub-agents.ts ===
+export class DocumentAnalysisAgent {
+export class ForensicsPatternAgent {
+export class ApprovalAgent {
+export class ExportAgent {
+export const subAgents = {
+
+=== server/mcp/pipelines/document-pipeline.ts ===
+export interface PipelineOptions {
+export interface PipelineResult {
+export interface PipelineProgress {
+export class DocumentPipeline {
+export const documentPipeline = new DocumentPipeline();
+
+=== server/mcp/plugins/browser-search.ts ===
+export function configureBrowserSearch(newConfig: Partial<BrowserSearchConfig>): void {
+
+=== server/mcp/plugins/diff.ts ===
+
+=== server/mcp/plugins/document-processors.ts ===
+
+=== server/mcp/plugins/document.ts ===
+
+=== server/mcp/plugins/evidence-hasher.ts ===
+export const evidenceHasherTools = [
+
+=== server/mcp/plugins/filesystem.ts ===
+
+=== server/mcp/plugins/format-converter.ts ===
+export const formatConverterTools = [
+
+=== server/mcp/plugins/graph-db.ts ===
+export function configureGraphDB(newConfig: Partial<GraphDBConfig>): void {
+export function isGraphDBEnabled(): boolean {
+
+=== server/mcp/plugins/langgraph-plugin.ts ===
+export const langGraphTools: ToolSpec[] = [
+export const langGraphHandlers = {
+
+=== server/mcp/plugins/library-tools.ts ===
+
+=== server/mcp/plugins/llamaindex.ts ===
+
+=== server/mcp/plugins/mem0.ts ===
+export function configureMem0(newConfig: Partial<Mem0Config>): void {
+export function isMem0Enabled(): boolean {
+
+=== server/mcp/plugins/ml.ts ===
+export function configureML(newConfig: Partial<MLConfig>): void {
+export function isMLEnabled(): boolean {
+
+=== server/mcp/plugins/n8n.ts ===
+export function configureN8n(newConfig: Partial<N8nConfig>): void {
+export function isN8nEnabled(): boolean {
+
+=== server/mcp/plugins/nlp.ts ===
+export function registerNLPProvider(provider: NLPProvider): void {
+export function setDefaultProvider(name: string): void {
+
+=== server/mcp/plugins/notebooklm.ts ===
+export interface NotebookLMTool {
+export interface NotebookInfo {
+export interface NotebookLMResponse {
+export class NotebookLMClient extends EventEmitter {
+export function getNotebookLMClient(): NotebookLMClient {
+
+=== server/mcp/plugins/pgvector-supabase.ts ===
+export interface EmbeddingRecord {
+export interface SearchResult {
+export const PGVECTOR_SETUP_SQL = `
+
+=== server/mcp/plugins/python-tools.ts ===
+
+=== server/mcp/plugins/registry.ts ===
+export interface SearchOptions {
+export interface PluginManifest {
+export class PluginRegistry {
+
+=== server/mcp/plugins/retrieval.ts ===
+
+=== server/mcp/plugins/rules.ts ===
+
+=== server/mcp/plugins/schema-resolver.ts ===
+export const schemaResolverTools = [
+
+=== server/mcp/plugins/search.ts ===
+
+=== server/mcp/plugins/summarization.ts ===
+export function configureSummarization(newConfig: Partial<SummarizationConfig>): void {
+
+=== server/mcp/plugins/text-miner.ts ===
+export function generateMarkdownReport(results: SearchResult): string {
+export const textMinerTools = [
+
+=== server/mcp/plugins/vector-db.ts ===
+export type VectorProvider = 'qdrant' | 'pgvector' | 'chroma';
+export function configureVectorDB(newConfig: Partial<VectorDBConfig>): void {
+export function getVectorDBConfig(): VectorDBConfig {
+
+=== server/mcp/prompts/prompt-manager.ts ===
+export interface PromptVariable {
+export interface PromptVersion {
+export interface WorkflowStep {
+export interface CreatePromptRequest {
+export interface CreateWorkflowRequest {
+
+=== server/mcp/proxy/mcp-config-import.ts ===
+export interface ImportedMcpServer {
+export function importMcpServersFromConfig(payload: unknown): ImportedMcpServer[] {
+
+=== server/mcp/proxy/mcp-proxy.ts ===
+export type ServerTransport = 'stdio' | 'http' | 'websocket';
+export type ServerStatus = 'connected' | 'disconnected' | 'error' | 'connecting';
+export interface MCPServerConfig {
+export interface MCPServerState {
+export interface ProxyRequest {
+
+=== server/mcp/python-bridge.ts ===
+
+=== server/mcp/queue/redis-queue.ts ===
+export interface QueueTask {
+export interface QueueConfig {
+export interface QueueStats {
+export function getQueueManager(config?: QueueConfig): QueueManager {
+
+=== server/mcp/realtime/log-stream.ts ===
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+export interface LogEntry {
+export interface LogFilter {
+export interface MetricsSnapshot {
+export function getLogStream(): LogStreamManager {
+
+=== server/mcp/stats/collector.ts ===
+export interface ToolCall {
+export interface HourlyStats {
+export interface ToolStats {
+export interface ProviderStats {
+export interface DashboardData {
+
+=== server/mcp/storage/chroma-client.ts ===
+export interface ChromaDocument {
+export interface ChromaQueryResult {
+export interface EvidenceDocument extends ChromaDocument {
+export interface ProjectContextDocument extends ChromaDocument {
+export class ChromaManager {
+
+=== server/mcp/storage/supabase-client.ts ===
+export interface EmbeddingRow {
+export interface DocumentRow {
+export interface ChunkRow {
+export interface SemanticSearchResult {
+export class SupabaseManager {
+
+=== server/mcp/store/content-store.test.ts ===
+
+=== server/mcp/store/content-store.ts ===
+export interface ContentStoreConfig {
+export class ContentStore {
+
+=== server/mcp/wiki/wiki-content.ts ===
+export interface WikiPage {
+export interface WikiCategory {
+export const WIKI_CATEGORIES: WikiCategory[] = [
+export const WIKI_PAGES: Record<string, WikiPage> = {
+export function getWikiCategories(): WikiCategory[] {
+
+=== server/mcp/workers/executor.test.ts ===
+
+=== server/mcp/workers/executor.ts ===
+export interface ExecuteRequest {
+export interface TaskCheckpoint {
+export class TaskExecutor {
+

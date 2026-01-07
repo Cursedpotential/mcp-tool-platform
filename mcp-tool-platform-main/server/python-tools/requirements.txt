@@ -1,0 +1,35 @@
+# MCP Tool Shop - Python NLP/ML Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core NLP
+spacy>=3.7.0
+langdetect>=1.0.9
+nltk>=3.8.0
+
+# Embeddings & ML
+sentence-transformers>=2.2.0
+transformers>=4.35.0
+torch>=2.0.0
+
+# Text processing
+beautifulsoup4>=4.12.0
+markdown>=3.5.0
+pyyaml>=6.0.0
+
+# Utilities
+numpy>=1.24.0
+
+# Graph and temporal reasoning
+graphiti-core>=0.3.0
+neo4j>=5.0.0
+
+# Document parsing and processing
+unstructured>=0.11.0
+unstructured[pdf]>=0.11.0
+
+# LLM frameworks
+llamaindex>=0.9.0
+llama-index-core>=0.9.0
+langchain>=0.1.0
+langchain-core>=0.1.0
+langgraph>=0.0.20

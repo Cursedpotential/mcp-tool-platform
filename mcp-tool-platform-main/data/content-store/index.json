@@ -1,0 +1,13 @@
+[
+  [
+    "fe2f3970d6db78ad6fe5048691df56221e702a98d536a57f6214f90f9e025862",
+    {
+      "ref": "sha256:fe2f3970d6db78ad6fe5048691df56221e702a98d536a57f6214f90f9e025862",
+      "hash": "fe2f3970d6db78ad6fe5048691df56221e702a98d536a57f6214f90f9e025862",
+      "size": 4338,
+      "mime": "application/json",
+      "preview": "{\"modules\":[{\"id\":\"gaslighting\",\"name\":\"Gaslighting Detection\",\"description\":\"Identifies reality-distorting statements that make the victim question their perception\",\"category\":\"negative\",\"subcategor...",
+      "createdAt": 1767288703856
+    }
+  ]
+]

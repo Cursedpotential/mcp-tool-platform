@@ -1,0 +1,9 @@
+{
+  "query": "CREATE TABLE IF NOT EXISTS `documentSections` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `documentId` int NOT NULL,\n  `parentSectionId` int,\n  `sectionType` varchar(64) NOT NULL,\n  `title` varchar(512),\n  `sequenceNum` int NOT NULL,\n  `startOffset` int NOT NULL,\n  `endOffset` int NOT NULL,\n  `contentPreview` text,\n  `metadata` text,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `documentSections_documentId_idx` (`documentId`),\n  KEY `documentSections_parentId_idx` (`parentSectionId`),\n  CONSTRAINT `documentSections_documentId_fk` FOREIGN KEY (`documentId`) REFERENCES `documents` (`id`) ON DELETE CASCADE\n);",
+  "command": "mysql --batch --raw --column-names --default-character-set=utf8mb4 --host gateway02.us-east-1.prod.aws.tidbcloud.com --port 4000 --user 2QJxepF6RkxixEF.root --database CrKBAyYZGWJki2G2dH59p7 --execute CREATE TABLE IF NOT EXISTS `documentSections` (\n  `id` int AUTO_INCREMENT NOT NULL,\n  `documentId` int NOT NULL,\n  `parentSectionId` int,\n  `sectionType` varchar(64) NOT NULL,\n  `title` varchar(512),\n  `sequenceNum` int NOT NULL,\n  `startOffset` int NOT NULL,\n  `endOffset` int NOT NULL,\n  `contentPreview` text,\n  `metadata` text,\n  `createdAt` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,\n  PRIMARY KEY (`id`),\n  KEY `documentSections_documentId_idx` (`documentId`),\n  KEY `documentSections_parentId_idx` (`parentSectionId`),\n  CONSTRAINT `documentSections_documentId_fk` FOREIGN KEY (`documentId`) REFERENCES `documents` (`id`) ON DELETE CASCADE\n);",
+  "rows": [],
+  "messages": [],
+  "stdout": "",
+  "stderr": "",
+  "execution_time_ms": 250
+}
