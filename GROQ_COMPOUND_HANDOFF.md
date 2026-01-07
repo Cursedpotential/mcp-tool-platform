@@ -1,7 +1,7 @@
-# Groq Compound Agent Handoff - Salem Nexus Deployment
+# Groq Compound Agent Handoff - Salem Infrastructure Deployment
 
 **Date:** January 7, 2026  
-**Task:** Deploy infrastructure services to salem-nexus via Coolify  
+**Task:** Deploy infrastructure services via Coolify on salem-nexus (master node)  
 **Priority:** HIGH  
 **Estimated Time:** 2-4 hours  
 
@@ -9,7 +9,9 @@
 
 ## Mission
 
-Deploy PostgreSQL, FerretDB, Directus, PhotoPrism, and n8n to **salem-nexus** (116.203.199.238) using Coolify API. Configure shared media storage on salem-vault (60GB XFS volume). Verify all services are accessible via Cloudflare DNS.
+Deploy PostgreSQL, FerretDB, Directus, PhotoPrism, n8n, and Tailscale to **salem-nexus** (116.203.199.238) using **Coolify API**. Configure shared media storage on salem-vault (60GB XFS volume). Later, add **salem-forge** (116.203.198.77) as remote server for AI/Compute services.
+
+**Architecture:** salem-nexus = Coolify master controlling both VPS servers
 
 ---
 
@@ -22,8 +24,9 @@ Deploy PostgreSQL, FerretDB, Directus, PhotoPrism, and n8n to **salem-nexus** (1
 
 ### Hetzner Cloud API
 - **API Key:** `BpA7Tw9IkbPG57dSFVtG0q56Bz7F20Wkcdg5Gpd2vaj2pOvGWKtVd817I0n0eAUl`
-- **Server:** salem-nexus (ID: 116864004, IP: 116.203.199.238)
-- **Volume:** salem-vault (ID: check via API, 60GB XFS, attached to salem-nexus)
+- **salem-nexus:** ID 116864004, IP 116.203.199.238 (8c/16GB)
+- **salem-forge:** ID 116864005, IP 116.203.198.77 (8c/16GB, will add as remote server later)
+- **salem-vault:** 60GB XFS volume attached to salem-nexus
 
 ### Cloudflare
 - **Email:** matt.salem85@gmail.com
@@ -32,14 +35,17 @@ Deploy PostgreSQL, FerretDB, Directus, PhotoPrism, and n8n to **salem-nexus** (1
 - **Domain:** mitechconsult.com
 
 ### SSH Access
-- **Host:** root@116.203.199.238
+- **salem-nexus:** root@116.203.199.238
+- **salem-forge:** root@116.203.198.77
 - **Note:** Use Hetzner console if SSH key not available
 
 ---
 
-## Pre-Deployment Checklist
+## Phase 1: Deploy salem-nexus Services (Tonight)
 
-### 1. Verify salem-vault Volume Mount
+### Pre-Deployment Checklist
+
+#### 1. Verify salem-vault Volume Mount
 
 ```bash
 # SSH into salem-nexus
@@ -77,7 +83,7 @@ chmod 755 /mnt/salem-vault/directus
 chmod 755 /mnt/salem-vault/n8n
 ```
 
-### 2. Test Coolify API Connection
+#### 2. Test Coolify API Connection
 
 ```bash
 curl -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619b" \
@@ -86,46 +92,56 @@ curl -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619
 
 **Expected:** JSON response with server list
 
-### 3. Verify DNS Records
+#### 3. Verify DNS Records
 
 ```bash
 # Check DNS propagation
-dig +short nexus.mitechconsult.com
-dig +short directus.mitechconsult.com
-dig +short photo.mitechconsult.com
-dig +short n8n.mitechconsult.com
-dig +short postgres.mitechconsult.com
+dig +short nexus.mitechconsult.com        # 116.203.199.238
+dig +short directus.mitechconsult.com     # 116.203.199.238
+dig +short photo.mitechconsult.com        # 116.203.199.238
+dig +short n8n.mitechconsult.com          # 116.203.199.238
+dig +short postgres.mitechconsult.com     # 116.203.199.238
 ```
 
 **Expected:** All should resolve to 116.203.199.238
 
 ---
 
-## Deployment Steps
+### Deployment via Coolify
 
-### Step 1: Create Coolify Project
+**IMPORTANT:** Use Coolify UI or API to deploy services. Coolify will:
+- Automatically configure Traefik reverse proxy
+- Issue Let's Encrypt SSL certificates
+- Manage container lifecycle
+- Handle volume mounts
+- Configure networking
 
-**Via Coolify UI:**
-1. Go to https://nexus.mitechconsult.com
-2. Navigate to **Projects** → **New Project**
-3. Name: `salem-forensics-storage`
-4. Description: `Storage, database, and CMS backend for Salem Forensics Platform`
+#### Option A: Coolify UI Deployment (Recommended)
 
-**Or via API (if available):**
+1. **Go to Coolify:** https://nexus.mitechconsult.com
+2. **Create Project:** "salem-forensics-storage"
+3. **Add Services:** For each service below, click "New Resource" → "Docker Compose"
+4. **Paste docker-compose.yml** from `/home/ubuntu/mcp-tool-platform/docker-compose.vps1-storage.yml`
+5. **Configure Environment Variables** (see below)
+6. **Deploy**
+
+#### Option B: Coolify API Deployment
+
+**Note:** Coolify API for docker-compose deployment may require research. If API is unclear, use UI.
+
 ```bash
+# Example API call (adjust based on Coolify API docs)
 curl -X POST -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619b" \
   -H "Content-Type: application/json" \
-  -d '{"name":"salem-forensics-storage","description":"Storage, database, and CMS backend"}' \
-  https://nexus.mitechconsult.com/api/v1/projects
+  -d @deployment-payload.json \
+  https://nexus.mitechconsult.com/api/v1/applications
 ```
 
-### Step 2: Deploy PostgreSQL
+---
 
-**Service Configuration:**
-- **Name:** salem-postgres
-- **Image:** postgres:16-alpine
-- **Domain:** postgres.mitechconsult.com (internal only, no public access)
-- **Volume:** /mnt/salem-vault/postgres:/var/lib/postgresql/data
+### Service Configuration Details
+
+#### 1. PostgreSQL
 
 **Environment Variables:**
 ```env
@@ -134,81 +150,38 @@ POSTGRES_PASSWORD=<GENERATE_STRONG_PASSWORD>
 POSTGRES_DB=salem_forensics
 ```
 
-**Docker Compose (if importing):**
+**Volume Mount:**
 ```yaml
-services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: salem-postgres
-    environment:
-      POSTGRES_USER: salem
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: salem_forensics
-    volumes:
-      - /mnt/salem-vault/postgres:/var/lib/postgresql/data
-    networks:
-      - salem-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U salem"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+volumes:
+  - /mnt/salem-vault/postgres:/var/lib/postgresql/data
 ```
 
 **Verification:**
 ```bash
-# Wait for container to start
-sleep 10
-
-# Test connection
 docker exec -it salem-postgres psql -U salem -d salem_forensics -c "SELECT version();"
 ```
 
-### Step 3: Deploy FerretDB
+---
 
-**Service Configuration:**
-- **Name:** salem-ferretdb
-- **Image:** ghcr.io/ferretdb/ferretdb:latest
-- **Depends on:** salem-postgres
+#### 2. FerretDB
 
 **Environment Variables:**
 ```env
 FERRETDB_POSTGRESQL_URL=postgres://salem:${POSTGRES_PASSWORD}@postgres:5432/salem_forensics
 ```
 
-**Docker Compose:**
-```yaml
-services:
-  ferretdb:
-    image: ghcr.io/ferretdb/ferretdb:latest
-    container_name: salem-ferretdb
-    environment:
-      FERRETDB_POSTGRESQL_URL: postgres://salem:${POSTGRES_PASSWORD}@postgres:5432/salem_forensics
-    depends_on:
-      - postgres
-    networks:
-      - salem-network
-    restart: unless-stopped
-```
+**Depends On:** PostgreSQL
 
 **Verification:**
 ```bash
-# Check logs
-docker logs salem-ferretdb
-
-# Should see "FerretDB started" message
+docker logs salem-ferretdb | grep "FerretDB started"
 ```
 
-### Step 4: Deploy Directus
+---
 
-**Service Configuration:**
-- **Name:** salem-directus
-- **Image:** directus/directus:latest
-- **Domain:** directus.mitechconsult.com
-- **Volumes:**
-  - /mnt/salem-vault/directus:/directus/uploads
-  - /mnt/salem-vault/media:/media:ro (read-only shared media)
+#### 3. Directus
+
+**Domain:** directus.mitechconsult.com
 
 **Environment Variables:**
 ```env
@@ -227,61 +200,24 @@ STORAGE_LOCATIONS=local
 STORAGE_LOCAL_ROOT=/directus/uploads
 ```
 
-**Docker Compose:**
+**Volume Mounts:**
 ```yaml
-services:
-  directus:
-    image: directus/directus:latest
-    container_name: salem-directus
-    environment:
-      KEY: ${DIRECTUS_KEY}
-      SECRET: ${DIRECTUS_SECRET}
-      DB_CLIENT: pg
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_DATABASE: salem_forensics
-      DB_USER: salem
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      ADMIN_EMAIL: matt.salem85@gmail.com
-      ADMIN_PASSWORD: ${DIRECTUS_ADMIN_PASSWORD}
-      PUBLIC_URL: https://directus.mitechconsult.com
-      STORAGE_LOCATIONS: local
-      STORAGE_LOCAL_ROOT: /directus/uploads
-    volumes:
-      - /mnt/salem-vault/directus:/directus/uploads
-      - /mnt/salem-vault/media:/media:ro
-    depends_on:
-      - postgres
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.directus.rule=Host(`directus.mitechconsult.com`)"
-      - "traefik.http.routers.directus.entrypoints=websecure"
-      - "traefik.http.routers.directus.tls.certresolver=letsencrypt"
-    networks:
-      - salem-network
-    restart: unless-stopped
+volumes:
+  - /mnt/salem-vault/directus:/directus/uploads
+  - /mnt/salem-vault/media:/media:ro
 ```
 
 **Verification:**
 ```bash
-# Wait for startup
-sleep 15
-
-# Test access
 curl -I https://directus.mitechconsult.com
-
 # Should return 200 OK or redirect to login
 ```
 
-### Step 5: Deploy PhotoPrism
+---
 
-**Service Configuration:**
-- **Name:** salem-photoprism
-- **Image:** photoprism/photoprism:latest
-- **Domain:** photo.mitechconsult.com
-- **Volumes:**
-  - /mnt/salem-vault/media/originals:/photoprism/originals
-  - /mnt/salem-vault/media/cache:/photoprism/storage
+#### 4. PhotoPrism
+
+**Domain:** photo.mitechconsult.com
 
 **Environment Variables:**
 ```env
@@ -300,61 +236,26 @@ PHOTOPRISM_DISABLE_TLS=false
 PHOTOPRISM_DEFAULT_TLS=true
 ```
 
-**Docker Compose:**
+**Volume Mounts:**
 ```yaml
-services:
-  photoprism:
-    image: photoprism/photoprism:latest
-    container_name: salem-photoprism
-    environment:
-      PHOTOPRISM_ADMIN_USER: admin
-      PHOTOPRISM_ADMIN_PASSWORD: ${PHOTOPRISM_PASSWORD}
-      PHOTOPRISM_AUTH_MODE: password
-      PHOTOPRISM_SITE_URL: https://photo.mitechconsult.com
-      PHOTOPRISM_ORIGINALS_LIMIT: 50000
-      PHOTOPRISM_HTTP_COMPRESSION: gzip
-      PHOTOPRISM_DATABASE_DRIVER: postgres
-      PHOTOPRISM_DATABASE_SERVER: postgres:5432
-      PHOTOPRISM_DATABASE_NAME: salem_forensics
-      PHOTOPRISM_DATABASE_USER: salem
-      PHOTOPRISM_DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
-      PHOTOPRISM_DISABLE_TLS: "false"
-      PHOTOPRISM_DEFAULT_TLS: "true"
-    volumes:
-      - /mnt/salem-vault/media/originals:/photoprism/originals
-      - /mnt/salem-vault/media/cache:/photoprism/storage
-    depends_on:
-      - postgres
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.photoprism.rule=Host(`photo.mitechconsult.com`)"
-      - "traefik.http.routers.photoprism.entrypoints=websecure"
-      - "traefik.http.routers.photoprism.tls.certresolver=letsencrypt"
-    networks:
-      - salem-network
-    restart: unless-stopped
+volumes:
+  - /mnt/salem-vault/media/originals:/photoprism/originals
+  - /mnt/salem-vault/media/cache:/photoprism/storage
 ```
 
 **Verification:**
 ```bash
-# Wait for startup (PhotoPrism takes 30-60 seconds)
+# Wait 60 seconds for startup
 sleep 60
-
-# Test access
 curl -I https://photo.mitechconsult.com
-
 # Should return 200 OK
 ```
 
-### Step 6: Deploy n8n
+---
 
-**Service Configuration:**
-- **Name:** salem-n8n
-- **Image:** n8nio/n8n:latest
-- **Domain:** n8n.mitechconsult.com
-- **Volumes:**
-  - /mnt/salem-vault/n8n:/home/node/.n8n
-  - /mnt/salem-vault/media:/media (read-write for workflows)
+#### 5. n8n
+
+**Domain:** n8n.mitechconsult.com
 
 **Environment Variables:**
 ```env
@@ -371,55 +272,76 @@ DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
 N8N_ENCRYPTION_KEY=<GENERATE_RANDOM_KEY>
 ```
 
-**Docker Compose:**
+**Volume Mounts:**
 ```yaml
-services:
-  n8n:
-    image: n8nio/n8n:latest
-    container_name: salem-n8n
-    environment:
-      N8N_HOST: n8n.mitechconsult.com
-      N8N_PORT: 5678
-      N8N_PROTOCOL: https
-      WEBHOOK_URL: https://n8n.mitechconsult.com
-      DB_TYPE: postgresdb
-      DB_POSTGRESDB_HOST: postgres
-      DB_POSTGRESDB_PORT: 5432
-      DB_POSTGRESDB_DATABASE: salem_forensics
-      DB_POSTGRESDB_USER: salem
-      DB_POSTGRESDB_PASSWORD: ${POSTGRES_PASSWORD}
-      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
-    volumes:
-      - /mnt/salem-vault/n8n:/home/node/.n8n
-      - /mnt/salem-vault/media:/media
-    depends_on:
-      - postgres
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.n8n.rule=Host(`n8n.mitechconsult.com`)"
-      - "traefik.http.routers.n8n.entrypoints=websecure"
-      - "traefik.http.routers.n8n.tls.certresolver=letsencrypt"
-    networks:
-      - salem-network
-    restart: unless-stopped
+volumes:
+  - /mnt/salem-vault/n8n:/home/node/.n8n
+  - /mnt/salem-vault/media:/media
 ```
 
 **Verification:**
 ```bash
-# Wait for startup
-sleep 15
-
-# Test access
 curl -I https://n8n.mitechconsult.com
-
 # Should return 200 OK or redirect
 ```
 
 ---
 
-## Post-Deployment Testing
+#### 6. Tailscale
 
-### Test 1: PostgreSQL Connection
+**Environment Variables:**
+```env
+TS_AUTHKEY=<GET_FROM_TAILSCALE_ADMIN>
+TS_HOSTNAME=salem-nexus
+TS_STATE_DIR=/var/lib/tailscale
+```
+
+**Capabilities:**
+```yaml
+cap_add:
+  - NET_ADMIN
+  - SYS_MODULE
+```
+
+**Verification:**
+```bash
+docker exec -it salem-tailscale tailscale status
+# Should show connected devices
+```
+
+---
+
+### Environment Variables Summary
+
+Generate these strong passwords/keys and save securely:
+
+```bash
+# Generate passwords
+POSTGRES_PASSWORD=$(openssl rand -base64 32)
+DIRECTUS_KEY=$(openssl rand -base64 32)
+DIRECTUS_SECRET=$(openssl rand -base64 64)
+DIRECTUS_ADMIN_PASSWORD=$(openssl rand -base64 32)
+PHOTOPRISM_PASSWORD=$(openssl rand -base64 32)
+N8N_ENCRYPTION_KEY=$(openssl rand -base64 32)
+
+# Save to file
+cat > /root/salem-credentials.env <<EOF
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+DIRECTUS_KEY=${DIRECTUS_KEY}
+DIRECTUS_SECRET=${DIRECTUS_SECRET}
+DIRECTUS_ADMIN_PASSWORD=${DIRECTUS_ADMIN_PASSWORD}
+PHOTOPRISM_PASSWORD=${PHOTOPRISM_PASSWORD}
+N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY}
+EOF
+
+chmod 600 /root/salem-credentials.env
+```
+
+---
+
+### Post-Deployment Testing
+
+#### Test 1: PostgreSQL Connection
 
 ```bash
 docker exec -it salem-postgres psql -U salem -d salem_forensics -c "\dt"
@@ -427,7 +349,7 @@ docker exec -it salem-postgres psql -U salem -d salem_forensics -c "\dt"
 
 **Expected:** List of tables (should include Directus, PhotoPrism, n8n tables)
 
-### Test 2: Shared Media Storage
+#### Test 2: Shared Media Storage
 
 ```bash
 # Create test file
@@ -445,7 +367,7 @@ docker exec -it salem-n8n ls /media/originals
 
 **Expected:** All three containers should list `test-file.txt`
 
-### Test 3: Directus Admin Access
+#### Test 3: Directus Admin Access
 
 1. Go to https://directus.mitechconsult.com
 2. Login with admin credentials
@@ -455,7 +377,7 @@ docker exec -it salem-n8n ls /media/originals
 
 **Expected:** File appears in `/mnt/salem-vault/directus/`
 
-### Test 4: PhotoPrism Image Indexing
+#### Test 4: PhotoPrism Image Indexing
 
 1. Go to https://photo.mitechconsult.com
 2. Login with admin credentials
@@ -464,7 +386,7 @@ docker exec -it salem-n8n ls /media/originals
 
 **Expected:** Image appears in PhotoPrism library
 
-### Test 5: n8n Workflow
+#### Test 5: n8n Workflow
 
 1. Go to https://n8n.mitechconsult.com
 2. Create test workflow:
@@ -477,30 +399,99 @@ docker exec -it salem-n8n ls /media/originals
 
 ---
 
-## Environment Variables Summary
+## Phase 2: Add salem-forge as Remote Server (After Reformat)
 
-Generate these strong passwords/keys and save securely:
+**IMPORTANT:** salem-forge is currently being reformatted to clean Debian. Once ready, add it as a remote server in Coolify.
 
-```env
-# PostgreSQL
-POSTGRES_PASSWORD=<generate_32_char_password>
+### Prerequisites
 
-# Directus
-DIRECTUS_KEY=<generate_32_char_random_key>
-DIRECTUS_SECRET=<generate_64_char_random_secret>
-DIRECTUS_ADMIN_PASSWORD=<generate_32_char_password>
+1. **salem-forge reformatted** to clean Debian 12
+2. **SSH access** from salem-nexus to salem-forge
+3. **Docker installed** on salem-forge
 
-# PhotoPrism
-PHOTOPRISM_PASSWORD=<generate_32_char_password>
+### Steps to Add Remote Server
 
-# n8n
-N8N_ENCRYPTION_KEY=<generate_32_char_random_key>
-```
+#### 1. Prepare salem-forge
 
-**Password generation command:**
 ```bash
-openssl rand -base64 32
+# SSH into salem-forge
+ssh root@116.203.198.77
+
+# Update system
+apt update && apt upgrade -y
+
+# Install Docker
+curl -fsSL https://get.docker.com | sh
+
+# Enable Docker
+systemctl enable docker
+systemctl start docker
+
+# Verify Docker
+docker --version
 ```
+
+#### 2. Add SSH Key from salem-nexus
+
+```bash
+# On salem-nexus, generate SSH key if not exists
+ssh-keygen -t ed25519 -C "coolify@salem-nexus" -f /root/.ssh/coolify_remote
+
+# Copy public key to salem-forge
+ssh-copy-id -i /root/.ssh/coolify_remote.pub root@116.203.198.77
+
+# Test connection
+ssh -i /root/.ssh/coolify_remote root@116.203.198.77 "docker ps"
+```
+
+#### 3. Add Remote Server in Coolify
+
+**Via Coolify UI:**
+1. Go to https://nexus.mitechconsult.com
+2. Navigate to **Servers** → **Add Server**
+3. **Name:** salem-forge
+4. **IP Address:** 116.203.198.77
+5. **SSH Port:** 22
+6. **SSH User:** root
+7. **SSH Private Key:** Paste contents of `/root/.ssh/coolify_remote`
+8. **Test Connection**
+9. **Save**
+
+**Via Coolify API (if available):**
+```bash
+curl -X POST -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619b" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "salem-forge",
+    "ip": "116.203.198.77",
+    "port": 22,
+    "user": "root",
+    "private_key": "<PASTE_SSH_KEY>"
+  }' \
+  https://nexus.mitechconsult.com/api/v1/servers
+```
+
+#### 4. Deploy AI/Compute Services to salem-forge
+
+Once salem-forge is added as remote server, deploy services from `docker-compose.vps2-compute.yml`:
+
+- LiteLLM (llm.mitechconsult.com)
+- MetaMCP (mcp.mitechconsult.com)
+- Chroma (chroma.mitechconsult.com)
+- LibreChat (chat.mitechconsult.com)
+- Open WebUI (ui.mitechconsult.com)
+- Ollama (ollama.mitechconsult.com)
+- Kasm Workspace (desktop.mitechconsult.com)
+- Browserless (browser.mitechconsult.com)
+- Playwright (playwright.mitechconsult.com)
+
+**Deployment Process:**
+1. In Coolify UI, create new project: "salem-forensics-compute"
+2. Add new resource: Docker Compose
+3. **Select Server:** salem-forge (remote)
+4. Paste `docker-compose.vps2-compute.yml`
+5. Configure environment variables
+6. Deploy
 
 ---
 
@@ -546,29 +537,67 @@ dig +short directus.mitechconsult.com
 # If not resolving, wait 5-10 minutes for propagation
 ```
 
+### Issue: Traefik not routing correctly
+
+```bash
+# Check Traefik logs
+docker logs traefik
+
+# Verify labels on containers
+docker inspect salem-directus | grep -A 10 Labels
+```
+
 ---
 
 ## Success Criteria
 
+### Phase 1 (Tonight)
 - [ ] PostgreSQL running and accessible
 - [ ] FerretDB connected to PostgreSQL
 - [ ] Directus accessible at https://directus.mitechconsult.com
 - [ ] PhotoPrism accessible at https://photo.mitechconsult.com
 - [ ] n8n accessible at https://n8n.mitechconsult.com
+- [ ] Tailscale connected to network
 - [ ] Shared media storage working (all services see same files)
 - [ ] All services persisting data to salem-vault volume
 - [ ] SSL/TLS certificates issued by Let's Encrypt
 - [ ] All admin credentials documented and secure
+
+### Phase 2 (After salem-forge reformat)
+- [ ] salem-forge added as remote server in Coolify
+- [ ] AI/Compute services deployed to salem-forge
+- [ ] LiteLLM accessible at https://llm.mitechconsult.com
+- [ ] MetaMCP accessible at https://mcp.mitechconsult.com
+- [ ] Chroma accessible at https://chroma.mitechconsult.com
+- [ ] LibreChat accessible at https://chat.mitechconsult.com
+- [ ] Kasm Workspace accessible at https://desktop.mitechconsult.com
+- [ ] Tailscale VPN connecting both VPS servers
 
 ---
 
 ## Deliverables
 
 1. **Deployment Summary Report** - Document what was deployed, any issues encountered, and resolutions
-2. **Credentials Document** - Secure list of all generated passwords and keys
+2. **Credentials Document** - Secure list of all generated passwords and keys (saved to `/root/salem-credentials.env`)
 3. **Service URLs** - List of all accessible services with test results
 4. **Screenshots** - Directus, PhotoPrism, and n8n login screens
-5. **Next Steps** - Recommendations for salem-forge deployment
+5. **Next Steps** - Recommendations for salem-forge deployment and file ingestion testing
+
+---
+
+## Timeline
+
+**Tonight (Phase 1):**
+- Deploy salem-nexus services (2-4 hours)
+- Verify all services accessible
+- Test shared media storage
+- Ready for file ingestion testing
+
+**Tomorrow (Phase 2):**
+- Wait for salem-forge reformat completion
+- Add salem-forge as remote server
+- Deploy AI/Compute services
+- Configure Tailscale VPN between servers
 
 ---
 
@@ -576,7 +605,7 @@ dig +short directus.mitechconsult.com
 
 **User:** Matthew Salem (matt.salem85@gmail.com)  
 **Project:** Salem Forensics Platform  
-**Timeline:** Deploy tonight for end-to-end file ingestion testing
+**Goal:** End-to-end file ingestion testing tonight with live debugging
 
 ---
 
