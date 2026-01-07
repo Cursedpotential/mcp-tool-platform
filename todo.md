@@ -1119,3 +1119,33 @@ Links to related docs
 - [ ] Test screenshot analysis pipeline end-to-end
 - [ ] Test document analysis pipeline end-to-end
 - [ ] Compare accuracy: AWS vs GCP vs custom models
+
+
+---
+
+## **Phase 33: Hetzner & Coolify API Integration**
+
+### Hetzner Cloud API
+- [ ] Install hcloud Python SDK (`pip3 install hcloud`)
+- [ ] Create `server/_core/hetzner.ts` wrapper for Node.js → Python bridge
+- [ ] Add tRPC procedures for VPS management (list, create, start, stop, resize, snapshot)
+- [ ] Create UI page `client/src/pages/ServerManagement.tsx` for VPS control
+- [ ] Add Hetzner API key to environment variables
+- [ ] Install hcloud CLI in Kasm workspace Dockerfile
+- [ ] Test VPS management via platform UI
+- [ ] Document Hetzner API usage in `docs/systems/hetzner-integration.md`
+
+### Coolify MCP Integration
+- [ ] Configure Coolify MCP server in MCP settings (already installed: `@fastmcp-me/coolify-mcp`)
+- [ ] Add Coolify API URL and token to environment variables
+- [ ] Create tRPC procedures for Coolify management (deploy, logs, restart, env vars)
+- [ ] Create UI page `client/src/pages/DeploymentManagement.tsx` for Coolify control
+- [ ] Test deployment management via platform UI
+- [ ] Document Coolify MCP usage in `docs/tools/coolify-mcp.md`
+
+### Cross-Platform Management
+- [ ] Create unified dashboard showing both Hetzner VPS and Coolify deployments
+- [ ] Add monitoring widgets (CPU, RAM, disk usage from Hetzner API)
+- [ ] Add deployment status widgets (service health from Coolify API)
+- [ ] Implement webhook handlers for Coolify deployment notifications
+- [ ] Test full workflow: Create VPS → Deploy services → Monitor status
