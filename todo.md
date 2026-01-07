@@ -677,3 +677,475 @@
 - [ ] Verify Neo4j entity extraction
 - [ ] Verify Directus/R2 raw file storage
 - [ ] Verify chain of custody tracking
+
+
+---
+
+## **Phase 26: Documentation Generation (Wiki-Style)**
+
+### **Documentation Structure**
+- [ ] Create `/docs` directory in project root
+- [ ] Create `/docs/tools` subdirectory (individual tool docs)
+- [ ] Create `/docs/workflows` subdirectory (workflow docs)
+- [ ] Create `/docs/systems` subdirectory (system component docs)
+- [ ] Create `/docs/guides` subdirectory (user guides)
+- [ ] Create `/docs/api` subdirectory (API reference)
+- [ ] Create `/docs/images` subdirectory (diagrams, screenshots)
+
+### **System Overview Documentation**
+- [ ] `/docs/README.md` - Main documentation index with links to all docs
+- [ ] `/docs/ARCHITECTURE.md` - High-level system architecture (already exists, may need updates)
+- [ ] `/docs/GETTING_STARTED.md` - Quick start guide for new users
+- [ ] `/docs/INSTALLATION.md` - Installation and setup instructions
+- [ ] `/docs/CONFIGURATION.md` - Configuration guide (env vars, settings)
+- [ ] `/docs/DEPLOYMENT.md` - Deployment guide (Manus hosting, Docker)
+- [ ] `/docs/TROUBLESHOOTING.md` - Common issues and solutions
+
+### **Tool Documentation (60+ tools)**
+Each tool needs: Purpose, Parameters, Return Values, Examples, Related Tools
+
+#### Search Tools
+- [ ] `/docs/tools/search-web.md` - Web search tool
+- [ ] `/docs/tools/search-semantic.md` - Semantic search tool
+- [ ] `/docs/tools/search-tavily.md` - Tavily LLM-optimized search
+- [ ] `/docs/tools/search-perplexity.md` - Perplexity search
+
+#### Document Tools
+- [ ] `/docs/tools/document-parse.md` - Document parsing tool
+- [ ] `/docs/tools/document-ocr.md` - OCR tool
+- [ ] `/docs/tools/document-extract.md` - Text extraction tool
+- [ ] `/docs/tools/document-chunk.md` - Document chunking tool
+
+#### NLP Tools
+- [ ] `/docs/tools/nlp-sentiment.md` - Sentiment analysis tool
+- [ ] `/docs/tools/nlp-entities.md` - Entity extraction tool
+- [ ] `/docs/tools/nlp-classify.md` - Text classification tool
+- [ ] `/docs/tools/nlp-summarize.md` - Summarization tool
+- [ ] `/docs/tools/nlp-spacy.md` - spaCy integration
+- [ ] `/docs/tools/nlp-nltk.md` - NLTK integration
+- [ ] `/docs/tools/nlp-textblob.md` - TextBlob integration
+- [ ] `/docs/tools/nlp-transformers.md` - Sentence Transformers
+
+#### Forensics Tools
+- [ ] `/docs/tools/forensics-analyze-patterns.md` - Pattern analysis tool
+- [ ] `/docs/tools/forensics-detect-hurtlex.md` - HurtLex detection
+- [ ] `/docs/tools/forensics-score-severity.md` - Severity scoring
+- [ ] `/docs/tools/forensics-get-modules.md` - Get analysis modules
+- [ ] `/docs/tools/forensics-multi-pass-classifier.md` - Multi-pass NLP classifier
+- [ ] `/docs/tools/forensics-priority-screener.md` - Priority screener (Pass 0)
+
+#### Vector Database Tools
+- [ ] `/docs/tools/vector-add.md` - Add embeddings to vector DB
+- [ ] `/docs/tools/vector-search.md` - Semantic search in vector DB
+- [ ] `/docs/tools/vector-delete.md` - Delete embeddings
+- [ ] `/docs/tools/vector-chroma.md` - Chroma integration
+- [ ] `/docs/tools/vector-pgvector.md` - pgvector/Supabase integration
+- [ ] `/docs/tools/vector-qdrant.md` - Qdrant integration
+
+#### Graph Database Tools
+- [ ] `/docs/tools/graph-add-entity.md` - Add entity to graph
+- [ ] `/docs/tools/graph-add-relationship.md` - Add relationship to graph
+- [ ] `/docs/tools/graph-search-entities.md` - Search entities
+- [ ] `/docs/tools/graph-timeline.md` - Get entity timeline
+- [ ] `/docs/tools/graph-contradictions.md` - Detect contradictions
+- [ ] `/docs/tools/graph-neo4j.md` - Neo4j integration
+- [ ] `/docs/tools/graph-graphiti.md` - Graphiti integration
+
+#### LLM Tools
+- [ ] `/docs/tools/llm-invoke.md` - Invoke LLM
+- [ ] `/docs/tools/llm-embed.md` - Generate embeddings
+- [ ] `/docs/tools/llm-smart-router.md` - Smart LLM routing
+- [ ] `/docs/tools/llm-providers.md` - LLM provider overview
+
+#### Format Conversion Tools
+- [ ] `/docs/tools/format-convert.md` - Format conversion tool
+- [ ] `/docs/tools/format-parse.md` - Format parsing tool
+- [ ] `/docs/tools/format-check-schema.md` - Schema validation
+- [ ] `/docs/tools/format-ocr.md` - OCR tool
+
+#### Evidence Chain Tools
+- [ ] `/docs/tools/evidence-create-chain.md` - Create evidence chain
+- [ ] `/docs/tools/evidence-add-stage.md` - Add stage to chain
+- [ ] `/docs/tools/evidence-verify.md` - Verify evidence integrity
+- [ ] `/docs/tools/evidence-hash-file.md` - Hash file (SHA-256)
+- [ ] `/docs/tools/evidence-export.md` - Export evidence chain
+- [ ] `/docs/tools/evidence-report.md` - Generate evidence report
+
+#### Text Mining Tools
+- [ ] `/docs/tools/text-mine.md` - Text mining tool (ugrep/ripgrep)
+
+#### Schema Tools
+- [ ] `/docs/tools/schema-resolve.md` - Schema resolution
+- [ ] `/docs/tools/schema-apply.md` - Apply schema
+- [ ] `/docs/tools/schema-cache.md` - Schema caching
+
+### **Workflow Documentation**
+Each workflow needs: Purpose, Steps, Input/Output, Diagram, Examples
+
+- [ ] `/docs/workflows/forensic-investigation.md` - 8-stage forensic investigation workflow
+- [ ] `/docs/workflows/document-processing.md` - Document processing workflow
+- [ ] `/docs/workflows/document-analysis.md` - Document analysis workflow
+- [ ] `/docs/workflows/forensic-chat-analysis.md` - Chat analysis workflow
+- [ ] `/docs/workflows/semantic-search-prep.md` - Semantic search preparation
+- [ ] `/docs/workflows/data-extraction-pipeline.md` - Data extraction pipeline
+- [ ] `/docs/workflows/text-mining-workflow.md` - Text mining workflow
+- [ ] `/docs/workflows/format-conversion-chain.md` - Format conversion chain
+
+### **System Component Documentation**
+- [ ] `/docs/systems/mcp-gateway.md` - MCP Gateway API
+- [ ] `/docs/systems/plugin-system.md` - Plugin architecture
+- [ ] `/docs/systems/executor.md` - Tool executor
+- [ ] `/docs/systems/smart-router.md` - Smart LLM routing
+- [ ] `/docs/systems/chroma-storage.md` - Chroma working memory
+- [ ] `/docs/systems/supabase-integration.md` - Supabase integration
+- [ ] `/docs/systems/neo4j-integration.md` - Neo4j/Graphiti integration
+- [ ] `/docs/systems/r2-directus-storage.md` - R2/Directus file storage
+- [ ] `/docs/systems/langgraph-state-machines.md` - LangGraph workflows
+- [ ] `/docs/systems/langchain-memory.md` - LangChain memory system
+- [ ] `/docs/systems/llamaindex-loaders.md` - LlamaIndex document loaders
+- [ ] `/docs/systems/multi-pass-classifier.md` - Multi-pass NLP classification
+- [ ] `/docs/systems/pattern-library.md` - 256-pattern behavioral library
+- [ ] `/docs/systems/embedding-pipeline.md` - Embedding generation pipeline
+- [ ] `/docs/systems/audit-logging.md` - Audit trail and chain of custody
+- [ ] `/docs/systems/hitl-checkpoints.md` - Human-in-the-loop system
+
+### **User Guides**
+- [ ] `/docs/guides/uploading-documents.md` - How to upload documents
+- [ ] `/docs/guides/running-analysis.md` - How to run forensic analysis
+- [ ] `/docs/guides/managing-patterns.md` - How to manage custom patterns
+- [ ] `/docs/guides/configuring-llm-providers.md` - How to configure LLM providers
+- [ ] `/docs/guides/building-workflows.md` - How to build custom workflows
+- [ ] `/docs/guides/creating-agents.md` - How to create custom agents
+- [ ] `/docs/guides/exporting-results.md` - How to export analysis results
+- [ ] `/docs/guides/court-admissibility.md` - Ensuring court-admissible evidence
+
+### **API Reference**
+- [ ] `/docs/api/mcp-gateway.md` - MCP Gateway API reference
+- [ ] `/docs/api/trpc-procedures.md` - tRPC procedures reference
+- [ ] `/docs/api/rest-endpoints.md` - REST API endpoints
+- [ ] `/docs/api/websocket-api.md` - WebSocket API (log streaming)
+- [ ] `/docs/api/authentication.md` - Authentication and authorization
+
+### **Developer Documentation**
+- [ ] `/docs/CONTRIBUTING.md` - How to contribute
+- [ ] `/docs/DEVELOPMENT.md` - Development setup
+- [ ] `/docs/TESTING.md` - Testing guide
+- [ ] `/docs/CODE_STYLE.md` - Code style guide
+- [ ] `/docs/PLUGIN_DEVELOPMENT.md` - How to create plugins
+- [ ] `/docs/TOOL_DEVELOPMENT.md` - How to create tools
+
+### **Documentation Standards**
+Each document should follow this template:
+```markdown
+# [Tool/Workflow/System Name]
+
+## Overview
+Brief description (2-3 sentences)
+
+## Purpose
+What problem does this solve?
+
+## Parameters/Configuration
+List of inputs with types and descriptions
+
+## Return Values/Output
+What does this produce?
+
+## Examples
+Code examples with explanations
+
+## Related Tools/Systems
+Links to related documentation
+
+## Troubleshooting
+Common issues and solutions
+
+## See Also
+Links to related docs
+```
+
+### **Documentation Generation Tasks**
+- [ ] Create documentation template generator script
+- [ ] Generate skeleton markdown files for all tools
+- [ ] Generate skeleton markdown files for all workflows
+- [ ] Generate skeleton markdown files for all systems
+- [ ] Create documentation index with auto-generated table of contents
+- [ ] Add Mermaid diagrams for workflows
+- [ ] Add code examples for all tools
+- [ ] Add screenshots for UI components
+- [ ] Generate API reference from TypeScript types
+- [ ] Create searchable documentation site (MkDocs, Docusaurus, or VitePress)
+
+
+
+---
+
+## **Phase 28: VPS Failover & Provider Independence**
+
+### VPS Web App Deployment
+- [ ] Create Dockerfile for full Manus app (client + server)
+- [ ] Add web app service to docker-compose.yml
+- [ ] Configure Nginx reverse proxy for web app
+- [ ] Set up SSL/TLS certificates (Let's Encrypt)
+- [ ] Configure environment variables for VPS deployment
+- [ ] Test web app deployment on VPS
+- [ ] Create deployment script (one-command deploy)
+
+### Database Migration Scripts
+- [ ] Create script to export all data from Manus/Supabase
+- [ ] Create script to import data to VPS databases
+- [ ] Test full database migration (Supabase → VPS Postgres)
+- [ ] Create incremental sync script (keep VPS up-to-date)
+
+### DNS & Traffic Routing
+- [ ] Document DNS configuration for custom domain
+- [ ] Create traffic routing script (switch between Manus ↔ VPS)
+- [ ] Set up health checks for automatic failover
+- [ ] Test manual failover (Manus → VPS)
+- [ ] Test automatic failover on Manus downtime
+
+### Data Synchronization
+- [ ] Set up bidirectional sync for user data
+- [ ] Configure R2 as shared storage layer
+- [ ] Create conflict resolution strategy
+- [ ] Test real-time sync between Manus and VPS
+
+### Monitoring & Alerts
+- [ ] Set up uptime monitoring for both Manus and VPS
+- [ ] Create alert system for failover events
+- [ ] Add cost tracking dashboard (Manus vs VPS)
+- [ ] Document rollback procedure (VPS → Manus)
+
+### Documentation
+- [ ] Create VPS deployment guide
+- [ ] Document failover procedure (step-by-step)
+- [ ] Create troubleshooting guide
+- [ ] Document cost comparison (Manus vs VPS vs hybrid)
+
+---
+
+## **Phase 29: LiteLLM + MetaMCP Integration**
+
+### LiteLLM Server-Side Integration
+- [ ] Implement routeLLM() function in server/_core/router.ts
+- [ ] Add LiteLLM client to server/_core/llm.ts
+- [ ] Update invokeLLM() to use intelligent routing
+- [ ] Add cost tracking for LLM calls
+- [ ] Test fallback routing (Manus → LiteLLM → Direct API)
+- [ ] Add LiteLLM metrics to monitoring dashboard
+
+### MetaMCP Integration
+- [ ] Implement MCP server registration in Dockerfile.metamcp
+- [ ] Add tool discovery API endpoints
+- [ ] Implement routeMCPTool() function in router.ts
+- [ ] Connect local MCP gateway to MetaMCP registry
+- [ ] Add MCP tool caching (Redis)
+- [ ] Test cross-server tool execution
+
+### Chroma Routing
+- [ ] Implement routeVectorSearch() with TTL vs persistent logic
+- [ ] Add Chroma VPS client to server
+- [ ] Update vector operations to use intelligent routing
+- [ ] Test in-process (TTL) vs VPS (persistent) Chroma
+- [ ] Add automatic cleanup for expired TTL collections
+
+### Neo4j Routing
+- [ ] Implement routeGraphQuery() function
+- [ ] Add connection pooling for Neo4j VPS
+- [ ] Test VPS → Aura fallback
+- [ ] Add graph query caching
+
+### Health Checks & Monitoring
+- [ ] Implement checkServiceHealth() for all VPS services
+- [ ] Add automatic failover on service degradation
+- [ ] Create service health dashboard
+- [ ] Add cost tracking for all services
+
+---
+
+## **Phase 30: Kasm Workspace Setup**
+
+### Kasm Configuration
+- [ ] Build Kasm Dockerfile with all CLI tools
+- [ ] Configure rclone for R2 bidirectional sync
+- [ ] Set up auto-sync timer (every 5 minutes)
+- [ ] Test workspace sync (local ↔ R2 ↔ desktop)
+- [ ] Add desktop shortcuts (VS Code, Sync, etc.)
+
+### CLI Tool Configuration
+- [ ] Configure Claude CLI with API key
+- [ ] Configure Gemini CLI with API key
+- [ ] Test Aider (AI pair programming)
+- [ ] Test Cursor (AI code editor)
+- [ ] Configure GitHub CLI authentication
+
+### Agent Access
+- [ ] Create SSH access for agents to Kasm container
+- [ ] Add CLI wrapper scripts for agent calls
+- [ ] Test agent → Claude CLI execution
+- [ ] Test agent → Gemini CLI execution
+- [ ] Add usage tracking for CLI calls
+
+---
+
+## **Phase 31: Documentation Generation (Delegate to Free Model)**
+
+### Tool Documentation (60+ files)
+- [ ] Use DOCUMENTATION_HANDOFF.md to generate tool docs
+- [ ] Review and edit generated documentation
+- [ ] Add code examples to each tool doc
+- [ ] Add usage statistics and best practices
+
+### Workflow Documentation (20+ files)
+- [ ] Generate workflow documentation
+- [ ] Add workflow diagrams
+- [ ] Document input/output schemas
+- [ ] Add troubleshooting sections
+
+### System Documentation (15+ files)
+- [ ] Generate system architecture docs
+- [ ] Add deployment guides
+- [ ] Document API endpoints
+- [ ] Create developer onboarding guide
+
+
+---
+
+## **Phase 32: AWS AI Services Integration**
+
+### AWS SDK Setup
+- [ ] Install AWS SDKs (`@aws-sdk/client-rekognition`, `@aws-sdk/client-comprehend`, `@aws-sdk/client-textract`)
+- [ ] Configure AWS credentials in .env.docker
+- [ ] Initialize AWS clients in server/_core/aws-ai.ts
+- [ ] Test AWS connection and permissions
+
+### Rekognition Integration
+- [ ] Implement detectFaces() for screenshot analysis
+- [ ] Implement detectLabels() for context detection
+- [ ] Implement detectTextInImage() for OCR
+- [ ] Test with sample screenshots
+- [ ] Add error handling and retries
+
+### Comprehend Integration
+- [ ] Implement analyzeSentiment() for conversation tone
+- [ ] Implement extractEntities() for people/places/orgs
+- [ ] Implement detectPII() for redaction
+- [ ] Test with sample conversation text
+- [ ] Add batch processing support
+
+### Textract Integration
+- [ ] Implement extractDocumentText() for simple OCR
+- [ ] Implement analyzeDocument() for tables/forms
+- [ ] Test with receipts, invoices, forms
+- [ ] Add support for multi-page documents
+
+### Screenshot Analysis Pipeline
+- [ ] Implement analyzeScreenshot() complete pipeline
+- [ ] Combine Rekognition + Comprehend results
+- [ ] Store results in Supabase
+- [ ] Add caching to avoid duplicate analysis
+- [ ] Create tRPC procedures for frontend access
+
+---
+
+## **Phase 33: GCP AI Services Integration**
+
+### GCP SDK Setup
+- [ ] Install GCP SDKs (`@google-cloud/documentai`, `@google-cloud/aiplatform`, `@google-cloud/notebooks`)
+- [ ] Create GCP service account with required permissions
+- [ ] Download service account JSON key
+- [ ] Configure GCP credentials in .env.docker
+- [ ] Initialize GCP clients in server/_core/gcp-ai.ts
+
+### Document AI Integration
+- [ ] Enable Document AI API in GCP project
+- [ ] Create processors (Form Parser, Invoice Parser, Receipt Parser)
+- [ ] Implement processDocument() for single documents
+- [ ] Implement batchProcessDocuments() for bulk processing
+- [ ] Test with complex forms and receipts
+- [ ] Compare results with AWS Textract
+
+### Colab Enterprise Setup
+- [ ] Enable Colab Enterprise API in GCP project
+- [ ] Create runtime templates (CPU, GPU, TPU)
+- [ ] Set up GCS bucket for notebook storage
+- [ ] Implement executeNotebook() for on-demand execution
+- [ ] Implement scheduleNotebook() for recurring jobs
+- [ ] Test with sample analysis notebook
+
+### Vertex AI Integration
+- [ ] Enable Vertex AI API in GCP project
+- [ ] Implement predictCustomModel() for inference
+- [ ] Implement deployModel() for model deployment
+- [ ] Test with pre-trained models
+- [ ] Add support for custom forensic classifiers
+
+### Colab Notebook Templates
+- [ ] Create sentiment analysis notebook template
+- [ ] Create entity extraction notebook template
+- [ ] Create pattern detection notebook template
+- [ ] Add data loading from R2/Supabase
+- [ ] Add results export to Supabase
+- [ ] Test end-to-end execution
+
+---
+
+## **Phase 34: Cloud AI Routing & Optimization**
+
+### Intelligent Routing
+- [ ] Update server/_core/router.ts with cloud AI routing
+- [ ] Add cost-based routing (AWS vs GCP)
+- [ ] Add latency-based routing
+- [ ] Add fallback chains (Rekognition → Document AI → Textract)
+- [ ] Implement caching to reduce API calls
+
+### Cost Tracking
+- [ ] Track AWS API costs (Rekognition, Comprehend, Textract)
+- [ ] Track GCP API costs (Document AI, Vertex AI, Colab)
+- [ ] Store cost metrics in Supabase
+- [ ] Create cost dashboard in Manus app
+- [ ] Add budget alerts
+
+### Performance Optimization
+- [ ] Implement parallel processing for batch jobs
+- [ ] Add request batching for Comprehend
+- [ ] Use Colab Enterprise for GPU-intensive tasks
+- [ ] Cache frequently analyzed documents
+- [ ] Optimize image sizes before sending to APIs
+
+### Testing & Validation
+- [ ] Create test suite for AWS AI services
+- [ ] Create test suite for GCP AI services
+- [ ] Test screenshot analysis pipeline end-to-end
+- [ ] Test document analysis pipeline end-to-end
+- [ ] Compare accuracy: AWS vs GCP vs custom models
+
+
+---
+
+## **Phase 33: Hetzner & Coolify API Integration**
+
+### Hetzner Cloud API
+- [ ] Install hcloud Python SDK (`pip3 install hcloud`)
+- [ ] Create `server/_core/hetzner.ts` wrapper for Node.js → Python bridge
+- [ ] Add tRPC procedures for VPS management (list, create, start, stop, resize, snapshot)
+- [ ] Create UI page `client/src/pages/ServerManagement.tsx` for VPS control
+- [ ] Add Hetzner API key to environment variables
+- [ ] Install hcloud CLI in Kasm workspace Dockerfile
+- [ ] Test VPS management via platform UI
+- [ ] Document Hetzner API usage in `docs/systems/hetzner-integration.md`
+
+### Coolify MCP Integration
+- [ ] Configure Coolify MCP server in MCP settings (already installed: `@fastmcp-me/coolify-mcp`)
+- [ ] Add Coolify API URL and token to environment variables
+- [ ] Create tRPC procedures for Coolify management (deploy, logs, restart, env vars)
+- [ ] Create UI page `client/src/pages/DeploymentManagement.tsx` for Coolify control
+- [ ] Test deployment management via platform UI
+- [ ] Document Coolify MCP usage in `docs/tools/coolify-mcp.md`
+
+### Cross-Platform Management
+- [ ] Create unified dashboard showing both Hetzner VPS and Coolify deployments
+- [ ] Add monitoring widgets (CPU, RAM, disk usage from Hetzner API)
+- [ ] Add deployment status widgets (service health from Coolify API)
+- [ ] Implement webhook handlers for Coolify deployment notifications
+- [ ] Test full workflow: Create VPS → Deploy services → Monitor status
