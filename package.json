@@ -15,6 +15,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
     "@aws-sdk/s3-request-presigner": "^3.693.0",
+    "@fastmcp-me/coolify-mcp": "^1.0.5",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -49,6 +50,7 @@
     "@trpc/server": "^11.6.0",
     "axios": "^1.12.0",
     "cheerio": "^1.1.2",
+    "chromadb": "^3.2.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -71,6 +73,7 @@
     "nanoid": "^5.1.5",
     "natural": "^8.1.0",
     "next-themes": "^0.4.6",
+    "node-html-parser": "^7.0.1",
     "react": "^19.2.1",
     "react-day-picker": "^9.11.1",
     "react-dom": "^19.2.1",

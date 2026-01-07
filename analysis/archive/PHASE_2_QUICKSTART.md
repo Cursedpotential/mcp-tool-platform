@@ -327,18 +327,18 @@ curl -u neo4j:password -X POST http://localhost:7474/db/neo4j/tx \
 ```bash
 # Update .env for production
 QDRANT_URL=https://YOUR_CLUSTER.qdrant.io
-QDRANT_API_KEY=your-production-key
+QDRANT_API_KEY=
 
 NEO4J_URL=bolt://your-neo4j-instance.com:7687
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=your-password
 
 MEM0_URL=https://api.mem0.ai
-MEM0_API_KEY=your-api-key
+MEM0_API_KEY=
 MEM0_ENABLED=true
 
 N8N_URL=https://your-n8n-instance.com
-N8N_API_KEY=your-api-key
+N8N_API_KEY=
 N8N_ENABLED=true
 ```
 
