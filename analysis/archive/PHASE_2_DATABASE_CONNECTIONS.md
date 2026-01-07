@@ -40,7 +40,7 @@ All four database plugins are **registered but stubbed**—they have function si
 # Local development: http://localhost:6333
 # Production: Your Qdrant Cloud URL
 QDRANT_URL=http://localhost:6333
-QDRANT_API_KEY=your-api-key-here
+QDRANT_API_KEY=
 QDRANT_COLLECTION_PREFIX=mcp_
 
 # ============================================================================
@@ -59,7 +59,7 @@ NEO4J_DATABASE=neo4j
 # Local/Docker: http://localhost:8000
 # Cloud: https://api.mem0.ai
 MEM0_URL=http://localhost:8000
-MEM0_API_KEY=your-api-key-here
+MEM0_API_KEY=
 MEM0_ENABLED=false
 
 # ============================================================================
@@ -68,7 +68,7 @@ MEM0_ENABLED=false
 # Local development: http://localhost:5678
 # Production: Your n8n instance URL
 N8N_URL=http://localhost:5678
-N8N_API_KEY=your-api-key-here
+N8N_API_KEY=
 N8N_WEBHOOK_BASE_URL=http://localhost:5678
 N8N_ENABLED=false
 
