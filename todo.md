@@ -1223,3 +1223,102 @@ Links to related docs
 - [ ] Add n8n execution monitoring in platform UI
 - [ ] Create n8n webhook endpoints for platform callbacks
 - [ ] Implement n8n credential sharing with platform secrets
+
+
+## Phase 36 - Migrate Platform to Self-Hosted PostgreSQL
+
+### Database Migration Planning
+- [ ] Audit current Manus platform database (TiDB/MySQL)
+- [ ] Document all existing tables and schemas
+- [ ] Identify data to migrate vs fresh start
+- [ ] Plan migration strategy (zero-downtime vs maintenance window)
+- [ ] Create rollback plan in case of migration failure
+- [ ] Document connection string format for self-hosted PostgreSQL
+
+### PostgreSQL Configuration on salem-nexus
+- [ ] Verify PostgreSQL deployment on salem-nexus (Groq agents)
+- [ ] Create dedicated database for platform: `mcp_tool_platform`
+- [ ] Create platform user with appropriate permissions
+- [ ] Configure PostgreSQL for external connections (Manus platform → salem-nexus)
+- [ ] Set up connection pooling (PgBouncer or built-in pooler)
+- [ ] Configure SSL/TLS for secure connections
+- [ ] Set up PostgreSQL backups (automated daily backups to salem-vault)
+- [ ] Configure PostgreSQL monitoring (query performance, connection stats)
+
+### Platform Database Connection Update
+- [ ] Update DATABASE_URL environment variable to point to salem-nexus PostgreSQL
+- [ ] Test connection from Manus platform to salem-nexus PostgreSQL
+- [ ] Update Drizzle ORM configuration for PostgreSQL dialect
+- [ ] Run schema migrations on new PostgreSQL database (drizzle-kit push)
+- [ ] Verify all tables created correctly
+- [ ] Test all tRPC procedures with new database connection
+- [ ] Update connection pooling settings for production load
+
+### Schema Consolidation
+- [ ] Merge drizzle/schema.ts and drizzle/settings-schema.ts into single schema
+- [ ] Add missing tables from Supabase design to platform database
+- [ ] Create unified schema for all platform data (users, settings, patterns, messages, analyses)
+- [ ] Add indexes for performance (conversation_cluster_id, timestamp, sender)
+- [ ] Add foreign key constraints for data integrity
+- [ ] Create database views for common queries
+- [ ] Document schema design decisions
+
+### Data Migration (if needed)
+- [ ] Export existing user data from Manus platform database
+- [ ] Transform data to match new PostgreSQL schema
+- [ ] Import data into salem-nexus PostgreSQL
+- [ ] Verify data integrity after migration
+- [ ] Test authentication with migrated user data
+- [ ] Update user IDs if schema changed
+
+### Shared Database Architecture
+- [ ] Configure Directus to use same PostgreSQL instance (salem_forensics database)
+- [ ] Configure PhotoPrism to use same PostgreSQL instance
+- [ ] Configure n8n to use same PostgreSQL instance
+- [ ] Create separate databases for each service (isolation)
+- [ ] Document database naming convention (salem_forensics, mcp_tool_platform, etc.)
+- [ ] Set up cross-database queries if needed (PostgreSQL foreign data wrappers)
+- [ ] Configure database-level permissions (service users can only access their databases)
+
+### PostgreSQL Extensions Setup
+- [ ] Enable pgvector extension for embeddings
+- [ ] Enable pg_trgm extension for fuzzy text search
+- [ ] Enable pg_stat_statements for query performance monitoring
+- [ ] Enable uuid-ossp for UUID generation
+- [ ] Enable pg_cron for scheduled jobs (cleanup, backups)
+- [ ] Test all extensions with platform queries
+
+### Performance Optimization
+- [ ] Tune PostgreSQL configuration for 16GB RAM (shared_buffers, work_mem)
+- [ ] Set up query performance monitoring
+- [ ] Identify slow queries and add indexes
+- [ ] Configure autovacuum settings
+- [ ] Set up connection pooling limits
+- [ ] Test database performance under load
+- [ ] Document optimization settings
+
+### Backup & Recovery
+- [ ] Set up automated daily backups to salem-vault volume
+- [ ] Configure point-in-time recovery (WAL archiving)
+- [ ] Test backup restoration process
+- [ ] Set up backup monitoring (verify backups complete successfully)
+- [ ] Document backup retention policy (daily for 7 days, weekly for 4 weeks)
+- [ ] Create disaster recovery runbook
+
+### Security Hardening
+- [ ] Change default PostgreSQL passwords
+- [ ] Restrict PostgreSQL network access (only from platform IP)
+- [ ] Enable SSL/TLS for all connections
+- [ ] Set up database audit logging
+- [ ] Configure row-level security (RLS) for multi-tenant data
+- [ ] Review and minimize user permissions
+- [ ] Document security configuration
+
+### Monitoring & Alerting
+- [ ] Set up PostgreSQL metrics collection
+- [ ] Create dashboard for database health (connections, queries/sec, cache hit ratio)
+- [ ] Configure alerts for high connection count
+- [ ] Configure alerts for slow queries
+- [ ] Configure alerts for disk space usage
+- [ ] Configure alerts for backup failures
+- [ ] Integrate monitoring with platform UI
