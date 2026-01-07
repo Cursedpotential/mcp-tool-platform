@@ -1149,3 +1149,77 @@ Links to related docs
 - [ ] Add deployment status widgets (service health from Coolify API)
 - [ ] Implement webhook handlers for Coolify deployment notifications
 - [ ] Test full workflow: Create VPS → Deploy services → Monitor status
+
+
+## Phase 35 - Directus Integration & Single Sign-On
+
+### Directus Extensions & Plugins Research
+- [ ] Research available Directus extensions (hooks, endpoints, panels, modules)
+- [ ] Identify useful extensions for forensic workflows (file processing, metadata extraction)
+- [ ] Research custom extension development (TypeScript SDK)
+- [ ] Document extension installation process via Coolify
+- [ ] Test extension compatibility with PostgreSQL backend
+- [ ] Create list of priority extensions to install
+
+### Directus Portal Integration
+- [ ] Create iframe integration for Directus in platform UI
+- [ ] Add Directus navigation tab to DashboardLayout
+- [ ] Implement seamless navigation between platform and Directus
+- [ ] Create tRPC procedures for Directus API proxy (avoid CORS)
+- [ ] Wire file upload from platform to Directus
+- [ ] Wire file retrieval from Directus to platform
+- [ ] Add Directus collection management UI in platform
+- [ ] Create custom Directus dashboard for forensic workflows
+
+### Single Sign-On (SSO) Implementation
+- [ ] Research Directus authentication methods (JWT, OAuth, API tokens)
+- [ ] Implement JWT token sharing between Manus auth and Directus
+- [ ] Create SSO middleware for PhotoPrism (API key or reverse proxy auth)
+- [ ] Create SSO middleware for n8n (API key or reverse proxy auth)
+- [ ] Implement session synchronization across all services
+- [ ] Add logout propagation (logout from platform = logout from all services)
+- [ ] Test SSO flow: Manus login → Directus → PhotoPrism → n8n
+- [ ] Add user role mapping (Manus admin → Directus admin)
+- [ ] Implement token refresh logic
+- [ ] Add SSO debugging UI (show active sessions across services)
+
+### Missing Backend Features Audit
+- [ ] Audit all tRPC procedures for incomplete implementations
+- [ ] List all TODOs in server/ directory
+- [ ] Identify missing database helpers in server/db.ts
+- [ ] Document missing API integrations (AWS, GCP, HuggingFace)
+- [ ] List missing frontend pages (LLM Router, Prompt Builder, Workflow Builder, Agent Builder)
+- [ ] Identify missing test coverage
+- [ ] Create prioritized backlog of missing features
+- [ ] Estimate effort for each missing feature
+- [ ] Document dependencies between missing features
+- [ ] Create implementation roadmap
+
+### Directus Workflow Integration
+- [ ] Create Directus collections for forensic evidence (documents, messages, behaviors)
+- [ ] Add custom fields for preliminary analysis results
+- [ ] Create Directus flows for automated processing (file upload → n8n webhook)
+- [ ] Implement Directus webhooks for real-time updates to platform
+- [ ] Add Directus filters for conversation clusters
+- [ ] Create Directus insights dashboard for case overview
+- [ ] Implement Directus permissions for multi-user access
+- [ ] Add Directus activity log integration with platform audit trail
+
+### PhotoPrism Integration
+- [ ] Research PhotoPrism API authentication
+- [ ] Create SSO bridge for PhotoPrism (reverse proxy or API token)
+- [ ] Implement iframe integration for PhotoPrism in platform
+- [ ] Wire PhotoPrism face detection results to Supabase
+- [ ] Wire PhotoPrism EXIF metadata to Supabase
+- [ ] Create PhotoPrism album sync with case management
+- [ ] Add PhotoPrism search integration in platform UI
+
+### n8n Integration
+- [ ] Research n8n API authentication
+- [ ] Create SSO bridge for n8n (API key or reverse proxy)
+- [ ] Implement iframe integration for n8n in platform
+- [ ] Create n8n workflow templates for forensic processing
+- [ ] Wire n8n workflow triggers from platform
+- [ ] Add n8n execution monitoring in platform UI
+- [ ] Create n8n webhook endpoints for platform callbacks
+- [ ] Implement n8n credential sharing with platform secrets
