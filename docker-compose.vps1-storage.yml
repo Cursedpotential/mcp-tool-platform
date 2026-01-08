@@ -89,15 +89,15 @@ services:
         
         # Configure rclone for R2 (backup only)
         mkdir -p /root/.config/rclone
-        cat > /root/.config/rclone/rclone.conf <<EOF
+        cat > /root/.config/rclone/rclone.conf <<'RCLONE_EOF'
 [r2]
 type = s3
 provider = Cloudflare
-access_key_id = \$R2_ACCESS_KEY_ID
-secret_access_key = \$R2_SECRET_ACCESS_KEY
-endpoint = \$R2_ENDPOINT
+access_key_id = $R2_ACCESS_KEY_ID
+secret_access_key = $R2_SECRET_ACCESS_KEY
+endpoint = $R2_ENDPOINT
 acl = private
-EOF
+RCLONE_EOF
         
         # Nightly backup cron (2am)
         echo '0 2 * * * /usr/bin/rclone sync /mnt/block-storage r2:\$R2_BUCKET/backups/vps1 --log-level INFO' | crontab -
