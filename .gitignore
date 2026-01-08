@@ -105,3 +105,6 @@ temp/
 *.db
 *.sqlite
 *.sqlite3
+.env.vps1-storage
+DEPLOY_VPS1_COOLIFY.md
+deploy-coolify.sh
