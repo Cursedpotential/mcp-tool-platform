@@ -1,0 +1,7 @@
+graphiti-core
+fastapi
+uvicorn[standard]
+neo4j
+openai
+pydantic
+python-dotenv
