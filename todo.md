@@ -1322,3 +1322,48 @@ Links to related docs
 - [ ] Configure alerts for disk space usage
 - [ ] Configure alerts for backup failures
 - [ ] Integrate monitoring with platform UI
+
+
+## Phase 13 - VPS Infrastructure Deployment (Jan 9, 2026)
+
+### Docker Compose Files
+- [x] Create docker-compose.vps1-complete.yml (salem-nexus - 8 services)
+- [x] Create docker-compose.vps2-salem-forge.yml (salem-forge - 6 services)
+- [x] Create .env.vps1-complete with all secrets
+- [x] Create .env.vps2-salem-forge with all secrets
+- [x] Add R2 configuration to Directus, n8n, LibreChat
+- [x] Create litellm-config.yaml with model routing
+- [x] Update Dockerfile.kasm with FastAPI server for Python tools
+- [x] Add NLP endpoints to Kasm FastAPI (detect_language, extract_entities, etc.)
+
+### Python Bridge Remote Execution
+- [x] Update python-bridge.ts to support remote API calls
+- [x] Add PYTHON_API_URL environment variable support
+- [x] Keep local subprocess code commented out for future use
+- [x] Add all NLP tool endpoints to Kasm FastAPI server
+
+### Cloudflare Workers
+- [x] Create r2-storage.js (file operations, zero egress)
+- [x] Create evidence-hasher.js (chain of custody, SHA-256)
+- [x] Create auth-proxy.js (JWT validation, API key auth)
+- [x] Create cache-api.js (LLM response caching)
+- [x] Create rate-limiter.js (sliding window rate limiting)
+- [x] Create webhook-receiver.js (webhook queue)
+- [x] Create wrangler.toml with deployment configuration
+
+### R2 Integration
+- [x] Add R2 credentials to .env files
+- [x] Configure R2 storage for Directus
+- [x] Configure R2 storage for n8n
+- [x] Configure R2 storage for LibreChat
+
+### Service Allocation
+**salem-nexus (VPS1):**
+- PostgreSQL, MariaDB, FerretDB
+- Directus, PhotoPrism, n8n
+- LibreChat, Open WebUI
+
+**salem-forge (VPS2):**
+- LiteLLM, MetaMCP, Chroma
+- Kasm Workspace, Browserless, Playwright
+

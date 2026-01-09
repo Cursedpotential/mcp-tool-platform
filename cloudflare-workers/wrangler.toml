@@ -1,0 +1,134 @@
+# ============================================================================
+# Cloudflare Workers Configuration - Salem Forensics Platform
+# ============================================================================
+# Deploy: wrangler deploy --config wrangler.toml --name <worker-name>
+# Account ID: 1a7406c497493a52128bb282f499e7b8
+# ============================================================================
+
+# Global settings
+account_id = "1a7406c497493a52128bb282f499e7b8"
+compatibility_date = "2024-01-01"
+
+# ============================================================================
+# R2 Storage Worker
+# Deploy: wrangler deploy r2-storage.js --name salem-r2-storage
+# ============================================================================
+[[env.r2-storage]]
+name = "salem-r2-storage"
+main = "r2-storage.js"
+routes = [{ pattern = "r2.mitechconsult.com/*", zone_name = "mitechconsult.com" }]
+
+[[env.r2-storage.r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "main"
+
+[env.r2-storage.vars]
+R2_PUBLIC_URL = "r2.mitechconsult.com"
+
+# Secrets (set via: wrangler secret put API_KEY --env r2-storage)
+# - API_KEY
+
+# ============================================================================
+# Evidence Hasher Worker
+# Deploy: wrangler deploy evidence-hasher.js --name salem-evidence-hasher
+# ============================================================================
+[[env.evidence-hasher]]
+name = "salem-evidence-hasher"
+main = "evidence-hasher.js"
+routes = [{ pattern = "hasher.mitechconsult.com/*", zone_name = "mitechconsult.com" }]
+
+[[env.evidence-hasher.kv_namespaces]]
+binding = "KV_NAMESPACE"
+id = ""  # Create via: wrangler kv:namespace create "EVIDENCE_CHAINS"
+
+# Secrets: API_KEY
+
+# ============================================================================
+# Auth Proxy Worker
+# Deploy: wrangler deploy auth-proxy.js --name salem-auth-proxy
+# ============================================================================
+[[env.auth-proxy]]
+name = "salem-auth-proxy"
+main = "auth-proxy.js"
+routes = [{ pattern = "auth.mitechconsult.com/*", zone_name = "mitechconsult.com" }]
+
+[[env.auth-proxy.kv_namespaces]]
+binding = "KV_NAMESPACE"
+id = ""  # Create via: wrangler kv:namespace create "AUTH_SESSIONS"
+
+[env.auth-proxy.vars]
+BACKEND_URL = "https://api.mitechconsult.com"
+
+# Secrets: JWT_SECRET, API_KEYS (JSON object)
+
+# ============================================================================
+# Cache API Worker
+# Deploy: wrangler deploy cache-api.js --name salem-cache-api
+# ============================================================================
+[[env.cache-api]]
+name = "salem-cache-api"
+main = "cache-api.js"
+routes = [{ pattern = "cache.mitechconsult.com/*", zone_name = "mitechconsult.com" }]
+
+[[env.cache-api.kv_namespaces]]
+binding = "KV_NAMESPACE"
+id = ""  # Create via: wrangler kv:namespace create "LLM_CACHE"
+
+# Secrets: API_KEY
+
+# ============================================================================
+# Rate Limiter Worker
+# Deploy: wrangler deploy rate-limiter.js --name salem-rate-limiter
+# ============================================================================
+[[env.rate-limiter]]
+name = "salem-rate-limiter"
+main = "rate-limiter.js"
+routes = [{ pattern = "ratelimit.mitechconsult.com/*", zone_name = "mitechconsult.com" }]
+
+[[env.rate-limiter.kv_namespaces]]
+binding = "KV_NAMESPACE"
+id = ""  # Create via: wrangler kv:namespace create "RATE_LIMITS"
+
+# Secrets: API_KEY
+
+# ============================================================================
+# Webhook Receiver Worker
+# Deploy: wrangler deploy webhook-receiver.js --name salem-webhook-receiver
+# ============================================================================
+[[env.webhook-receiver]]
+name = "salem-webhook-receiver"
+main = "webhook-receiver.js"
+routes = [{ pattern = "webhooks.mitechconsult.com/*", zone_name = "mitechconsult.com" }]
+
+[[env.webhook-receiver.kv_namespaces]]
+binding = "KV_NAMESPACE"
+id = ""  # Create via: wrangler kv:namespace create "WEBHOOKS"
+
+[env.webhook-receiver.vars]
+BACKEND_URL = "https://api.mitechconsult.com"
+
+# Secrets: API_KEY
+
+# ============================================================================
+# Deployment Instructions
+# ============================================================================
+# 1. Install wrangler: npm install -g wrangler
+# 2. Login: wrangler login
+# 3. Create KV namespaces:
+#    wrangler kv:namespace create "EVIDENCE_CHAINS"
+#    wrangler kv:namespace create "AUTH_SESSIONS"
+#    wrangler kv:namespace create "LLM_CACHE"
+#    wrangler kv:namespace create "RATE_LIMITS"
+#    wrangler kv:namespace create "WEBHOOKS"
+# 4. Update namespace IDs in this file
+# 5. Set secrets for each worker:
+#    wrangler secret put API_KEY --env r2-storage
+#    wrangler secret put API_KEY --env evidence-hasher
+#    wrangler secret put JWT_SECRET --env auth-proxy
+#    wrangler secret put API_KEYS --env auth-proxy
+#    etc.
+# 6. Deploy each worker:
+#    wrangler deploy --env r2-storage
+#    wrangler deploy --env evidence-hasher
+#    etc.
+# ============================================================================

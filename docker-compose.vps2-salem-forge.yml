@@ -1,0 +1,348 @@
+version: '3.8'
+
+# ============================================================================
+# VPS2 (salem-forge) - Backend Platform Services
+# Salem Forensics Infrastructure - Hetzner 8c/16GB
+# ============================================================================
+#
+# Services:
+# - LiteLLM (LLM proxy with S3 caching and model routing)
+# - MetaMCP (MCP server registry and aggregator)
+# - Chroma (Vector database for embeddings and semantic search)
+# - Kasm Workspace (Persistent desktop with Claude/Gemini CLI, VS Code, rclone sync)
+# - Browserless (Headless Chrome for automation)
+# - Playwright (Browser automation framework)
+#
+# Network Architecture:
+# - All services communicate via salem-network bridge
+# - Cross-VPS communication via public IPs (salem-nexus: 188.245.189.218)
+# - No Tailscale (configuration skipped)
+#
+# ============================================================================
+
+networks:
+  salem-network:
+    driver: bridge
+    # Internal network for service-to-service communication
+
+volumes:
+  # LiteLLM cache and logs
+  litellm_data:
+    driver: local
+
+  # MetaMCP server registry
+  metamcp_data:
+    driver: local
+
+  # Chroma vector database
+  chroma_data:
+    driver: local
+
+  # Kasm workspace persistent storage
+  kasm_data:
+    driver: local
+
+services:
+  # ============================================================================
+  # LiteLLM - LLM Proxy with Caching and Model Routing
+  # ============================================================================
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: salem-litellm
+    environment:
+      # Database Configuration (PostgreSQL for request logging)
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@188.245.189.218:5432/${POSTGRES_DB:-salem}?sslmode=disable
+      
+      # Master Key (for admin access)
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}                # Master API key (REQUIRED, generate with: openssl rand -hex 32)
+      
+      # Model Configuration
+      - LITELLM_CONFIG_PATH=/app/config.yaml                    # Path to model config file
+      
+      # Caching Configuration (S3-compatible)
+      - LITELLM_CACHE=s3                                        # Cache backend (s3, redis, none)
+      - LITELLM_CACHE_BUCKET=${S3_BUCKET:-salem-llm-cache}      # S3 bucket name
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}                  # AWS access key (REQUIRED if using S3 cache)
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}          # AWS secret key (REQUIRED if using S3 cache)
+      - AWS_REGION=${AWS_REGION:-us-east-1}                     # AWS region
+      
+      # Optional: Redis Cache (alternative to S3)
+      # - LITELLM_CACHE=redis
+      # - REDIS_HOST=redis
+      # - REDIS_PORT=6379
+      # - REDIS_PASSWORD=${REDIS_PASSWORD}
+      
+      # Logging Configuration
+      - LITELLM_LOG=INFO                                        # Log level (DEBUG, INFO, WARNING, ERROR)
+      - LITELLM_LOG_TO_FILE=true                                # Enable file logging
+      
+      # Rate Limiting
+      - LITELLM_MAX_PARALLEL_REQUESTS=100                       # Max parallel requests
+      - LITELLM_REQUEST_TIMEOUT=600                             # Request timeout in seconds
+      
+      # Optional: Prometheus Metrics
+      # - LITELLM_ENABLE_PROMETHEUS=true
+      # - LITELLM_PROMETHEUS_PORT=9090
+    volumes:
+      - litellm_data:/app/logs                                  # Log storage
+      - /home/ubuntu/mcp-tool-platform/litellm-config.yaml:/app/config.yaml:ro  # Model configuration
+    ports:
+      - "4000:4000"                                             # LiteLLM HTTP API port
+      # - "9090:9090"                                           # Prometheus metrics (if enabled)
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.litellm.rule=Host(`llm.${DOMAIN}`)"
+      - "traefik.http.routers.litellm.entrypoints=websecure"
+      - "traefik.http.routers.litellm.tls.certresolver=letsencrypt"
+      - "traefik.http.services.litellm.loadbalancer.server.port=4000"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+
+  # ============================================================================
+  # MetaMCP - MCP Server Registry and Aggregator
+  # ============================================================================
+  metamcp:
+    image: node:22-alpine
+    container_name: salem-metamcp
+    working_dir: /app
+    command: sh -c "npm install -g @modelcontextprotocol/server-registry && mcp-registry serve"
+    environment:
+      # Server Configuration
+      - MCP_REGISTRY_PORT=3001                                  # HTTP port for MCP registry
+      - MCP_REGISTRY_HOST=0.0.0.0                               # Listen address
+      
+      # Storage Configuration
+      - MCP_REGISTRY_DATA_DIR=/app/data                         # Data directory for server registry
+      
+      # Optional: Authentication
+      # - MCP_REGISTRY_AUTH_ENABLED=true
+      # - MCP_REGISTRY_AUTH_TOKEN=${MCP_REGISTRY_AUTH_TOKEN}
+      
+      # Optional: Logging
+      - MCP_REGISTRY_LOG_LEVEL=info                             # Log level (debug, info, warn, error)
+    volumes:
+      - metamcp_data:/app/data                                  # Server registry data
+    ports:
+      - "3001:3001"                                             # MetaMCP HTTP port
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.metamcp.rule=Host(`mcp.${DOMAIN}`)"
+      - "traefik.http.routers.metamcp.entrypoints=websecure"
+      - "traefik.http.routers.metamcp.tls.certresolver=letsencrypt"
+      - "traefik.http.services.metamcp.loadbalancer.server.port=3001"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+
+  # ============================================================================
+  # Chroma - Vector Database for Embeddings
+  # ============================================================================
+  chroma:
+    image: ghcr.io/chroma-core/chroma:latest
+    container_name: salem-chroma
+    environment:
+      # Server Configuration
+      - CHROMA_SERVER_HOST=0.0.0.0                              # Listen address
+      - CHROMA_SERVER_HTTP_PORT=8000                            # HTTP port
+      
+      # Authentication (optional but recommended)
+      - CHROMA_SERVER_AUTH_CREDENTIALS=${CHROMA_AUTH_TOKEN}     # Auth token (REQUIRED, generate with: openssl rand -hex 32)
+      - CHROMA_SERVER_AUTH_PROVIDER=token                       # Auth provider (token, none)
+      
+      # Storage Configuration
+      - CHROMA_PERSIST_DIRECTORY=/chroma/data                   # Data persistence directory
+      - CHROMA_ALLOW_RESET=false                                # Allow database reset (true, false)
+      
+      # Performance Configuration
+      - CHROMA_SERVER_CORS_ALLOW_ORIGINS=*                      # CORS origins (adjust for production)
+      - CHROMA_SEGMENT_CACHE_POLICY=LRU                         # Cache policy (LRU, LFU)
+      
+      # Optional: Telemetry
+      # - CHROMA_TELEMETRY_ENABLED=false                        # Disable telemetry
+      
+      # Optional: Logging
+      - CHROMA_LOG_LEVEL=INFO                                   # Log level (DEBUG, INFO, WARNING, ERROR)
+    volumes:
+      - chroma_data:/chroma/data                                # Persistent vector storage
+    ports:
+      - "8000:8000"                                             # Chroma HTTP API port
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chroma.rule=Host(`chroma.${DOMAIN}`)"
+      - "traefik.http.routers.chroma.entrypoints=websecure"
+      - "traefik.http.routers.chroma.tls.certresolver=letsencrypt"
+      - "traefik.http.services.chroma.loadbalancer.server.port=8000"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+
+  # ============================================================================
+  # Kasm Workspace - Persistent Desktop Environment
+  # ============================================================================
+  kasm:
+    build:
+      context: .
+      dockerfile: Dockerfile.kasm
+    container_name: salem-kasm
+    environment:
+      # VNC Configuration
+      - VNC_PW=${KASM_VNC_PASSWORD:-!Ms10238512!}              # VNC password (REQUIRED)
+      - VNC_RESOLUTION=1920x1080                                # Screen resolution
+      
+      # User Configuration
+      - PUID=1000                                               # User ID
+      - PGID=1000                                               # Group ID
+      
+      # Workspace Configuration
+      - WORKSPACE_NAME=Salem Forensics Desktop                  # Workspace display name
+      
+      # rclone Configuration (for bidirectional sync with local machine)
+      - RCLONE_CONFIG=/config/rclone/rclone.conf                # rclone config file path
+      - RCLONE_REMOTE_NAME=salem-local                          # Remote name for local machine
+      - RCLONE_SYNC_INTERVAL=300                                # Sync interval in seconds (5 minutes)
+      
+      # Claude CLI Configuration
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}                # Claude API key (optional)
+      
+      # Gemini CLI Configuration
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}                      # Gemini API key (optional)
+      
+      # Optional: Timezone
+      - TZ=America/New_York                                     # Timezone
+    volumes:
+      - kasm_data:/config                                       # Persistent config and workspace data
+      - /var/run/docker.sock:/var/run/docker.sock:ro            # Docker socket (for Docker-in-Docker)
+    ports:
+      - "6901:6901"                                             # noVNC web interface (HTTPS)
+      - "5901:5901"                                             # VNC port (direct access)
+      - "2222:22"                                               # SSH port (for agent access)
+      - "8888:8888"                                             # FastAPI CLI tools API
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kasm.rule=Host(`desktop.${DOMAIN}`)"
+      - "traefik.http.routers.kasm.entrypoints=websecure"
+      - "traefik.http.routers.kasm.tls.certresolver=letsencrypt"
+      - "traefik.http.services.kasm.loadbalancer.server.port=6901"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+
+  # ============================================================================
+  # Browserless - Headless Chrome for Automation
+  # ============================================================================
+  browserless:
+    image: browserless/chrome:latest
+    container_name: salem-browserless
+    environment:
+      # Server Configuration
+      - PORT=3000                                               # HTTP port
+      - MAX_CONCURRENT_SESSIONS=10                              # Max concurrent browser sessions
+      - CONNECTION_TIMEOUT=60000                                # Connection timeout in ms
+      - MAX_QUEUE_LENGTH=10                                     # Max queued requests
+      
+      # Authentication
+      - TOKEN=${BROWSERLESS_TOKEN}                              # API token (REQUIRED, generate with: openssl rand -hex 32)
+      
+      # Resource Limits
+      - PREBOOT_CHROME=true                                     # Pre-boot Chrome instances
+      - KEEP_ALIVE=true                                         # Keep browser instances alive
+      - CHROME_REFRESH_TIME=3600000                             # Chrome refresh interval in ms (1 hour)
+      
+      # Optional: Debugging
+      # - DEBUG=browserless*                                    # Enable debug logging
+      
+      # Optional: Proxy Configuration
+      # - PROXY_URL=${PROXY_URL}                                # Proxy URL for outbound requests
+    ports:
+      - "3000:3000"                                             # Browserless HTTP API port
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.browserless.rule=Host(`browser.${DOMAIN}`)"
+      - "traefik.http.routers.browserless.entrypoints=websecure"
+      - "traefik.http.routers.browserless.tls.certresolver=letsencrypt"
+      - "traefik.http.services.browserless.loadbalancer.server.port=3000"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+
+  # ============================================================================
+  # Playwright - Browser Automation Framework
+  # ============================================================================
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.40.0-jammy
+    container_name: salem-playwright
+    command: npx playwright run-server --port 3002 --host 0.0.0.0
+    environment:
+      # Server Configuration
+      - PLAYWRIGHT_SERVER_PORT=3002                             # HTTP port for Playwright server
+      - PLAYWRIGHT_SERVER_HOST=0.0.0.0                          # Listen address
+      
+      # Browser Configuration
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright                 # Browser binaries path
+      
+      # Optional: Proxy Configuration
+      # - HTTP_PROXY=${HTTP_PROXY}
+      # - HTTPS_PROXY=${HTTPS_PROXY}
+      
+      # Optional: Debugging
+      # - DEBUG=pw:api                                          # Enable Playwright API debugging
+    ports:
+      - "3002:3002"                                             # Playwright HTTP server port
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.playwright.rule=Host(`playwright.${DOMAIN}`)"
+      - "traefik.http.routers.playwright.entrypoints=websecure"
+      - "traefik.http.routers.playwright.tls.certresolver=letsencrypt"
+      - "traefik.http.services.playwright.loadbalancer.server.port=3002"
+      - "coolify.managed=true"
+      - "coolify.type=application"

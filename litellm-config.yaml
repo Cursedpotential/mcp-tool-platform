@@ -1,0 +1,258 @@
+# ============================================================================
+# LiteLLM Configuration - Model Routing and Fallback Rules
+# Salem Forensics Infrastructure
+# ============================================================================
+#
+# This configuration defines:
+# 1. Model routing rules (task-based, cost-based, latency-based)
+# 2. Fallback chains for reliability
+# 3. Rate limiting and caching
+# 4. API key management
+#
+# ============================================================================
+
+model_list:
+  # ============================================================================
+  # Ollama Cloud Models (Primary for most tasks)
+  # ============================================================================
+  - model_name: ollama/llama3.3
+    litellm_params:
+      model: ollama/llama3.3
+      api_base: https://api.ollama.ai
+      api_key: ${OLLAMA_API_KEY}
+      rpm: 60  # Requests per minute
+      tpm: 100000  # Tokens per minute
+
+  - model_name: ollama/qwen2.5-coder
+    litellm_params:
+      model: ollama/qwen2.5-coder
+      api_base: https://api.ollama.ai
+      api_key: ${OLLAMA_API_KEY}
+      rpm: 60
+      tpm: 100000
+
+  # ============================================================================
+  # OpenRouter Models (Free tier prioritized)
+  # ============================================================================
+  - model_name: openrouter/mistral-7b-instruct
+    litellm_params:
+      model: mistralai/mistral-7b-instruct
+      api_base: https://openrouter.ai/api/v1
+      api_key: ${OPENROUTER_API_KEY}
+      rpm: 20
+      tpm: 50000
+
+  - model_name: openrouter/gemma-2-9b
+    litellm_params:
+      model: google/gemma-2-9b-it
+      api_base: https://openrouter.ai/api/v1
+      api_key: ${OPENROUTER_API_KEY}
+      rpm: 20
+      tpm: 50000
+
+  # ============================================================================
+  # Groq Models (Speed prioritized)
+  # ============================================================================
+  - model_name: groq/llama-3.3-70b
+    litellm_params:
+      model: llama-3.3-70b-versatile
+      api_base: https://api.groq.com/openai/v1
+      api_key: ${GROQ_API_KEY}
+      rpm: 30
+      tpm: 6000
+
+  - model_name: groq/mixtral-8x7b
+    litellm_params:
+      model: mixtral-8x7b-32768
+      api_base: https://api.groq.com/openai/v1
+      api_key: ${GROQ_API_KEY}
+      rpm: 30
+      tpm: 5000
+
+  # ============================================================================
+  # OpenAI Models (General purpose, use sparingly)
+  # ============================================================================
+  - model_name: openai/gpt-4o-mini
+    litellm_params:
+      model: gpt-4o-mini
+      api_key: ${OPENAI_API_KEY}
+      rpm: 500
+      tpm: 200000
+
+  - model_name: openai/gpt-4o
+    litellm_params:
+      model: gpt-4o
+      api_key: ${OPENAI_API_KEY}
+      rpm: 500
+      tpm: 150000
+
+  # ============================================================================
+  # Anthropic Models (Last resort, expensive)
+  # ============================================================================
+  - model_name: anthropic/claude-3-5-sonnet
+    litellm_params:
+      model: claude-3-5-sonnet-20241022
+      api_key: ${ANTHROPIC_API_KEY}
+      rpm: 50
+      tpm: 40000
+
+  - model_name: anthropic/claude-3-5-haiku
+    litellm_params:
+      model: claude-3-5-haiku-20241022
+      api_key: ${ANTHROPIC_API_KEY}
+      rpm: 50
+      tpm: 50000
+
+  # ============================================================================
+  # Google Gemini Models (via OpenRouter or direct)
+  # ============================================================================
+  - model_name: google/gemini-2.0-flash
+    litellm_params:
+      model: gemini/gemini-2.0-flash-exp
+      api_key: ${GOOGLE_API_KEY}
+      rpm: 15
+      tpm: 1000000
+
+  - model_name: google/gemini-1.5-pro
+    litellm_params:
+      model: gemini/gemini-1.5-pro
+      api_key: ${GOOGLE_API_KEY}
+      rpm: 2
+      tpm: 32000
+
+# ============================================================================
+# Router Settings - Task-Based Routing
+# ============================================================================
+router_settings:
+  # Routing strategy: simple, least-busy, usage-based-routing, latency-based-routing
+  routing_strategy: simple
+  
+  # Fallback models (in order of preference)
+  fallbacks:
+    - ollama/llama3.3
+    - openrouter/mistral-7b-instruct
+    - groq/llama-3.3-70b
+    - openai/gpt-4o-mini
+    - anthropic/claude-3-5-haiku
+
+  # Model aliases for task-based routing
+  model_group_alias:
+    # Speed-critical tasks (real-time chat, quick responses)
+    speed:
+      - groq/llama-3.3-70b
+      - groq/mixtral-8x7b
+      - ollama/llama3.3
+    
+    # Code generation and analysis
+    code:
+      - ollama/qwen2.5-coder
+      - openai/gpt-4o-mini
+      - anthropic/claude-3-5-sonnet
+    
+    # Reasoning and complex analysis
+    reasoning:
+      - openai/gpt-4o
+      - anthropic/claude-3-5-sonnet
+      - google/gemini-1.5-pro
+    
+    # Bulk processing (cost-optimized)
+    bulk:
+      - ollama/llama3.3
+      - openrouter/mistral-7b-instruct
+      - openrouter/gemma-2-9b
+    
+    # Multimodal (vision, audio)
+    multimodal:
+      - google/gemini-2.0-flash
+      - openai/gpt-4o
+      - anthropic/claude-3-5-sonnet
+    
+    # Long context (documents, conversations)
+    long_context:
+      - google/gemini-1.5-pro
+      - anthropic/claude-3-5-sonnet
+      - openai/gpt-4o
+
+  # Context window limits (for automatic routing)
+  context_window_fallbacks:
+    - model: ollama/llama3.3
+      context_window: 128000
+    - model: google/gemini-1.5-pro
+      context_window: 2000000
+    - model: anthropic/claude-3-5-sonnet
+      context_window: 200000
+
+# ============================================================================
+# Caching Settings
+# ============================================================================
+cache_settings:
+  # Cache backend (s3, redis, none)
+  type: s3
+  
+  # S3 cache configuration
+  s3_bucket_name: ${S3_BUCKET}
+  s3_region_name: ${AWS_REGION}
+  s3_aws_access_key_id: ${AWS_ACCESS_KEY_ID}
+  s3_aws_secret_access_key: ${AWS_SECRET_ACCESS_KEY}
+  
+  # Cache TTL (time to live in seconds)
+  ttl: 3600  # 1 hour
+  
+  # Cache only for specific models (optional)
+  # supported_call_types: ["completion", "embedding", "chat"]
+
+# ============================================================================
+# General Settings
+# ============================================================================
+general_settings:
+  # Master key for admin access
+  master_key: ${LITELLM_MASTER_KEY}
+  
+  # Database for request logging
+  database_url: ${DATABASE_URL}
+  
+  # Max parallel requests
+  max_parallel_requests: 100
+  
+  # Request timeout (seconds)
+  request_timeout: 600
+  
+  # Enable detailed logging
+  set_verbose: false
+  
+  # Drop non-essential params (for compatibility)
+  drop_params: true
+  
+  # Allow user to override model
+  allow_user_auth: true
+
+# ============================================================================
+# Cost Tracking (optional)
+# ============================================================================
+litellm_settings:
+  # Track cost per request
+  success_callback: ["langfuse"]
+  
+  # Set budgets per key (optional)
+  # max_budget: 100  # USD
+  # budget_duration: 30d
+
+# ============================================================================
+# Usage Notes
+# ============================================================================
+#
+# To use task-based routing, send requests with model alias:
+#   curl -X POST http://localhost:4000/v1/chat/completions \
+#     -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+#     -H "Content-Type: application/json" \
+#     -d '{"model": "speed", "messages": [{"role": "user", "content": "Hello"}]}'
+#
+# To use specific model:
+#   curl -X POST http://localhost:4000/v1/chat/completions \
+#     -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+#     -H "Content-Type: application/json" \
+#     -d '{"model": "ollama/llama3.3", "messages": [{"role": "user", "content": "Hello"}]}'
+#
+# Fallback chain will automatically retry failed requests with next model
+#
+# ============================================================================

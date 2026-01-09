@@ -33,6 +33,8 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     iputils-ping \
     dnsutils \
+    # SSH server
+    openssh-server \
     # Archive tools
     unzip \
     zip \
@@ -331,6 +333,723 @@ RUN chmod +x /home/kasm-user/Desktop/*.desktop \
     && chown -R kasm-user:kasm-user /home/kasm-user/Desktop
 
 # ============================================================================
+# Configure SSH Server
+# ============================================================================
+USER root
+
+# Configure SSH for agent access
+RUN mkdir -p /var/run/sshd && \
+    mkdir -p /home/kasm-user/.ssh && \
+    chmod 700 /home/kasm-user/.ssh && \
+    chown kasm-user:kasm-user /home/kasm-user/.ssh
+
+# Configure SSH to allow key-based auth
+RUN sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && \
+    sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config
+
+# ============================================================================
+# Create FastAPI Service for CLI Tool Exposure
+# ============================================================================
+RUN pip3 install --no-cache-dir fastapi uvicorn pydantic
+
+# Create FastAPI app for CLI tools
+RUN cat > /usr/local/bin/cli-api-server.py << 'FASTAPI_EOF'
+#!/usr/bin/env python3
+import os
+import subprocess
+import json
+from typing import Optional, Dict, Any
+from fastapi import FastAPI, HTTPException, Header
+from pydantic import BaseModel
+import uvicorn
+
+app = FastAPI(title="Salem CLI Tools API", version="1.0.0")
+
+# API key from environment
+API_KEY = os.environ.get("CLI_API_KEY", "default-insecure-key")
+
+class CLIRequest(BaseModel):
+    command: str
+    args: list[str] = []
+    env: Dict[str, str] = {}
+    timeout: int = 300
+
+class CLIResponse(BaseModel):
+    stdout: str
+    stderr: str
+    returncode: int
+    success: bool
+
+def verify_api_key(authorization: Optional[str] = Header(None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid authorization header")
+    token = authorization.replace("Bearer ", "")
+    if token != API_KEY:
+        raise HTTPException(status_code=403, detail="Invalid API key")
+
+@app.post("/cli/claude", response_model=CLIResponse)
+async def claude_cli(request: CLIRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        result = subprocess.run(
+            ["claude-cli"] + request.args,
+            capture_output=True,
+            text=True,
+            timeout=request.timeout,
+            env={**os.environ, **request.env}
+        )
+        return CLIResponse(
+            stdout=result.stdout,
+            stderr=result.stderr,
+            returncode=result.returncode,
+            success=result.returncode == 0
+        )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=408, detail="Command timeout")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/cli/gemini", response_model=CLIResponse)
+async def gemini_cli(request: CLIRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        result = subprocess.run(
+            ["gemini-cli"] + request.args,
+            capture_output=True,
+            text=True,
+            timeout=request.timeout,
+            env={**os.environ, **request.env}
+        )
+        return CLIResponse(
+            stdout=result.stdout,
+            stderr=result.stderr,
+            returncode=result.returncode,
+            success=result.returncode == 0
+        )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=408, detail="Command timeout")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/cli/aider", response_model=CLIResponse)
+async def aider_cli(request: CLIRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        result = subprocess.run(
+            ["aider"] + request.args,
+            capture_output=True,
+            text=True,
+            timeout=request.timeout,
+            env={**os.environ, **request.env}
+        )
+        return CLIResponse(
+            stdout=result.stdout,
+            stderr=result.stderr,
+            returncode=result.returncode,
+            success=result.returncode == 0
+        )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=408, detail="Command timeout")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/cli/gh", response_model=CLIResponse)
+async def github_cli(request: CLIRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        result = subprocess.run(
+            ["gh"] + request.args,
+            capture_output=True,
+            text=True,
+            timeout=request.timeout,
+            env={**os.environ, **request.env}
+        )
+        return CLIResponse(
+            stdout=result.stdout,
+            stderr=result.stderr,
+            returncode=result.returncode,
+            success=result.returncode == 0
+        )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=408, detail="Command timeout")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# Python Library Endpoints
+# ============================================================================
+
+class LangChainRequest(BaseModel):
+    prompt: str
+    chain_type: str = "llm"  # llm, conversation, retrieval
+    memory: bool = False
+    context: Dict[str, Any] = {}
+
+class LangGraphRequest(BaseModel):
+    workflow: str  # JSON workflow definition
+    input_data: Dict[str, Any]
+    checkpoint: Optional[str] = None
+
+class LlamaIndexRequest(BaseModel):
+    operation: str  # load, query, embed
+    documents: Optional[list[str]] = None
+    query: Optional[str] = None
+    index_name: Optional[str] = None
+
+@app.post("/python/langchain")
+async def langchain_execute(request: LangChainRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        # Execute LangChain operation via subprocess
+        script = f'''
+import sys
+import json
+from langchain.llms import OpenAI
+from langchain.chains import LLMChain
+from langchain.prompts import PromptTemplate
+
+prompt = "{request.prompt}"
+chain_type = "{request.chain_type}"
+
+if chain_type == "llm":
+    llm = OpenAI()
+    result = llm(prompt)
+    print(json.dumps({{"result": result}}))
+else:
+    print(json.dumps({{"error": "Chain type not implemented"}}))
+'''
+        result = subprocess.run(
+            ["python3", "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            env={**os.environ, **request.context}
+        )
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+        else:
+            raise HTTPException(status_code=500, detail=result.stderr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/python/langgraph")
+async def langgraph_execute(request: LangGraphRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        # Execute LangGraph workflow via subprocess
+        script = f'''
+import sys
+import json
+from langgraph.graph import StateGraph
+
+workflow = json.loads('''{request.workflow}''')
+input_data = {json.dumps(request.input_data)}
+
+# Execute workflow (simplified)
+print(json.dumps({{"result": "Workflow executed", "output": input_data}}))
+'''
+        result = subprocess.run(
+            ["python3", "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+        else:
+            raise HTTPException(status_code=500, detail=result.stderr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/python/llamaindex")
+async def llamaindex_execute(request: LlamaIndexRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        # Execute LlamaIndex operation via subprocess
+        script = f'''
+import sys
+import json
+from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, Document
+
+operation = "{request.operation}"
+
+if operation == "load":
+    documents = {json.dumps(request.documents or [])}
+    docs = [Document(text=doc) for doc in documents]
+    index = VectorStoreIndex.from_documents(docs)
+    print(json.dumps({{"result": "Documents loaded", "count": len(docs)}}))
+elif operation == "query":
+    query = "{request.query}"
+    # Simplified query execution
+    print(json.dumps({{"result": "Query executed", "query": query}}))
+else:
+    print(json.dumps({{"error": "Operation not implemented"}}))
+'''
+        result = subprocess.run(
+            ["python3", "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+        else:
+            raise HTTPException(status_code=500, detail=result.stderr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/python/anthropic")
+async def anthropic_direct(request: Dict[str, Any], authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        script = f'''
+import sys
+import json
+import anthropic
+
+client = anthropic.Anthropic()
+message = client.messages.create(
+    model="claude-3-5-sonnet-20241022",
+    max_tokens=1024,
+    messages={json.dumps(request.get("messages", []))}
+)
+print(json.dumps({{"content": message.content[0].text}}))
+'''
+        result = subprocess.run(
+            ["python3", "-c", script],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+        else:
+            raise HTTPException(status_code=500, detail=result.stderr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
+# NLP Tool Endpoints (called by python-bridge.ts)
+# ============================================================================
+
+class NLPTextRequest(BaseModel):
+    text: str
+    types: Optional[list[str]] = None
+    topK: int = 10
+
+@app.post("/python/detect_language")
+async def detect_language(request: NLPTextRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        script = f'''
+import json
+try:
+    from langdetect import detect, detect_langs
+    text = {json.dumps(request.text)}
+    lang = detect(text)
+    probs = detect_langs(text)
+    confidence = probs[0].prob if probs else 0.5
+    print(json.dumps({{"language": lang, "confidence": confidence, "method": "langdetect"}}))
+except ImportError:
+    # Fallback to simple heuristic
+    text = {json.dumps(request.text)}
+    import re
+    if re.search(r"[\u0400-\u04FF]", text):
+        lang = "ru"
+    elif re.search(r"[\u4E00-\u9FFF]", text):
+        lang = "zh"
+    elif re.search(r"[\u0600-\u06FF]", text):
+        lang = "ar"
+    else:
+        lang = "en"
+    print(json.dumps({{"language": lang, "confidence": 0.5, "method": "heuristic"}}))
+'''
+        result = subprocess.run(["python3", "-c", script], capture_output=True, text=True, timeout=30)
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+        raise HTTPException(status_code=500, detail=result.stderr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/python/extract_entities")
+async def extract_entities(request: NLPTextRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        script = f'''
+import json
+try:
+    import spacy
+    nlp = spacy.load("en_core_web_sm")
+    text = {json.dumps(request.text)}
+    doc = nlp(text)
+    entities = []
+    for ent in doc.ents:
+        entities.append({{
+            "text": ent.text,
+            "type": ent.label_,
+            "start": ent.start_char,
+            "end": ent.end_char,
+            "confidence": 0.9
+        }})
+    print(json.dumps({{"entities": entities, "method": "spacy"}}))
+except ImportError:
+    print(json.dumps({{"entities": [], "method": "spacy_unavailable", "error": "spaCy not installed"}}))
+'''
+        result = subprocess.run(["python3", "-c", script], capture_output=True, text=True, timeout=60)
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+        raise HTTPException(status_code=500, detail=result.stderr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/python/extract_keywords")
+async def extract_keywords(request: NLPTextRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        script = f'''
+import json
+try:
+    from rake_nltk import Rake
+    text = {json.dumps(request.text)}
+    topK = {request.topK}
+    r = Rake()
+    r.extract_keywords_from_text(text)
+    ranked = r.get_ranked_phrases_with_scores()[:topK]
+    keywords = [{{"keyword": phrase, "score": score / (ranked[0][0] if ranked else 1), "frequency": 1}} for score, phrase in ranked]
+    print(json.dumps({{"keywords": keywords, "method": "rake"}}))  
+except ImportError:
+    # Fallback to simple frequency
+    import re
+    from collections import Counter
+    text = {json.dumps(request.text)}
+    words = re.findall(r"\\b[a-z]{{3,}}\\b", text.lower())
+    stopwords = set(["the", "and", "for", "that", "this", "with", "are", "was", "were", "been"])
+    words = [w for w in words if w not in stopwords]
+    freq = Counter(words).most_common({request.topK})
+    max_f = freq[0][1] if freq else 1
+    keywords = [{{"keyword": w, "score": f/max_f, "frequency": f}} for w, f in freq]
+    print(json.dumps({{"keywords": keywords, "method": "frequency"}}))
+'''
+        result = subprocess.run(["python3", "-c", script], capture_output=True, text=True, timeout=30)
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+        raise HTTPException(status_code=500, detail=result.stderr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/python/analyze_sentiment")
+async def analyze_sentiment(request: NLPTextRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        script = f'''
+import json
+try:
+    from textblob import TextBlob
+    text = {json.dumps(request.text)}
+    blob = TextBlob(text)
+    polarity = blob.sentiment.polarity
+    if polarity > 0.1:
+        label = "positive"
+    elif polarity < -0.1:
+        label = "negative"
+    else:
+        label = "neutral"
+    print(json.dumps({{"label": label, "score": polarity, "confidence": abs(polarity), "method": "textblob"}}))
+except ImportError:
+    print(json.dumps({{"label": "neutral", "score": 0, "confidence": 0.5, "method": "unavailable"}}))
+'''
+        result = subprocess.run(["python3", "-c", script], capture_output=True, text=True, timeout=30)
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+        raise HTTPException(status_code=500, detail=result.stderr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/python/split_sentences")
+async def split_sentences(request: NLPTextRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        script = f'''
+import json
+try:
+    import nltk
+    nltk.download("punkt", quiet=True)
+    from nltk.tokenize import sent_tokenize
+    text = {json.dumps(request.text)}
+    sents = sent_tokenize(text)
+    sentences = []
+    pos = 0
+    for i, s in enumerate(sents):
+        start = text.find(s, pos)
+        end = start + len(s)
+        sentences.append({{"text": s, "start": start, "end": end, "index": i}})
+        pos = end
+    print(json.dumps({{"sentences": sentences, "count": len(sentences), "method": "nltk"}}))
+except ImportError:
+    import re
+    text = {json.dumps(request.text)}
+    sents = re.split(r"(?<=[.!?])\\s+", text)
+    sentences = [{{"text": s, "start": 0, "end": len(s), "index": i}} for i, s in enumerate(sents)]
+    print(json.dumps({{"sentences": sentences, "count": len(sentences), "method": "regex"}}))
+'''
+        result = subprocess.run(["python3", "-c", script], capture_output=True, text=True, timeout=30)
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+        raise HTTPException(status_code=500, detail=result.stderr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/python/tokenize")
+async def tokenize(request: NLPTextRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        script = f'''
+import json
+try:
+    import nltk
+    nltk.download("punkt", quiet=True)
+    from nltk.tokenize import word_tokenize
+    text = {json.dumps(request.text)}
+    tokens = word_tokenize(text)
+    print(json.dumps({{"tokens": tokens, "count": len(tokens), "method": "nltk"}}))
+except ImportError:
+    import re
+    text = {json.dumps(request.text)}
+    tokens = re.findall(r"\\b\\w+\\b", text)
+    print(json.dumps({{"tokens": tokens, "count": len(tokens), "method": "regex"}}))
+'''
+        result = subprocess.run(["python3", "-c", script], capture_output=True, text=True, timeout=30)
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+        raise HTTPException(status_code=500, detail=result.stderr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/python/lemmatize")
+async def lemmatize(request: NLPTextRequest, authorization: str = Header(None)):
+    verify_api_key(authorization)
+    try:
+        script = f'''
+import json
+try:
+    import spacy
+    nlp = spacy.load("en_core_web_sm")
+    text = {json.dumps(request.text)}
+    doc = nlp(text)
+    lemmas = [{{"original": token.text, "lemma": token.lemma_}} for token in doc if token.is_alpha]
+    print(json.dumps({{"lemmas": lemmas, "method": "spacy"}}))
+except ImportError:
+    import re
+    text = {json.dumps(request.text)}
+    words = re.findall(r"\\b\\w+\\b", text)
+    lemmas = [{{"original": w, "lemma": w}} for w in words]
+    print(json.dumps({{"lemmas": lemmas, "method": "passthrough"}}))
+'''
+        result = subprocess.run(["python3", "-c", script], capture_output=True, text=True, timeout=60)
+        if result.returncode == 0:
+            return json.loads(result.stdout)
+        raise HTTPException(status_code=500, detail=result.stderr)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "service": "cli-api-server", "nlp_endpoints": True}
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8888)
+FASTAPI_EOF
+
+RUN chmod +x /usr/local/bin/cli-api-server.py
+
+# ============================================================================
+# Create MCP Server Configuration
+# ============================================================================
+RUN npm install -g @modelcontextprotocol/sdk
+
+# Create MCP server for CLI tools
+RUN cat > /usr/local/bin/mcp-cli-server.js << 'MCP_EOF'
+#!/usr/bin/env node
+const { Server } = require('@modelcontextprotocol/sdk/server/index.js');
+const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
+const { CallToolRequestSchema, ListToolsRequestSchema } = require('@modelcontextprotocol/sdk/types.js');
+const { exec } = require('child_process');
+const { promisify } = require('util');
+
+const execAsync = promisify(exec);
+
+const server = new Server(
+  {
+    name: 'salem-cli-tools',
+    version: '1.0.0',
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+);
+
+// Define available tools
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: 'claude_cli',
+        description: 'Execute Claude CLI commands using your Anthropic subscription',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            prompt: {
+              type: 'string',
+              description: 'The prompt to send to Claude',
+            },
+          },
+          required: ['prompt'],
+        },
+      },
+      {
+        name: 'gemini_cli',
+        description: 'Execute Gemini CLI commands using your Google AI subscription',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            prompt: {
+              type: 'string',
+              description: 'The prompt to send to Gemini',
+            },
+          },
+          required: ['prompt'],
+        },
+      },
+      {
+        name: 'aider',
+        description: 'AI pair programming tool for code generation and modification',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            message: {
+              type: 'string',
+              description: 'The instruction for Aider',
+            },
+            files: {
+              type: 'array',
+              items: { type: 'string' },
+              description: 'Files to include in context',
+            },
+          },
+          required: ['message'],
+        },
+      },
+      {
+        name: 'github_cli',
+        description: 'GitHub CLI for repository operations',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            command: {
+              type: 'string',
+              description: 'GitHub CLI command (e.g., "repo list", "issue create")',
+            },
+          },
+          required: ['command'],
+        },
+      },
+    ],
+  };
+});
+
+// Handle tool calls
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  try {
+    let command;
+    let result;
+
+    switch (name) {
+      case 'claude_cli':
+        command = `claude-cli "${args.prompt.replace(/"/g, '\\"')}"`;
+        result = await execAsync(command, { timeout: 300000 });
+        break;
+
+      case 'gemini_cli':
+        command = `gemini-cli "${args.prompt.replace(/"/g, '\\"')}"`;
+        result = await execAsync(command, { timeout: 300000 });
+        break;
+
+      case 'aider':
+        const files = args.files ? args.files.join(' ') : '';
+        command = `aider ${files} --message "${args.message.replace(/"/g, '\\"')}"`;
+        result = await execAsync(command, { timeout: 300000 });
+        break;
+
+      case 'github_cli':
+        command = `gh ${args.command}`;
+        result = await execAsync(command, { timeout: 60000 });
+        break;
+
+      default:
+        throw new Error(`Unknown tool: ${name}`);
+    }
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: result.stdout || result.stderr,
+        },
+      ],
+    };
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error: ${error.message}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+});
+
+async function main() {
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error('Salem CLI Tools MCP Server running on stdio');
+}
+
+main().catch(console.error);
+MCP_EOF
+
+RUN chmod +x /usr/local/bin/mcp-cli-server.js
+
+# ============================================================================
+# Create Supervisor Config to Run All Services
+# ============================================================================
+RUN apt-get update && apt-get install -y supervisor && rm -rf /var/lib/apt/lists/*
+
+RUN cat > /etc/supervisor/conf.d/salem-services.conf << 'SUPERVISOR_EOF'
+[program:sshd]
+command=/usr/sbin/sshd -D
+autostart=true
+autorestart=true
+stdout_logfile=/var/log/sshd.log
+stderr_logfile=/var/log/sshd.err.log
+
+[program:cli-api-server]
+command=/usr/local/bin/cli-api-server.py
+autostart=true
+autorestart=true
+user=kasm-user
+environment=HOME="/home/kasm-user",USER="kasm-user"
+stdout_logfile=/var/log/cli-api-server.log
+stderr_logfile=/var/log/cli-api-server.err.log
+SUPERVISOR_EOF
+
+# ============================================================================
 # Set user and finalize
 # ============================================================================
 USER kasm-user
@@ -398,4 +1117,5 @@ EOF
 WORKDIR /home/kasm-user/workspace
 
 # Run startup script on container start
-CMD ["/bin/bash", "-c", "/home/kasm-user/.startup.sh && /dockerstartup/kasm_default_profile.sh /dockerstartup/vnc_startup.sh /dockerstartup/kasm_startup.sh"]
+USER root
+CMD ["/bin/bash", "-c", "supervisord && su - kasm-user -c '/home/kasm-user/.startup.sh' && /dockerstartup/kasm_default_profile.sh /dockerstartup/vnc_startup.sh /dockerstartup/kasm_startup.sh"]

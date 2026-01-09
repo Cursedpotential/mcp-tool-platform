@@ -35,11 +35,25 @@ volumes:
       type: none
       o: bind
       device: /mnt/block-storage
-  # Persistent volumes
+  # Persistent volumes (all mapped to block storage)
   postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/block-storage/postgres
   ferretdb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/block-storage/ferretdb
   n8n_data:
-  tailscale_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/block-storage/n8n
   # Shared media directory (accessible to all services)
   media_storage:
     driver: local

@@ -1,8 +1,12 @@
 /**
- * Python Bridge - Subprocess interface for Python NLP/ML tools
+ * Python Bridge - Interface for Python NLP/ML tools
  * 
- * Calls Python scripts via child_process for heavy NLP operations.
- * Falls back to JS implementations if Python is unavailable.
+ * Supports two execution modes:
+ * 1. Remote API (default for Manus hosting) - Calls salem-forge FastAPI server
+ * 2. Local subprocess (for self-hosted) - Spawns Python processes directly
+ * 
+ * Set PYTHON_API_URL environment variable to use remote mode.
+ * If not set, falls back to local subprocess, then JS fallbacks.
  */
 
 import { spawn } from 'child_process';
@@ -11,6 +15,10 @@ import { join } from 'path';
 const PYTHON_TOOLS_DIR = join(process.cwd(), 'server', 'python-tools');
 const NLP_RUNNER = join(PYTHON_TOOLS_DIR, 'nlp_runner.py');
 
+// Remote API configuration
+const PYTHON_API_URL = process.env.PYTHON_API_URL || '';
+const PYTHON_API_KEY = process.env.PYTHON_API_KEY || process.env.CLI_API_KEY || '';
+
 interface PythonResult {
   success: boolean;
   data?: Record<string, unknown>;
@@ -18,10 +26,65 @@ interface PythonResult {
   method?: string;
 }
 
+// ============================================================================
+// Remote API Execution (for Manus hosting)
+// ============================================================================
+
 /**
- * Execute a Python NLP command via subprocess
+ * Execute Python command via remote API (salem-forge FastAPI)
  */
-export async function callPython(
+async function callPythonRemote(
+  command: string,
+  args: Record<string, unknown>,
+  timeout = 30000
+): Promise<PythonResult> {
+  if (!PYTHON_API_URL) {
+    return { success: false, error: 'PYTHON_API_URL not configured', method: 'remote_unavailable' };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(`${PYTHON_API_URL}/python/${command}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${PYTHON_API_KEY}`,
+      },
+      body: JSON.stringify(args),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      return { success: false, error: `API error ${response.status}: ${errorText}`, method: 'remote' };
+    }
+
+    const data = await response.json();
+    return { success: true, data, method: 'remote' };
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      return { success: false, error: 'Remote API timeout', method: 'remote' };
+    }
+    return { success: false, error: `Remote API error: ${error}`, method: 'remote' };
+  }
+}
+
+// ============================================================================
+// Local Subprocess Execution (for self-hosted deployments)
+// ============================================================================
+
+/**
+ * Execute Python command via local subprocess
+ * 
+ * NOTE: This requires Python and all NLP packages to be installed locally.
+ * On Manus hosting, use remote API instead (set PYTHON_API_URL).
+ */
+async function callPythonLocal(
   command: string,
   args: Record<string, unknown>,
   timeout = 30000
@@ -29,7 +92,6 @@ export async function callPython(
   return new Promise((resolve) => {
     const startTime = Date.now();
     
-    // Try python3 first, then python
     const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
     
     const proc = spawn(pythonCmd, [NLP_RUNNER, command, JSON.stringify(args)], {
@@ -58,41 +120,96 @@ export async function callPython(
           resolve({
             success: true,
             data: { ...result, executionTimeMs: executionTime },
+            method: 'local',
           });
         } catch (e) {
           resolve({
             success: false,
             error: `Failed to parse Python output: ${stdout}`,
+            method: 'local',
           });
         }
       } else {
         resolve({
           success: false,
           error: stderr || `Python process exited with code ${code}`,
+          method: 'local',
         });
       }
     });
 
     proc.on('error', (err) => {
-      // Python not available, will use JS fallback
       resolve({
         success: false,
         error: `Python not available: ${err.message}`,
-        method: 'python_unavailable',
+        method: 'local_unavailable',
       });
     });
   });
 }
 
+// ============================================================================
+// Main Entry Point - Auto-selects execution mode
+// ============================================================================
+
 /**
- * Check if Python and required packages are available
+ * Execute a Python NLP command
+ * 
+ * Priority:
+ * 1. Remote API (if PYTHON_API_URL is set)
+ * 2. Local subprocess (if Python is available)
+ * 3. JS fallback (always available)
+ */
+export async function callPython(
+  command: string,
+  args: Record<string, unknown>,
+  timeout = 30000
+): Promise<PythonResult> {
+  // Try remote API first if configured
+  if (PYTHON_API_URL) {
+    const remoteResult = await callPythonRemote(command, args, timeout);
+    if (remoteResult.success) {
+      return remoteResult;
+    }
+    // Log remote failure but continue to fallback
+    console.warn(`Remote Python API failed: ${remoteResult.error}, trying local...`);
+  }
+
+  // Try local subprocess
+  const localResult = await callPythonLocal(command, args, timeout);
+  if (localResult.success) {
+    return localResult;
+  }
+
+  // Both failed, return the local error (JS fallback will be handled by caller)
+  return localResult;
+}
+
+/**
+ * Check if Python execution is available (remote or local)
  */
 export async function checkPythonAvailability(): Promise<{
   available: boolean;
+  mode: 'remote' | 'local' | 'none';
   version?: string;
   packages?: string[];
   error?: string;
 }> {
+  // Check remote first
+  if (PYTHON_API_URL) {
+    try {
+      const response = await fetch(`${PYTHON_API_URL}/health`, {
+        headers: { 'Authorization': `Bearer ${PYTHON_API_KEY}` },
+      });
+      if (response.ok) {
+        return { available: true, mode: 'remote' };
+      }
+    } catch {
+      // Remote not available, try local
+    }
+  }
+
+  // Check local
   return new Promise((resolve) => {
     const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
     
@@ -110,11 +227,13 @@ export async function checkPythonAvailability(): Promise<{
       if (code === 0) {
         resolve({
           available: true,
+          mode: 'local',
           version: stdout.trim(),
         });
       } else {
         resolve({
           available: false,
+          mode: 'none',
           error: 'Python not found',
         });
       }
@@ -123,6 +242,7 @@ export async function checkPythonAvailability(): Promise<{
     proc.on('error', () => {
       resolve({
         available: false,
+        mode: 'none',
         error: 'Python not installed',
       });
     });
@@ -372,12 +492,12 @@ export async function splitSentences(text: string): Promise<{
     };
   }
   
-  // JS fallback: regex-based
+  // JS fallback: simple regex
   const sentenceRegex = /[^.!?]+[.!?]+/g;
   const sentences: Array<{ text: string; start: number; end: number; index: number }> = [];
-  
   let match;
   let index = 0;
+  
   while ((match = sentenceRegex.exec(text)) !== null) {
     sentences.push({
       text: match[0].trim(),
@@ -391,101 +511,44 @@ export async function splitSentences(text: string): Promise<{
 }
 
 /**
- * Generate embeddings for text
+ * Tokenize text
  */
-export async function embedText(
-  texts: string[]
-): Promise<{
-  embeddings: number[][];
-  model: string;
-  dimensions: number;
+export async function tokenize(text: string): Promise<{
+  tokens: string[];
+  count: number;
   method: string;
 }> {
-  const result = await callPython('embed_text', { texts });
+  const result = await callPython('tokenize', { text });
   
   if (result.success && result.data) {
-    return {
-      ...(result.data as { embeddings: number[][]; model: string; dimensions: number }),
-      method: 'python',
-    };
+    return result.data as { tokens: string[]; count: number; method: string };
   }
   
-  // JS fallback: simple bag-of-words hash (not real embeddings)
-  const dimensions = 384;
-  const embeddings = texts.map((text) => {
-    const words = text.toLowerCase().split(/\s+/);
-    const vec = new Array(dimensions).fill(0);
-    
-    for (const word of words) {
-      // Simple hash to distribute words across dimensions
-      let hash = 0;
-      for (let i = 0; i < word.length; i++) {
-        hash = ((hash << 5) - hash) + word.charCodeAt(i);
-        hash = hash & hash;
-      }
-      const idx = Math.abs(hash) % dimensions;
-      vec[idx] += 1;
-    }
-    
-    // Normalize
-    const norm = Math.sqrt(vec.reduce((sum, v) => sum + v * v, 0)) || 1;
-    return vec.map((v) => v / norm);
-  });
-  
-  return {
-    embeddings,
-    model: 'js_bow_hash',
-    dimensions,
-    method: 'js_fallback',
-  };
+  // JS fallback: simple word tokenization
+  const tokens = text.match(/\b\w+\b/g) || [];
+  return { tokens, count: tokens.length, method: 'js_fallback' };
 }
 
 /**
- * Generate document outline
+ * Lemmatize text
  */
-export async function generateOutline(
-  text: string,
-  maxDepth = 3
-): Promise<{
-  outline: Array<{ level: number; title: string; line: number }>;
-  depth: number;
-  sections: number;
+export async function lemmatize(text: string): Promise<{
+  lemmas: Array<{ original: string; lemma: string }>;
   method: string;
 }> {
-  const result = await callPython('generate_outline', { text, maxDepth });
+  const result = await callPython('lemmatize', { text });
   
   if (result.success && result.data) {
     return result.data as {
-      outline: Array<{ level: number; title: string; line: number }>;
-      depth: number;
-      sections: number;
+      lemmas: Array<{ original: string; lemma: string }>;
       method: string;
     };
   }
   
-  // JS fallback
-  const lines = text.split('\n');
-  const outline: Array<{ level: number; title: string; line: number }> = [];
-  
-  lines.forEach((line, i) => {
-    const trimmed = line.trim();
-    if (!trimmed) return;
-    
-    // Markdown headings
-    const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)/);
-    if (headingMatch) {
-      const level = headingMatch[1].length;
-      if (level <= maxDepth) {
-        outline.push({ level, title: headingMatch[2], line: i + 1 });
-      }
-      return;
-    }
-    
-    // All caps lines (likely headings)
-    if (trimmed === trimmed.toUpperCase() && trimmed.length > 3 && /[A-Z]/.test(trimmed)) {
-      outline.push({ level: 1, title: trimmed, line: i + 1 });
-    }
-  });
-  
-  return { outline, depth: maxDepth, sections: outline.length, method: 'js_fallback' };
+  // JS fallback: no lemmatization, return original
+  const words = text.match(/\b\w+\b/g) || [];
+  return {
+    lemmas: words.map(word => ({ original: word, lemma: word })),
+    method: 'js_fallback',
+  };
 }

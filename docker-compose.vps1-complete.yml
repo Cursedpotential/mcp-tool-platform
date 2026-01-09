@@ -1,0 +1,554 @@
+version: '3.8'
+
+# ============================================================================
+# VPS1 (salem-nexus) - Storage, CMS & Chat UIs
+# Salem Forensics Infrastructure - Hetzner 8c/16GB + 60GB Block Storage
+# ============================================================================
+#
+# Services:
+# - PostgreSQL 16 (Directus, n8n, FerretDB backend, LibreChat)
+# - MariaDB 11 (PhotoPrism - required, PostgreSQL not supported)
+# - FerretDB (MongoDB compatibility layer over PostgreSQL for LibreChat)
+# - Directus (Headless CMS with AI extensions)
+# - PhotoPrism (AI-powered media management with Ollama Cloud integration)
+# - n8n (Workflow automation)
+# - LibreChat (Multi-LLM chat interface)
+# - Open WebUI (Ollama-focused chat interface)
+#
+# Storage Architecture:
+# - /mnt/block-storage (60GB Hetzner volume - salem-vault)
+#   ├── /postgres (PostgreSQL data)
+#   ├── /mariadb (MariaDB data for PhotoPrism)
+#   ├── /n8n (n8n workflows)
+#   └── /media (shared forensic files - Directus + PhotoPrism)
+#
+# ============================================================================
+
+networks:
+  salem-network:
+    driver: bridge
+    # Internal network for service-to-service communication
+
+volumes:
+  # Block storage mount (60GB Hetzner volume)
+  block_storage:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/block-storage
+
+  # PostgreSQL data (Directus, n8n, FerretDB)
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/block-storage/postgres
+
+  # MariaDB data (PhotoPrism only)
+  mariadb_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/block-storage/mariadb
+
+  # n8n workflows and data
+  n8n_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/block-storage/n8n
+
+  # Shared media directory (Directus uploads + PhotoPrism originals)
+  media_storage:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /mnt/block-storage/media
+
+services:
+  # ============================================================================
+  # PostgreSQL - Primary Database (Directus, n8n, FerretDB)
+  # ============================================================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: salem-postgres
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}              # Database superuser username
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}                # Database superuser password (REQUIRED)
+      - POSTGRES_DB=${POSTGRES_DB:-salem}                     # Default database name
+      - PGDATA=/var/lib/postgresql/data/pgdata                # Data directory inside container
+      # - POSTGRES_INITDB_ARGS=--encoding=UTF8 --lc-collate=C --lc-ctype=C  # Uncomment for custom init args
+      # - POSTGRES_HOST_AUTH_METHOD=trust                     # Uncomment to disable password auth (INSECURE)
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"                                           # Expose PostgreSQL port (comment out for internal-only)
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G                                          # Memory limit (adjust based on workload)
+        reservations:
+          memory: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    labels:
+      - "coolify.managed=true"
+      - "coolify.type=database"
+
+  # ============================================================================
+  # MariaDB - PhotoPrism Database (PostgreSQL not supported)
+  # ============================================================================
+  mariadb:
+    image: mariadb:11
+    container_name: salem-mariadb
+    command: --innodb-buffer-pool-size=2G --transaction-isolation=READ-COMMITTED --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --max-connections=512 --innodb-rollback-on-timeout=OFF --innodb-lock-wait-timeout=120
+    environment:
+      - MARIADB_AUTO_UPGRADE=1                                # Automatically upgrade database on version changes
+      - MARIADB_INITDB_SKIP_TZINFO=1                          # Skip timezone data import (faster startup)
+      - MARIADB_DATABASE=photoprism                           # Database name for PhotoPrism
+      - MARIADB_USER=photoprism                               # Database user for PhotoPrism
+      - MARIADB_PASSWORD=${PHOTOPRISM_DB_PASSWORD}            # Database password (REQUIRED)
+      - MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}        # Root password (REQUIRED)
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    ports:
+      - "3306:3306"                                           # Expose MariaDB port (comment out for internal-only)
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    labels:
+      - "coolify.managed=true"
+      - "coolify.type=database"
+
+  # ============================================================================
+  # FerretDB - MongoDB Compatibility Layer (over PostgreSQL for LibreChat)
+  # ============================================================================
+  ferretdb:
+    image: ghcr.io/ferretdb/ferretdb:latest
+    container_name: salem-ferretdb
+    environment:
+      - FERRETDB_POSTGRESQL_URL=postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${FERRETDB_DATABASE:-salem_forensics}?sslmode=disable
+      # - FERRETDB_TELEMETRY=disabled                         # Uncomment to disable telemetry
+      # - FERRETDB_LOG_LEVEL=debug                            # Uncomment for debug logging
+    ports:
+      - "27017:27017"                                         # MongoDB protocol port
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    labels:
+      - "coolify.managed=true"
+      - "coolify.type=database"
+
+  # ============================================================================
+  # Directus - Headless CMS
+  # ============================================================================
+  directus:
+    image: directus/directus:latest
+    container_name: salem-directus
+    environment:
+      # Database Configuration
+      - DB_CLIENT=pg                                          # Database driver (pg for PostgreSQL)
+      - DB_HOST=postgres                                      # Database host (container name)
+      - DB_PORT=5432                                          # Database port
+      - DB_DATABASE=${POSTGRES_DB:-salem}                     # Database name
+      - DB_USER=${POSTGRES_USER:-postgres}                    # Database user
+      - DB_PASSWORD=${POSTGRES_PASSWORD}                      # Database password (REQUIRED)
+      
+      # Admin Account (first boot only)
+      - ADMIN_EMAIL=${DIRECTUS_ADMIN_EMAIL}                   # Admin email (REQUIRED)
+      - ADMIN_PASSWORD=${DIRECTUS_ADMIN_PASSWORD}             # Admin password (REQUIRED, 8+ chars)
+      
+      # Security
+      - KEY=${DIRECTUS_KEY}                                   # Unique key for encryption (REQUIRED, generate with: openssl rand -base64 32)
+      - SECRET=${DIRECTUS_SECRET}                             # Secret for JWT signing (REQUIRED, generate with: openssl rand -base64 64)
+      
+      # Storage Configuration - Cloudflare R2 (S3-compatible)
+      - STORAGE_LOCATIONS=local,r2                           # Storage drivers available
+      - STORAGE_LOCAL_ROOT=/directus/uploads                  # Local storage path (fallback)
+      - STORAGE_R2_DRIVER=s3                                  # R2 uses S3 driver
+      - STORAGE_R2_KEY=${R2_ACCESS_KEY_ID}                    # R2 Access Key
+      - STORAGE_R2_SECRET=${R2_SECRET_ACCESS_KEY}             # R2 Secret Key
+      - STORAGE_R2_BUCKET=${R2_BUCKET}                        # R2 Bucket name
+      - STORAGE_R2_REGION=auto                                # R2 uses 'auto' region
+      - STORAGE_R2_ENDPOINT=${R2_ENDPOINT}                    # R2 endpoint URL
+      - STORAGE_R2_ACL=private                                # Access control
+      
+      # Server Configuration
+      - PUBLIC_URL=https://cms.${DOMAIN}                      # Public URL for Directus
+      - MAX_PAYLOAD_SIZE=100mb                                # Maximum upload size
+      - CACHE_ENABLED=false                                   # Enable/disable caching (true for production)
+      - WEBSOCKETS_ENABLED=true                               # Enable WebSocket support
+      
+      # Optional: Email Configuration (uncomment and configure for email features)
+      # - EMAIL_FROM=noreply@${DOMAIN}
+      # - EMAIL_TRANSPORT=smtp
+      # - EMAIL_SMTP_HOST=smtp.gmail.com
+      # - EMAIL_SMTP_PORT=587
+      # - EMAIL_SMTP_USER=your-email@gmail.com
+      # - EMAIL_SMTP_PASSWORD=your-app-password
+      # - EMAIL_SMTP_SECURE=false
+      
+      # Optional: Rate Limiting
+      # - RATE_LIMITER_ENABLED=true
+      # - RATE_LIMITER_POINTS=50
+      # - RATE_LIMITER_DURATION=1
+      
+      # Optional: CORS
+      # - CORS_ENABLED=true
+      # - CORS_ORIGIN=*
+    volumes:
+      - media_storage:/directus/uploads                       # Shared media directory
+    ports:
+      - "8055:8055"                                           # Directus HTTP port
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.directus.rule=Host(`cms.${DOMAIN}`)"
+      - "traefik.http.routers.directus.entrypoints=websecure"
+      - "traefik.http.routers.directus.tls.certresolver=letsencrypt"
+      - "traefik.http.services.directus.loadbalancer.server.port=8055"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+
+  # ============================================================================
+  # PhotoPrism - AI-Powered Media Management (with Ollama Cloud)
+  # ============================================================================
+  photoprism:
+    image: photoprism/photoprism:latest
+    container_name: salem-photoprism
+    security_opt:
+      - seccomp:unconfined                                    # Required for some features
+      - apparmor:unconfined
+    environment:
+      # System Configuration
+      PHOTOPRISM_INIT: "ffmpeg"                               # Install latest FFmpeg on startup (ffmpeg, https, or blank)
+      PHOTOPRISM_DEBUG: "false"                               # Enable debug mode (true, false)
+      PHOTOPRISM_READONLY: "false"                            # Read-only mode (true, false)
+      PHOTOPRISM_EXPERIMENTAL: "false"                        # Enable experimental features (true, false)
+      PHOTOPRISM_DISABLE_CHOWN: "false"                       # Disable chown on startup (true, false)
+      PHOTOPRISM_DISABLE_WEBDAV: "false"                      # Disable WebDAV server (true, false)
+      PHOTOPRISM_DISABLE_SETTINGS: "false"                    # Disable settings UI (true, false)
+      PHOTOPRISM_DISABLE_TENSORFLOW: "false"                  # Disable TensorFlow (true, false)
+      PHOTOPRISM_DISABLE_FACES: "false"                       # Disable face detection (true, false)
+      PHOTOPRISM_DISABLE_CLASSIFICATION: "false"              # Disable image classification (true, false)
+      PHOTOPRISM_DISABLE_VECTORS: "false"                     # Disable vector search (true, false)
+      PHOTOPRISM_DISABLE_RAW: "false"                         # Disable RAW image support (true, false)
+      PHOTOPRISM_RAW_PRESETS: "false"                         # Use RAW presets (true, false)
+      PHOTOPRISM_JPEG_QUALITY: "85"                           # JPEG quality (25-100)
+      PHOTOPRISM_DETECT_NSFW: "true"                          # Detect NSFW content (true, false)
+      PHOTOPRISM_UPLOAD_NSFW: "true"                          # Allow NSFW uploads (true, false)
+      
+      # Authentication
+      PHOTOPRISM_AUTH_MODE: "password"                        # Authentication mode (password, public)
+      PHOTOPRISM_ADMIN_USER: "admin"                          # Admin username
+      PHOTOPRISM_ADMIN_PASSWORD: "${PHOTOPRISM_ADMIN_PASSWORD}"  # Admin password (REQUIRED, 8+ chars)
+      PHOTOPRISM_DISABLE_REGISTRATION: "true"                 # Disable user registration (true, false)
+      
+      # Database Configuration (MariaDB)
+      PHOTOPRISM_DATABASE_DRIVER: "mysql"                     # Database driver (mysql, sqlite)
+      PHOTOPRISM_DATABASE_SERVER: "mariadb:3306"              # Database server (host:port)
+      PHOTOPRISM_DATABASE_NAME: "photoprism"                  # Database name
+      PHOTOPRISM_DATABASE_USER: "photoprism"                  # Database user
+      PHOTOPRISM_DATABASE_PASSWORD: "${PHOTOPRISM_DB_PASSWORD}"  # Database password (REQUIRED)
+      
+      # Storage Configuration
+      PHOTOPRISM_ORIGINALS_LIMIT: "5000"                      # Max file size in MB (-1 for unlimited)
+      PHOTOPRISM_HTTP_COMPRESSION: "gzip"                     # HTTP compression (gzip, none)
+      
+      # Site Configuration
+      PHOTOPRISM_SITE_URL: "https://photos.${DOMAIN}/"        # Public URL
+      PHOTOPRISM_SITE_AUTHOR: ""                              # Site author
+      PHOTOPRISM_SITE_TITLE: "Salem Forensics"                # Site title
+      PHOTOPRISM_SITE_CAPTION: "Evidence Management"          # Site caption
+      PHOTOPRISM_SITE_DESCRIPTION: ""                         # Site description
+      
+      # Ollama Cloud Integration (AI captions/labels)
+      PHOTOPRISM_OLLAMA_HOST: "https://api.ollama.ai"         # Ollama Cloud API endpoint
+      PHOTOPRISM_OLLAMA_API_KEY: "${OLLAMA_API_KEY}"          # Ollama Cloud API key (REQUIRED)
+      
+      # Optional: Backup Configuration
+      # PHOTOPRISM_BACKUP_PATH: "/photoprism/storage/backups"
+      # PHOTOPRISM_BACKUP_SCHEDULE: "0 2 * * *"               # Cron schedule for backups
+      
+      # Optional: Thumbnail Configuration
+      # PHOTOPRISM_THUMB_FILTER: "lanczos"                    # Thumbnail filter (lanczos, cubic, linear)
+      # PHOTOPRISM_THUMB_SIZE: "2048"                         # Max thumbnail size in pixels
+      # PHOTOPRISM_THUMB_SIZE_UNCACHED: "7680"                # Max uncached thumbnail size
+      
+      # Optional: Workers Configuration
+      # PHOTOPRISM_WORKERS: "0"                               # Number of workers (0 = auto)
+      # PHOTOPRISM_WAKEUP_INTERVAL: "15m"                     # Background worker wakeup interval
+      # PHOTOPRISM_AUTO_INDEX: "300"                          # Auto-index interval in seconds
+      # PHOTOPRISM_AUTO_IMPORT: "-1"                          # Auto-import interval in seconds (-1 = disabled)
+    volumes:
+      - media_storage:/photoprism/originals                   # Shared media directory (read-only recommended for forensics)
+      - /mnt/block-storage/photoprism:/photoprism/storage     # PhotoPrism storage (cache, thumbnails, sidecar files)
+    ports:
+      - "2342:2342"                                           # PhotoPrism HTTP port
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.photoprism.rule=Host(`photos.${DOMAIN}`)"
+      - "traefik.http.routers.photoprism.entrypoints=websecure"
+      - "traefik.http.routers.photoprism.tls.certresolver=letsencrypt"
+      - "traefik.http.services.photoprism.loadbalancer.server.port=2342"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+
+  # ============================================================================
+  # n8n - Workflow Automation
+  # ============================================================================
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: salem-n8n
+    environment:
+      # Basic Configuration
+      - N8N_BASIC_AUTH_ACTIVE=true                            # Enable basic auth (true, false)
+      - N8N_BASIC_AUTH_USER=${N8N_USER}                       # Basic auth username (REQUIRED if auth enabled)
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}               # Basic auth password (REQUIRED if auth enabled)
+      - N8N_HOST=n8n.${DOMAIN}                                # Public hostname
+      - N8N_PORT=5678                                         # HTTP port
+      - N8N_PROTOCOL=https                                    # Protocol (http, https)
+      - WEBHOOK_URL=https://n8n.${DOMAIN}/                    # Webhook base URL
+      - GENERIC_TIMEZONE=America/New_York                     # Timezone for scheduled workflows
+      
+      # Database Configuration (PostgreSQL)
+      - DB_TYPE=postgresdb                                    # Database type
+      - DB_POSTGRESDB_HOST=postgres                           # Database host
+      - DB_POSTGRESDB_PORT=5432                               # Database port
+      - DB_POSTGRESDB_DATABASE=${POSTGRES_DB:-salem}          # Database name
+      - DB_POSTGRESDB_USER=${POSTGRES_USER:-postgres}         # Database user
+      - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}           # Database password (REQUIRED)
+      
+      # Execution Configuration
+      - EXECUTIONS_MODE=regular                               # Execution mode (regular, queue)
+      - EXECUTIONS_TIMEOUT=3600                               # Execution timeout in seconds
+      - EXECUTIONS_TIMEOUT_MAX=7200                           # Max execution timeout
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all                     # Save execution data on error (all, none)
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all                   # Save execution data on success (all, none)
+      - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true           # Save manual execution data
+      
+      # Docker Integration (for Docker nodes)
+      - DOCKER_HOST=unix:///var/run/docker.sock               # Docker socket path
+      
+      # Cloudflare R2 Storage (for S3 nodes)
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}                   # R2 Access Key
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}           # R2 Secret Key
+      - R2_ENDPOINT=${R2_ENDPOINT}                             # R2 Endpoint
+      - R2_BUCKET=${R2_BUCKET}                                 # R2 Bucket
+      
+      # Optional: Email Configuration
+      # - N8N_EMAIL_MODE=smtp
+      # - N8N_SMTP_HOST=smtp.gmail.com
+      # - N8N_SMTP_PORT=587
+      # - N8N_SMTP_USER=your-email@gmail.com
+      # - N8N_SMTP_PASS=your-app-password
+      # - N8N_SMTP_SENDER=noreply@${DOMAIN}
+      
+      # Optional: Security
+      # - N8N_JWT_AUTH_ACTIVE=true                            # Enable JWT authentication
+      # - N8N_JWT_AUTH_HEADER=Authorization                   # JWT header name
+      # - N8N_JWT_AUTH_HEADER_VALUE_PREFIX=Bearer             # JWT header value prefix
+    volumes:
+      - n8n_data:/home/node/.n8n                              # n8n data directory
+      - /var/run/docker.sock:/var/run/docker.sock:ro          # Docker socket (for Docker nodes)
+      - media_storage:/media                                  # Shared media directory (for file operations)
+    ports:
+      - "5678:5678"                                           # n8n HTTP port
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.${DOMAIN}`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls.certresolver=letsencrypt"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+
+  # ============================================================================
+  # LibreChat - Multi-LLM Chat Interface (uses FerretDB/MongoDB)
+  # ============================================================================
+  librechat:
+    image: ghcr.io/danny-avila/librechat:latest
+    container_name: salem-librechat
+    environment:
+      # MongoDB Configuration (via FerretDB)
+      - MONGO_URI=mongodb://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@ferretdb:27017/${FERRETDB_DATABASE:-salem_forensics}?authSource=admin
+      
+      # App Configuration
+      - HOST=0.0.0.0                                          # Listen address
+      - PORT=3080                                             # HTTP port
+      - APP_TITLE=Salem Forensics Chat                        # Application title
+      - ALLOW_REGISTRATION=false                              # Allow user registration (true, false)
+      - ALLOW_SOCIAL_LOGIN=false                              # Allow social login (true, false)
+      - ALLOW_EMAIL_LOGIN=true                                # Allow email/password login (true, false)
+      
+      # Security
+      - JWT_SECRET=${LIBRECHAT_JWT_SECRET}                    # JWT secret (REQUIRED, generate with: openssl rand -hex 32)
+      - JWT_REFRESH_SECRET=${LIBRECHAT_JWT_REFRESH_SECRET}    # JWT refresh secret (REQUIRED, generate with: openssl rand -hex 32)
+      - CREDS_KEY=${LIBRECHAT_CREDS_KEY}                      # Credentials encryption key (REQUIRED, generate with: openssl rand -hex 32)
+      - CREDS_IV=${LIBRECHAT_CREDS_IV}                        # Credentials encryption IV (REQUIRED, generate with: openssl rand -hex 16)
+      
+      # LLM API Keys (configure as needed)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}                    # OpenAI API key (optional)
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}              # Anthropic API key (optional)
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}                    # Google AI API key (optional)
+      - GROQ_API_KEY=${GROQ_API_KEY:-}                        # Groq API key (optional)
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}            # OpenRouter API key (optional)
+      
+      # File Upload Configuration (Cloudflare R2)
+      - FILE_UPLOAD_ENABLED=true                              # Enable file uploads
+      - FILE_UPLOAD_SIZE_LIMIT=100                            # Max file size in MB
+      - FILE_UPLOAD_MIME_TYPES=image/*,application/pdf,text/*  # Allowed MIME types
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}                   # R2 Access Key
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}           # R2 Secret Key
+      - R2_ENDPOINT=${R2_ENDPOINT}                             # R2 Endpoint
+      - R2_BUCKET=${R2_BUCKET}                                 # R2 Bucket
+      
+      # Optional: Search Configuration
+      # - SEARCH_ENABLED=true                                 # Enable web search
+      # - MEILI_HOST=http://meilisearch:7700                  # MeiliSearch host
+      # - MEILI_MASTER_KEY=your-master-key                    # MeiliSearch master key
+    volumes:
+      - /mnt/block-storage/librechat:/app/client/public/images  # User uploads
+    ports:
+      - "3080:3080"                                           # LibreChat HTTP port
+    depends_on:
+      ferretdb:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.librechat.rule=Host(`chat.${DOMAIN}`)"
+      - "traefik.http.routers.librechat.entrypoints=websecure"
+      - "traefik.http.routers.librechat.tls.certresolver=letsencrypt"
+      - "traefik.http.services.librechat.loadbalancer.server.port=3080"
+      - "coolify.managed=true"
+      - "coolify.type=application"
+
+  # ============================================================================
+  # Open WebUI - Ollama-Focused Chat Interface
+  # ============================================================================
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: salem-open-webui
+    environment:
+      # Ollama Configuration (Ollama Cloud)
+      - OLLAMA_BASE_URL=https://api.ollama.ai                 # Ollama Cloud API endpoint
+      - OLLAMA_API_KEY=${OLLAMA_API_KEY}                      # Ollama Cloud API key (REQUIRED)
+      
+      # OpenAI Configuration (optional, for OpenAI models)
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}                    # OpenAI API key (optional)
+      - OPENAI_API_BASE_URL=https://api.openai.com/v1         # OpenAI API base URL
+      
+      # App Configuration
+      - WEBUI_NAME=Salem Forensics AI                         # Application name
+      - WEBUI_URL=https://ui.${DOMAIN}                        # Public URL
+      - WEBUI_SECRET_KEY=${OPEN_WEBUI_SECRET_KEY}             # Secret key (REQUIRED, generate with: openssl rand -hex 32)
+      
+      # Authentication
+      - ENABLE_SIGNUP=false                                   # Enable user signup (true, false)
+      - DEFAULT_USER_ROLE=user                                # Default role for new users (admin, user, pending)
+      
+      # Optional: RAG Configuration
+      # - ENABLE_RAG_WEB_SEARCH=true                          # Enable web search for RAG
+      # - RAG_WEB_SEARCH_ENGINE=duckduckgo                    # Search engine (duckduckgo, google, brave)
+      # - RAG_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2  # Embedding model
+      
+      # Optional: Image Generation
+      # - ENABLE_IMAGE_GENERATION=true                        # Enable image generation
+      # - IMAGE_GENERATION_ENGINE=openai                      # Image generation engine (openai, automatic1111)
+      # - AUTOMATIC1111_BASE_URL=http://stable-diffusion:7860 # Stable Diffusion URL
+    volumes:
+      - /mnt/block-storage/open-webui:/app/backend/data       # Open WebUI data
+    ports:
+      - "8080:8080"                                           # Open WebUI HTTP port
+    restart: unless-stopped
+    networks:
+      - salem-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.open-webui.rule=Host(`ui.${DOMAIN}`)"
+      - "traefik.http.routers.open-webui.entrypoints=websecure"
+      - "traefik.http.routers.open-webui.tls.certresolver=letsencrypt"
+      - "traefik.http.services.open-webui.loadbalancer.server.port=8080"
+      - "coolify.managed=true"
+      - "coolify.type=application"
