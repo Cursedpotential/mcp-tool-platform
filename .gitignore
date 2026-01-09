@@ -108,3 +108,5 @@ temp/
 .env.vps1-storage
 DEPLOY_VPS1_COOLIFY.md
 deploy-coolify.sh
+.env*
+*.env
