@@ -86,6 +86,7 @@ services:
       # - POSTGRES_HOST_AUTH_METHOD=trust                     # Uncomment to disable password auth (INSECURE)
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/01-extensions.sql:ro  # Install extensions on first startup
     ports:
       - "5432:5432"                                           # Expose PostgreSQL port (comment out for internal-only)
     restart: unless-stopped

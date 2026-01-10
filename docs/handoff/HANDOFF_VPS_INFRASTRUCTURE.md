@@ -140,12 +140,13 @@ After PostgreSQL is running:
    CREATE DATABASE n8n;
    ```
 
-2. Enable extensions:
-   ```sql
-   CREATE EXTENSION IF NOT EXISTS vector;
-   CREATE EXTENSION IF NOT EXISTS pg_trgm;
-   CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-   ```
+2. Extensions are auto-installed via `/deploy/docker/postgres-init.sql`:
+   - **Core**: vector (pgvector), uuid-ossp, pgcrypto, plpgsql
+   - **Text search**: pg_trgm, btree_gin, btree_gist, citext
+   - **Data types**: hstore, ltree, isn, lo
+   - **Monitoring**: pg_stat_statements
+   
+   No manual installation needed - the init script runs automatically on first startup.
 
 3. Run schema migrations from the platform
 
