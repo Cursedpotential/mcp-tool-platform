@@ -1,0 +1,401 @@
+FROM kasmweb/debian-bookworm-desktop:1.15.0
+
+USER root
+
+# ============================================================================
+# System packages and dependencies
+# ============================================================================
+RUN apt-get update && apt-get install -y \
+    # Build tools
+    build-essential \
+    git \
+    curl \
+    wget \
+    # Python
+    python3 \
+    python3-pip \
+    python3-venv \
+    # Node.js (for npm-based CLIs)
+    nodejs \
+    npm \
+    # Database clients
+    postgresql-client \
+    redis-tools \
+    # Text editors
+    vim \
+    nano \
+    # Terminal tools
+    tmux \
+    screen \
+    htop \
+    tree \
+    # Network tools
+    netcat-openbsd \
+    iputils-ping \
+    dnsutils \
+    # Archive tools
+    unzip \
+    zip \
+    tar \
+    # Other
+    jq \
+    ripgrep \
+    fd-find \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================================================
+# Install Node.js 20 (LTS)
+# ============================================================================
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================================================
+# Install VS Code
+# ============================================================================
+RUN wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg \
+    && install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg \
+    && sh -c 'echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" > /etc/apt/sources.list.d/vscode.list' \
+    && rm -f packages.microsoft.gpg \
+    && apt-get update \
+    && apt-get install -y code \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================================================
+# Install rclone
+# ============================================================================
+RUN curl https://rclone.org/install.sh | bash
+
+# ============================================================================
+# Install Claude CLI (Anthropic)
+# ============================================================================
+RUN npm install -g @anthropic-ai/claude-cli
+
+# ============================================================================
+# Install Gemini CLI (Google)
+# ============================================================================
+RUN pip3 install --no-cache-dir google-generativeai google-auth google-auth-oauthlib
+
+# Create Gemini CLI wrapper script
+RUN cat > /usr/local/bin/gemini-cli << 'EOF'
+#!/usr/bin/env python3
+import sys
+import os
+import google.generativeai as genai
+
+# Configure API key from environment
+api_key = os.environ.get('GEMINI_API_KEY')
+if not api_key:
+    print("Error: GEMINI_API_KEY environment variable not set", file=sys.stderr)
+    sys.exit(1)
+
+genai.configure(api_key=api_key)
+
+# Get model (default to gemini-pro)
+model_name = os.environ.get('GEMINI_MODEL', 'gemini-pro')
+model = genai.GenerativeModel(model_name)
+
+# Get prompt from args or stdin
+if len(sys.argv) > 1:
+    prompt = ' '.join(sys.argv[1:])
+else:
+    prompt = sys.stdin.read()
+
+# Generate response
+response = model.generate_content(prompt)
+print(response.text)
+EOF
+
+RUN chmod +x /usr/local/bin/gemini-cli
+
+# ============================================================================
+# Install Aider (AI pair programming)
+# ============================================================================
+RUN pip3 install --no-cache-dir aider-chat
+
+# ============================================================================
+# Install OpenRouter CLI (multi-model gateway)
+# ============================================================================
+RUN npm install -g openrouter-cli
+
+# ============================================================================
+# Install Cursor CLI (AI code editor)
+# ============================================================================
+RUN wget -O /tmp/cursor.AppImage https://downloader.cursor.sh/linux/appImage/x64 \
+    && chmod +x /tmp/cursor.AppImage \
+    && /tmp/cursor.AppImage --appimage-extract \
+    && mv squashfs-root /opt/cursor \
+    && ln -s /opt/cursor/cursor /usr/local/bin/cursor \
+    && rm /tmp/cursor.AppImage
+
+# ============================================================================
+# Install GitHub CLI
+# ============================================================================
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y gh \
+    && rm -rf /var/lib/apt/lists/*
+
+# ============================================================================
+# Install Supabase CLI
+# ============================================================================
+RUN npm install -g supabase
+
+# ============================================================================
+# Install Neo4j CLI
+# ============================================================================
+RUN npm install -g @neo4j/cli
+
+# ============================================================================
+# Install Python AI libraries
+# ============================================================================
+RUN pip3 install --no-cache-dir \
+    # LLM frameworks
+    langchain \
+    langgraph \
+    llama-index \
+    # Anthropic
+    anthropic \
+    # OpenAI
+    openai \
+    # Google
+    google-generativeai \
+    # Cohere
+    cohere \
+    # Database
+    neo4j \
+    psycopg2-binary \
+    # Storage
+    boto3 \
+    # Utilities
+    python-dotenv \
+    httpx \
+    pydantic
+
+# ============================================================================
+# Create rclone config directory and sync script
+# ============================================================================
+RUN mkdir -p /home/kasm-user/.config/rclone
+
+# Create rclone sync script
+RUN cat > /usr/local/bin/sync-workspace << 'EOF'
+#!/bin/bash
+set -e
+
+# Sync local workspace to R2
+echo "Syncing workspace to R2..."
+rclone sync /home/kasm-user/workspace r2:salem-forensics/workspace \
+    --exclude ".git/**" \
+    --exclude "node_modules/**" \
+    --exclude "__pycache__/**" \
+    --exclude "*.pyc" \
+    --exclude ".venv/**" \
+    --transfers 4 \
+    --checkers 8 \
+    --progress
+
+echo "Sync complete!"
+EOF
+
+RUN chmod +x /usr/local/bin/sync-workspace
+
+# Create bidirectional sync script (for seamless desktop <-> remote)
+RUN cat > /usr/local/bin/sync-bidirectional << 'EOF'
+#!/bin/bash
+set -e
+
+# Bidirectional sync with conflict resolution
+echo "Starting bidirectional sync..."
+rclone bisync /home/kasm-user/workspace r2:salem-forensics/workspace \
+    --exclude ".git/**" \
+    --exclude "node_modules/**" \
+    --exclude "__pycache__/**" \
+    --exclude "*.pyc" \
+    --exclude ".venv/**" \
+    --resilient \
+    --recover \
+    --conflict-resolve newer \
+    --conflict-loser delete \
+    --verbose
+
+echo "Bidirectional sync complete!"
+EOF
+
+RUN chmod +x /usr/local/bin/sync-bidirectional
+
+# Create auto-sync systemd service (runs every 5 minutes)
+RUN cat > /etc/systemd/system/workspace-sync.service << 'EOF'
+[Unit]
+Description=Workspace Auto-Sync to R2
+After=network.target
+
+[Service]
+Type=oneshot
+User=kasm-user
+ExecStart=/usr/local/bin/sync-workspace
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+RUN cat > /etc/systemd/system/workspace-sync.timer << 'EOF'
+[Unit]
+Description=Workspace Auto-Sync Timer
+Requires=workspace-sync.service
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+# ============================================================================
+# Create workspace directory
+# ============================================================================
+RUN mkdir -p /home/kasm-user/workspace \
+    && chown -R kasm-user:kasm-user /home/kasm-user/workspace
+
+# ============================================================================
+# Create startup script to configure rclone on first boot
+# ============================================================================
+RUN cat > /home/kasm-user/.startup.sh << 'EOF'
+#!/bin/bash
+
+# Configure rclone if not already configured
+if [ ! -f /home/kasm-user/.config/rclone/rclone.conf ]; then
+    echo "Configuring rclone for R2..."
+    cat > /home/kasm-user/.config/rclone/rclone.conf << RCLONE_EOF
+[r2]
+type = s3
+provider = Cloudflare
+access_key_id = ${R2_ACCESS_KEY_ID}
+secret_access_key = ${R2_SECRET_ACCESS_KEY}
+endpoint = ${R2_ENDPOINT}
+acl = private
+RCLONE_EOF
+fi
+
+# Initial sync from R2 (pull latest)
+if [ -d /home/kasm-user/workspace ] && [ -z "$(ls -A /home/kasm-user/workspace)" ]; then
+    echo "Pulling workspace from R2..."
+    rclone sync r2:salem-forensics/workspace /home/kasm-user/workspace --progress || true
+fi
+
+# Start auto-sync timer
+systemctl --user enable workspace-sync.timer
+systemctl --user start workspace-sync.timer
+EOF
+
+RUN chmod +x /home/kasm-user/.startup.sh \
+    && chown kasm-user:kasm-user /home/kasm-user/.startup.sh
+
+# ============================================================================
+# Create desktop shortcuts
+# ============================================================================
+RUN mkdir -p /home/kasm-user/Desktop
+
+# VS Code shortcut
+RUN cat > /home/kasm-user/Desktop/vscode.desktop << 'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=VS Code
+Comment=Code Editing. Redefined.
+Exec=/usr/bin/code --no-sandbox --user-data-dir=/home/kasm-user/.vscode
+Icon=code
+Terminal=false
+Categories=Development;IDE;
+EOF
+
+# Sync Workspace shortcut
+RUN cat > /home/kasm-user/Desktop/sync-workspace.desktop << 'EOF'
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Sync Workspace
+Comment=Sync workspace to R2
+Exec=/usr/local/bin/sync-workspace
+Icon=folder-sync
+Terminal=true
+Categories=Utility;
+EOF
+
+RUN chmod +x /home/kasm-user/Desktop/*.desktop \
+    && chown -R kasm-user:kasm-user /home/kasm-user/Desktop
+
+# ============================================================================
+# Set user and finalize
+# ============================================================================
+USER kasm-user
+
+# Set default shell to bash
+ENV SHELL=/bin/bash
+
+# Add aliases to .bashrc
+RUN echo 'alias claude="claude-cli"' >> /home/kasm-user/.bashrc \
+    && echo 'alias gemini="gemini-cli"' >> /home/kasm-user/.bashrc \
+    && echo 'alias sync="sync-workspace"' >> /home/kasm-user/.bashrc \
+    && echo 'alias bisync="sync-bidirectional"' >> /home/kasm-user/.bashrc \
+    && echo 'export PATH="/home/kasm-user/.local/bin:$PATH"' >> /home/kasm-user/.bashrc
+
+# Create README in workspace
+RUN cat > /home/kasm-user/workspace/README.md << 'EOF'
+# Salem Forensics - Kasm Workspace
+
+This workspace is automatically synced to R2 every 5 minutes.
+
+## Available CLI Tools
+
+- **Claude CLI**: `claude "your prompt here"`
+- **Gemini CLI**: `gemini "your prompt here"`
+- **Aider**: `aider` (AI pair programming)
+- **OpenRouter**: `openrouter-cli` (multi-model gateway)
+- **Cursor**: `cursor` (AI code editor)
+- **GitHub CLI**: `gh` (GitHub operations)
+- **Supabase CLI**: `supabase` (database management)
+- **Neo4j CLI**: `neo4j` (graph database)
+
+## Syncing
+
+- **Manual sync to R2**: `sync` or `sync-workspace`
+- **Bidirectional sync**: `bisync` or `sync-bidirectional`
+- **Auto-sync**: Runs every 5 minutes automatically
+
+## Environment Variables
+
+Set these in Docker Compose `.env.docker`:
+- `CLAUDE_API_KEY` - Anthropic API key
+- `GEMINI_API_KEY` - Google AI API key
+- `OPENROUTER_API_KEY` - OpenRouter API key
+- `R2_ACCESS_KEY_ID` - Cloudflare R2 access key
+- `R2_SECRET_ACCESS_KEY` - Cloudflare R2 secret key
+- `R2_ENDPOINT` - Cloudflare R2 endpoint
+
+## Usage
+
+1. Open VS Code from desktop
+2. Work on your code in `/home/kasm-user/workspace`
+3. Changes are auto-synced to R2 every 5 minutes
+4. Access the same workspace from your desktop via rclone
+
+## Calling Subscription CLIs from Agents
+
+Your agents can SSH into this container and call:
+- `claude "analyze this code: $(cat file.py)"`
+- `gemini "explain this error: $ERROR_MSG"`
+- `aider --message "fix this bug"`
+
+This saves API calls by using your existing subscriptions!
+EOF
+
+WORKDIR /home/kasm-user/workspace
+
+# Run startup script on container start
+CMD ["/bin/bash", "-c", "/home/kasm-user/.startup.sh && /dockerstartup/kasm_default_profile.sh /dockerstartup/vnc_startup.sh /dockerstartup/kasm_startup.sh"]

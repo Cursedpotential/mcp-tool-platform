@@ -1,3 +1,4 @@
+// File: server/mcp/forensics/forensics-router.ts | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
 /**
  * Forensics Router
  * 
@@ -5,12 +6,14 @@
  */
 
 import { z } from 'zod';
-import { router, protectedProcedure } from '../../_core/trpc';
+import { router, protectedProcedure } from '../../core/trpc';
+
 import { patternAnalyzer, BUILT_IN_MODULES, BUILT_IN_PATTERNS } from './pattern-analyzer';
 import { hurtlexFetcher, HURTLEX_CATEGORIES } from './hurtlex-fetcher';
-import { getDb } from '../../db';
+import { getDb } from '../../core/db';
 import { behavioralPatterns, patternCategories, forensicResults, mclFactors } from '../../../drizzle/schema';
 import { eq, and, desc } from 'drizzle-orm';
+
 
 export const forensicsRouter = router({
   // ============================================================================

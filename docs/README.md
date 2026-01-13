@@ -1,200 +1,280 @@
-# Salem Forensic Trinity - Documentation
+# MCP Tool Platform - Documentation Index
 
-**Project:** MCP Tool Platform for Forensic Analysis  
-**Version:** 1.0.0  
-**Last Updated:** January 6, 2026  
+## 📚 **Complete Wiki Documentation Suite**
 
----
-
-## Overview
-
-Salem Forensic Trinity is a **forensic analysis platform for custody case evidence processing**. It ingests multi-platform messaging data (SMS, Facebook, iMessage, email, ChatGPT), performs multi-pass NLP classification to detect psychological abuse patterns (gaslighting, DARVO, parental alienation), and exports to multiple databases with court-admissible audit trails.
-
-**Core Capabilities:**
-- Multi-platform document parsing (SMS XML, Facebook HTML, iMessage PDF, Email, ChatGPT)
-- 6-pass NLP classification system (spaCy, NLTK, TextBlob, Pattern Analyzer, Sentence Transformers, Aggregation)
-- 256-pattern behavioral library (gaslighting, DARVO, parental alienation, substance abuse, etc.)
-- Dual-polarity analysis (detect both negative abuse patterns AND positive love-bombing patterns)
-- Multi-database export (Supabase for messages, Neo4j/Graphiti for entities, R2/Directus for raw files)
-- Court-admissible audit trails (SHA-256 hashing, immutable logs, chain of custody)
-- Human-in-the-loop checkpoints (preliminary approval, meta-analysis approval)
+This documentation provides comprehensive, man-page style references for all components of the MCP Tool Platform - a sophisticated forensic legal case management system with MCP tool orchestration.
 
 ---
 
-## Quick Links
+## 🏗️ **Architecture & Core Systems**
 
-### Getting Started
-- [Quick Start Guide](./GETTING_STARTED.md) - Get up and running in 5 minutes
-- [Installation](./INSTALLATION.md) - Detailed setup instructions
-- [Configuration](./CONFIGURATION.md) - Environment variables and settings
-- [Architecture Overview](./ARCHITECTURE.md) - System design and data flow
+### **Primary APIs & Interfaces**
+- **[MCP Gateway](mcp-gateway.md)** - Token-efficient API with 4 core endpoints (search, describe, invoke, get_ref)
+- **[Tool Registry](tool-registry.md)** - Dynamic tool registration with 78+ forensic analysis tools
+- **[Task Executor](task-executor.md)** - Execution engine with checkpoint/resume and deduplication
+- **[Content Store](content-store.md)** - SHA-256 content-addressed storage for large artifacts
+- **[Smart Router](smart-router.md)** - Intelligent LLM provider routing with cost optimization
 
-### User Guides
-- [Uploading Documents](./guides/uploading-documents.md) - How to upload evidence files
-- [Running Analysis](./guides/running-analysis.md) - How to trigger forensic analysis
-- [Managing Patterns](./guides/managing-patterns.md) - How to customize behavioral patterns
-- [Exporting Results](./guides/exporting-results.md) - How to generate reports
-- [Court Admissibility](./guides/court-admissibility.md) - Ensuring evidence is court-ready
-
-### API Reference
-- [MCP Gateway API](./api/mcp-gateway.md) - Tool discovery and invocation
-- [tRPC Procedures](./api/trpc-procedures.md) - Backend API reference
-- [WebSocket API](./api/websocket-api.md) - Real-time log streaming
-- [Authentication](./api/authentication.md) - OAuth and session management
+### **AI & Integration Layer**
+- **[LiteLLM Proxy](litellm-proxy.md)** - Universal proxy supporting 75+ LLM providers with cost tracking
+- **[Directus CMS](directus-integration.md)** - Headless CMS for file management and AI plugins
+- **[Neo4j Graphiti](neo4j-graphiti.md)** - Temporal knowledge graphs for entity relationships
+- **[Chroma Vector DB](chroma-integration.md)** - 72-hour TTL working memory for evidence processing
 
 ---
 
-## Tools Reference
+## 🔧 **Tool Categories & Capabilities**
 
-### Search Tools
-- [Web Search](./tools/search-web.md) - General web search
-- [Semantic Search](./tools/search-semantic.md) - Vector-based similarity search
-- [Tavily Search](./tools/search-tavily.md) - LLM-optimized search
-- [Perplexity Search](./tools/search-perplexity.md) - AI-powered search
+### **Document Processing (15 tools)**
+- OCR extraction, format conversion, text chunking
+- Multi-format parsing (PDF, Word, images)
+- Content extraction and normalization
 
-### Document Tools
-- [Document Parser](./tools/document-parse.md) - Multi-format document parsing
-- [OCR Tool](./tools/document-ocr.md) - Optical character recognition
-- [Text Extraction](./tools/document-extract.md) - Extract text from documents
-- [Document Chunking](./tools/document-chunk.md) - Split documents into chunks
+### **NLP & Analysis (12 tools)**
+- Sentiment analysis, entity extraction
+- Text classification, summarization
+- spaCy, NLTK, TextBlob, Sentence Transformers integration
 
-### NLP Tools
-- [Sentiment Analysis](./tools/nlp-sentiment.md) - Analyze sentiment
-- [Entity Extraction](./tools/nlp-entities.md) - Extract named entities
-- [Text Classification](./tools/nlp-classify.md) - Classify text into categories
-- [Summarization](./tools/nlp-summarize.md) - Generate summaries
-- [spaCy Integration](./tools/nlp-spacy.md) - Entity extraction, structure analysis
-- [NLTK Integration](./tools/nlp-nltk.md) - VADER sentiment, negation handling
-- [TextBlob Integration](./tools/nlp-textblob.md) - Polarity, subjectivity, sarcasm
-- [Sentence Transformers](./tools/nlp-transformers.md) - Semantic similarity
+### **Forensic Analysis (20 tools)**
+- 256 behavioral pattern detection
+- Gaslighting, DARVO, parental alienation patterns
+- HurtLex detection, severity scoring
+- Multi-pass classification system
 
-### Forensics Tools
-- [Pattern Analysis](./tools/forensics-analyze-patterns.md) - Detect 256 behavioral patterns
-- [HurtLex Detection](./tools/forensics-detect-hurtlex.md) - Offensive language detection
-- [Severity Scoring](./tools/forensics-score-severity.md) - Score abuse severity (1-10)
-- [Analysis Modules](./tools/forensics-get-modules.md) - Get 17 analysis modules
-- [Multi-Pass Classifier](./tools/forensics-multi-pass-classifier.md) - 6-pass NLP classification
-- [Priority Screener](./tools/forensics-priority-screener.md) - Pass 0: Immediate flags
+### **Search & Discovery (8 tools)**
+- Web search, semantic search, Tavily, Perplexity
+- Browser automation, screenshot, content extraction
 
-### Vector Database Tools
-- [Add Embeddings](./tools/vector-add.md) - Store embeddings in vector DB
-- [Semantic Search](./tools/vector-search.md) - Search by semantic similarity
-- [Delete Embeddings](./tools/vector-delete.md) - Remove embeddings
-- [Chroma Integration](./tools/vector-chroma.md) - 72hr TTL working memory
-- [pgvector Integration](./tools/vector-pgvector.md) - Supabase persistent storage
-- [Qdrant Integration](./tools/vector-qdrant.md) - Qdrant vector DB
+### **Vector Database (8 tools)**
+- Embedding storage and retrieval
+- Chroma (72hr TTL), PGVector, Qdrant integration
+- Semantic similarity search
 
-### Graph Database Tools
-- [Add Entity](./tools/graph-add-entity.md) - Add entity to knowledge graph
-- [Add Relationship](./tools/graph-add-relationship.md) - Add relationship between entities
-- [Search Entities](./tools/graph-search-entities.md) - Query entities
-- [Entity Timeline](./tools/graph-timeline.md) - Get entity history
-- [Detect Contradictions](./tools/graph-contradictions.md) - Find conflicting statements
-- [Neo4j Integration](./tools/graph-neo4j.md) - Neo4j graph database
-- [Graphiti Integration](./tools/graph-graphiti.md) - Temporal knowledge graphs
+### **Graph Database (6 tools)**
+- Entity and relationship management
+- Temporal analysis, contradiction detection
+- Neo4j and Graphiti integration
 
-### LLM Tools
-- [Invoke LLM](./tools/llm-invoke.md) - Call language models
-- [Generate Embeddings](./tools/llm-embed.md) - Create text embeddings
-- [Smart Router](./tools/llm-smart-router.md) - Route to optimal LLM provider
-- [LLM Providers](./tools/llm-providers.md) - Supported providers overview
+### **ML & AI (6 tools)**
+- LLM invocation, embedding generation
+- Smart routing, provider management
 
-### Format Conversion Tools
-- [Format Converter](./tools/format-convert.md) - Convert between formats
-- [Format Parser](./tools/format-parse.md) - Parse SMS XML, Facebook HTML, etc.
-- [Schema Validation](./tools/format-check-schema.md) - Validate data schemas
-- [OCR Tool](./tools/format-ocr.md) - Extract text from images
-
-### Evidence Chain Tools
-- [Create Chain](./tools/evidence-create-chain.md) - Start evidence chain
-- [Add Stage](./tools/evidence-add-stage.md) - Add processing stage
-- [Verify Integrity](./tools/evidence-verify.md) - Verify chain integrity
-- [Hash File](./tools/evidence-hash-file.md) - SHA-256 file hashing
-- [Hash Content](./tools/evidence-hash-content.md) - SHA-256 content hashing
-- [Export Chain](./tools/evidence-export.md) - Export evidence chain
-- [Generate Report](./tools/evidence-report.md) - Create evidence report
-
-### Other Tools
-- [Text Mining](./tools/text-mine.md) - Advanced text search (ugrep/ripgrep)
-- [Schema Resolution](./tools/schema-resolve.md) - Resolve data schemas
-- [Schema Application](./tools/schema-apply.md) - Apply schemas to data
-- [Schema Caching](./tools/schema-cache.md) - Cache resolved schemas
+### **Workflow & Orchestration (4 tools)**
+- Tool chaining, workflow execution
+- Checkpoint management, state persistence
 
 ---
 
-## Workflows
+## 📊 **Workflows & Processing Pipelines**
 
-- [Forensic Investigation](./workflows/forensic-investigation.md) - 8-stage end-to-end workflow
-- [Document Processing](./workflows/document-processing.md) - Parse and validate documents
-- [Document Analysis](./workflows/document-analysis.md) - Analyze document content
-- [Forensic Chat Analysis](./workflows/forensic-chat-analysis.md) - Analyze messaging data
-- [Semantic Search Prep](./workflows/semantic-search-prep.md) - Prepare embeddings
-- [Data Extraction Pipeline](./workflows/data-extraction-pipeline.md) - Extract structured data
-- [Text Mining Workflow](./workflows/text-mining-workflow.md) - Mine text for patterns
-- [Format Conversion Chain](./workflows/format-conversion-chain.md) - Convert formats
+### **Document Analysis Workflow**
+- 7-stage end-to-end document processing
+- OCR → Entity Extraction → Sentiment → Pattern Detection → Evidence Compilation
+- Court-admissible report generation
 
----
+### **Message Processing Pipeline**
+- Specialized for 8-year messaging datasets
+- Multi-platform support (SMS, Facebook, iMessage, WhatsApp)
+- Temporal analysis, behavioral pattern detection
+- Evidence packaging for legal proceedings
 
-## System Components
+### **Evidence Correlation Workflow**
+- Cross-document relationship analysis
+- Timeline reconstruction
+- Pattern aggregation across sources
 
-- [MCP Gateway](./systems/mcp-gateway.md) - Tool discovery and invocation API
-- [Plugin System](./systems/plugin-system.md) - Plugin architecture
-- [Tool Executor](./systems/executor.md) - Tool execution engine
-- [Smart Router](./systems/smart-router.md) - LLM provider routing
-- [Chroma Storage](./systems/chroma-storage.md) - 72hr TTL working memory
-- [Supabase Integration](./systems/supabase-integration.md) - Message storage
-- [Neo4j Integration](./systems/neo4j-integration.md) - Entity graph storage
-- [R2/Directus Storage](./systems/r2-directus-storage.md) - Raw file storage
-- [LangGraph State Machines](./systems/langgraph-state-machines.md) - Workflow orchestration
-- [LangChain Memory](./systems/langchain-memory.md) - Hypothesis tracking
-- [LlamaIndex Loaders](./systems/llamaindex-loaders.md) - Document loaders
-- [Multi-Pass Classifier](./systems/multi-pass-classifier.md) - 6-pass NLP system
-- [Pattern Library](./systems/pattern-library.md) - 256 behavioral patterns
-- [Embedding Pipeline](./systems/embedding-pipeline.md) - Embedding generation
-- [Audit Logging](./systems/audit-logging.md) - Chain of custody
-- [HITL Checkpoints](./systems/hitl-checkpoints.md) - Human approval gates
+### **Pattern Detection Workflow**
+- Multi-pass behavioral analysis
+- Severity scoring and risk assessment
+- Contextual pattern interpretation
 
 ---
 
-## Developer Documentation
+## 🎨 **Frontend Components**
 
-- [Contributing](./CONTRIBUTING.md) - How to contribute
-- [Development Setup](./DEVELOPMENT.md) - Local development guide
-- [Testing Guide](./TESTING.md) - Writing and running tests
-- [Code Style](./CODE_STYLE.md) - Coding standards
-- [Plugin Development](./PLUGIN_DEVELOPMENT.md) - Creating plugins
-- [Tool Development](./TOOL_DEVELOPMENT.md) - Creating tools
+### **React Application Structure**
+- Main app with wouter routing
+- Settings page for API key and database configuration
+- Tools discovery interface
+- API key management UI
+- MCP configuration panel
 
----
-
-## Support
-
-- **Issues:** [GitHub Issues](https://github.com/your-org/salem-forensic-trinity/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/your-org/salem-forensic-trinity/discussions)
-- **Email:** support@salemforensic.com
-
----
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
+### **Key Pages**
+- **Home**: System dashboard and stats
+- **Tools**: Tool discovery and invocation
+- **Settings**: Configuration management
+- **API Keys**: Provider key management
+- **MCP Config**: External tool exposure settings
 
 ---
 
-## Acknowledgments
+## 🚀 **Deployment & Operations**
 
-- **spaCy** - Industrial-strength NLP
-- **NLTK** - Natural Language Toolkit
-- **TextBlob** - Simplified text processing
-- **Sentence Transformers** - State-of-the-art embeddings
-- **LangGraph** - Workflow orchestration
-- **LangChain** - Memory and context management
-- **LlamaIndex** - Document loaders and indexing
-- **Graphiti** - Temporal knowledge graphs
-- **Supabase** - Backend-as-a-service
-- **Neo4j** - Graph database
-- **Chroma** - Vector database
+### **Docker Compose Architecture**
+- **salem-nexus**: Storage services (PostgreSQL, Directus, PhotoPrism, n8n)
+- **salem-forge**: Compute services (LiteLLM, MetaMCP, Kasm, Jupyter)
+- **Cross-VPS Communication**: Tailscale VPN for secure inter-server communication
+
+### **Environment Configuration**
+- Production environment templates
+- API key management and encryption
+- Database connection configuration
+- SSL/TLS certificate setup
+
+### **Monitoring & Health Checks**
+- Service health monitoring
+- Performance metrics collection
+- Error tracking and alerting
+- Resource usage monitoring
 
 ---
 
-**Note:** This documentation is generated for version 1.0.0. For the latest updates, see the [CHANGELOG](../CHANGELOG.md).
+## 🔐 **Security & Compliance**
+
+### **Authentication & Authorization**
+- User authentication via tRPC
+- API key encryption (AES-256)
+- Role-based access control
+- Session management
+
+### **Data Security**
+- Content-addressed storage with SHA-256
+- End-to-end encryption for sensitive data
+- Secure API key storage
+- Audit logging for compliance
+
+### **Legal Compliance**
+- Chain of custody tracking
+- Data integrity verification
+- Court-admissible evidence formatting
+- Timestamp preservation
+
+---
+
+## 📈 **Performance & Scaling**
+
+### **Optimization Strategies**
+- Token-efficient tool discovery
+- Content-addressed deduplication
+- Intelligent provider routing
+- Response caching and batching
+
+### **Scalability Features**
+- Horizontal scaling across multiple servers
+- Load balancing and failover
+- Resource pooling and connection reuse
+- Asynchronous processing queues
+
+### **Monitoring & Analytics**
+- Real-time performance metrics
+- Cost tracking and optimization
+- Usage analytics and reporting
+- Error rate monitoring
+
+---
+
+## 🛠️ **Development & Maintenance**
+
+### **Code Organization**
+- **server/**: Backend API and business logic
+- **client/**: React frontend application
+- **shared/**: TypeScript type definitions
+- **drizzle/**: Database schema and migrations
+- **docs/**: Comprehensive documentation
+
+### **Development Workflow**
+- Plan → Build → Test → Deploy cycle
+- Comprehensive logging and error handling
+- Automated testing and validation
+- Continuous integration and deployment
+
+### **Maintenance Tasks**
+- Database schema updates
+- API key rotation
+- Security patches and updates
+- Performance optimization
+
+---
+
+## 📋 **Quick Reference**
+
+### **Starting the Platform**
+```bash
+# Install dependencies
+pnpm install
+
+# Configure environment
+cp .env.production .env
+# Edit .env with your API keys and database config
+
+# Start services
+docker-compose -f docker-compose.salem-nexus.yml up -d
+docker-compose -f docker-compose.salem-forge.yml up -d
+
+# Start application
+pnpm run dev
+```
+
+### **Access Points**
+- **Web UI**: http://localhost:3000
+- **Directus**: http://localhost:8055
+- **LiteLLM**: http://localhost:4000
+- **MetaMCP Internal**: http://localhost:4001
+- **MetaMCP External**: http://localhost:4002
+
+### **Key Configuration**
+- Database: PostgreSQL + PGVector + PostGIS
+- Cache: Dragonfly (Redis-compatible)
+- AI: LiteLLM proxy with 75+ providers
+- Storage: Directus CMS + R2/Cloudflare
+- Graph: Neo4j Aura + Graphiti
+- Vector: Chroma (72hr TTL) + PGVector (persistent)
+
+---
+
+## 🎯 **Use Cases**
+
+### **Forensic Legal Analysis**
+- Process 8-year messaging datasets
+- Detect behavioral patterns (gaslighting, DARVO)
+- Generate court-admissible evidence
+- Timeline reconstruction and analysis
+
+### **Document Processing**
+- Multi-format document ingestion
+- OCR and text extraction
+- Entity recognition and classification
+- Sentiment analysis and summarization
+
+### **AI-Powered Research**
+- Multi-provider LLM access
+- Cost-optimized routing
+- Vector similarity search
+- Knowledge graph construction
+
+---
+
+## 📞 **Support & Resources**
+
+### **Documentation Navigation**
+Use this index to navigate to specific component documentation. Each page follows man-page format with:
+- **NAME**: Component purpose
+- **SYNOPSIS**: Quick usage summary
+- **DESCRIPTION**: Detailed functionality
+- **DATA STRUCTURES**: Type definitions
+- **API METHODS**: Function interfaces
+- **CONFIGURATION**: Setup examples
+- **SEE ALSO**: Related components
+
+### **Getting Help**
+- Check component-specific documentation
+- Review workflow examples
+- Examine configuration templates
+- Monitor logs for troubleshooting
+
+---
+
+**Documentation Version**: 1.0.0
+**Platform Version**: v0.2.0-rc1
+**Last Updated**: January 11, 2026
+**Generated by**: Claude Code - Opus 4.1

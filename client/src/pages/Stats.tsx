@@ -1,4 +1,6 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+// File: client/src/pages/Stats.tsx | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
+import { useAuth } from "@/core/hooks/useAuth";
+
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";

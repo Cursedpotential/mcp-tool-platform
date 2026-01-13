@@ -1,0 +1,209 @@
+model_list:
+  # ============================================================================
+  # OpenAI Models
+  # ============================================================================
+  - model_name: gpt-4o
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: ${OPENAI_API_KEY}
+    model_info:
+      mode: chat
+      cost: $0.0050/1K tokens
+  
+  - model_name: gpt-4o-mini
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: ${OPENAI_API_KEY}
+    model_info:
+      mode: chat
+      cost: $0.00015/1K tokens
+  
+  - model_name: gpt-4-turbo
+    litellm_params:
+      model: openai/gpt-4-turbo
+      api_key: ${OPEN    model_info:
+AI_API_KEY}
+      mode: chat
+      cost: $0.01/1K tokens
+  
+  - model_name: gpt-3.5-turbo
+    litellm_params:
+      model: openai/gpt-3.5-turbo
+      api_key: ${OPENAI_API_KEY}
+    model_info:
+      mode: chat
+      cost: $0.0005/1K tokens
+  
+  - model_name: text-embedding-ada-002
+    litellm_params:
+      model: openai/text-embedding-ada-002
+      api_key: ${OPENAI_API_KEY}
+    model_info:
+      mode: embedding
+      cost: $0.0001/1K tokens
+
+  # ============================================================================
+  # Anthropic Models
+  # ============================================================================
+  - model_name: claude-sonnet-4-20250514
+    litellm_params:
+      model: anthropic/claude-sonnet-4-20250514
+      api_key: ${ANTHROPIC_API_KEY}
+    model_info:
+      mode: chat
+      cost: $0.003/1K tokens
+  
+  - model_name: claude-opus-4-20250514
+    litellm_params:
+      model: anthropic/claude-opus-4-20250514
+      api_key: ${ANTHROPIC_API_KEY}
+    model_info:
+      mode: chat
+      cost: $0.015/1K tokens
+  
+  - model_name: claude-haiku-3-20250514
+    litellm_params:
+      model: anthropic/claude-haiku-3-20250514
+      api_key: ${ANTHROPIC_API_KEY}
+    model_info:
+      mode: chat
+      cost: $0.00025/1K tokens
+
+  # ============================================================================
+  # Google Gemini Models
+  # ============================================================================
+  - model_name: gemini-pro
+    litellm_params:
+      model: gemini/gemini-pro
+      api_key: ${GEMINI_API_KEY}
+    model_info:
+      mode: chat
+      cost: $0.0005/1K tokens
+  
+  - model_name: gemini-ultra
+    litellm_params:
+      model: gemini/gemini-1.5-pro
+      api_key: ${GEMINI_API_KEY}
+    model_info:
+      mode: chat
+      cost: $0.00125/1K tokens
+
+  # ============================================================================
+  # Groq Models (Fast Inference)
+  # ============================================================================
+  - model_name: llama-3.1-70b-versatile
+    litellm_params:
+      model: groq/llama-3.1-70b-versatile
+      api_key: ${GROQ_API_KEY}
+    model_info:
+      mode: chat
+      cost: $0.00059/1K tokens
+  
+  - model_name: llama-3.1-8b-instant
+    litellm_params:
+      model: groq/llama-3.1-8b-instant
+      api_key: ${GROQ_API_KEY}
+    model_info:
+      mode: chat
+      cost: $0.00005/1K tokens
+  
+  - model_name: mixtral-8x7b-32768
+    litellm_params:
+      model: groq/mixtral-8x7b-32768
+      api_key: ${GROQ_API_KEY}
+    model_info:
+      mode: chat
+      cost: $0.00024/1K tokens
+
+  # ============================================================================
+  # Azure OpenAI
+  # ============================================================================
+  - model_name: azure-gpt-4o
+    litellm_params:
+      model: azure/gpt-4o
+      api_key: ${AZURE_API_KEY}
+      api_base: ${AZURE_API_BASE}
+    model_info:
+      mode: chat
+  
+  - model_name: azure-gpt-35-turbo
+    litellm_params:
+      model: azure/gpt-35-turbo
+      api_key: ${AZURE_API_KEY}
+      api_base: ${AZURE_API_BASE}
+    model_info:
+      mode: chat
+
+  # ============================================================================
+  # Local/Ollama Models (if running locally)
+  # ============================================================================
+  - model_name: llama3.2
+    litellm_params:
+      model: ollama/llama3.2
+      api_base: http://ollama:11434
+    model_info:
+      mode: chat
+      cost: $0.0/1K tokens
+  
+  - model_name: qwen2.5
+    litellm_params:
+      model: ollama/qwen2.5
+      api_base: http://ollama:11434
+    model_info:
+      mode: chat
+      cost: $0.0/1K tokens
+
+# ============================================================================
+# General Settings
+# ============================================================================
+general_settings: 
+  master_key: ${LITELLM_MASTER_KEY}
+
+litellm_settings:
+  # Cache settings
+  cache: true
+  cache_type: redis
+  redis_host: redis
+  redis_port: 6379
+  redis_password: ${REDIS_PASSWORD}
+  
+  # Completion settings
+  drop_params: true
+  always_alternate_model_names:
+    - gpt-4o
+    - claude-sonnet-4-20250514
+  
+  # Timeout settings
+  request_timeout: 600
+  max_retries: 3
+  
+  # Logging
+  detailed_logs: true
+
+# ============================================================================
+# Model Routing Rules
+# ============================================================================
+model_alias_map:
+  # Cost-based routing
+  "cheap": "gpt-4o-mini"
+  "fast": "llama-3.1-8b-instant"
+  "smart": "claude-opus-4-20250514"
+  "reasoning": "llama-3.1-70b-versatile"
+  
+  # Task-based routing
+  "embedding": "text-embedding-ada-002"
+  "analysis": "claude-opus-4-20250514"
+  "coding": "claude-sonnet-4-20250514"
+  "quick": "gpt-4o-mini"
+
+# ============================================================================
+# Expected Models for MCP Tools
+# ============================================================================
+# These are the models the MCP tool registry will use
+expected_models:
+  - gpt-4o
+  - gpt-4o-mini
+  - claude-sonnet-4-20250514
+  - claude-opus-4-20250514
+  - gemini-pro
+  - llama-3.1-70b-versatile

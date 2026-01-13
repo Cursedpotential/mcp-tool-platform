@@ -1,4 +1,6 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+// File: client/src/components/DashboardLayout.tsx | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
+import { useAuth } from "@/core/hooks/useAuth";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,

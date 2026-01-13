@@ -1,6 +1,8 @@
+// File: server/mcp/gateway.test.ts | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { appRouter } from '../routers';
-import type { TrpcContext } from '../_core/context';
+import { appRouter } from '../api';
+import type { TrpcContext } from '../core/context';
+
 
 // Mock the plugin registry
 vi.mock('./plugins/registry', () => ({

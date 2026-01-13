@@ -1,3 +1,4 @@
+// File: server/mcp/gateway.ts | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
 /**
  * MCP Gateway API
  * 
@@ -9,8 +10,10 @@
  */
 
 import { z } from 'zod';
-import { router, publicProcedure, protectedProcedure } from '../_core/trpc';
+import { router, publicProcedure, protectedProcedure } from '../core/trpc';
+
 import { TRPCError } from '@trpc/server';
+
 import { getContentStore } from './store/content-store';
 import { getPluginRegistry } from './plugins/registry';
 import { getTaskExecutor } from './workers/executor';

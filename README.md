@@ -1,297 +1,225 @@
-# MCP Tool Platform - Salem Forensics
+<!-- File: README.md | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1 -->
+# MCP Preprocessing Tool Shop
 
-A forensic evidence analysis platform built on the Model Context Protocol (MCP), designed for processing, analyzing, and managing digital evidence in legal proceedings. The platform provides AI-powered document analysis, pattern detection, and evidence chain verification with court-admissible audit trails.
+A token-efficient preprocessing platform designed for **85%+ token reduction** before data flows into final databases (Neo4j, Supabase, Vector DBs). This is the "Home Depot of preprocessing tools" - an intermediary system where heavy lifting happens so orchestrating agents receive pre-analyzed, structured data.
 
----
-
-## ⚠️ CRITICAL: Delegation Requirements
-
-**ALL agents working on this project MUST delegate coding and routine tasks to external LLMs.** Do not write boilerplate code manually. Use the available API keys:
-
-| Service | Use Case | Model |
-|---------|----------|-------|
-| **Groq** | Fast code generation, simple tasks | Llama 3.3 70B, Compound (free) |
-| **Gemini** | Complex reasoning, GCP integration | Gemini 2.5 Flash |
-| **OpenRouter** | Fallback, variety of models | Various |
-| **Anthropic** | Complex analysis | Claude |
-
-**How to delegate:**
-```javascript
-// Use Manus built-in API or direct API calls
-const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-  headers: { 'Authorization': `Bearer ${process.env.Groq_api_key}` },
-  body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [...] })
-});
-```
-
-Reserve your tokens for planning, architecture decisions, debugging, and user communication. Delegate everything else.
-
----
-
-## Quick Start
-
-```bash
-# Install dependencies
-pnpm install
-
-# Start development server
-pnpm dev
-
-# Run tests
-pnpm test
-
-# Database migrations
-pnpm db:push
-```
-
----
 
 ## Architecture Overview
 
-The platform operates across three deployment environments:
+```
+Raw Documents → [MCP Tool Shop] → Preprocessed Data → Final DBs
+                     ↓
+              - OCR/Pandoc conversion
+              - Entity extraction
+              - Sentiment analysis
+              - Graph relationship extraction
+              - Chunking with citations
+              - Embeddings (staging in Chroma)
+              - Initial summarization
+```
 
-| Environment | Purpose | Services |
-|-------------|---------|----------|
-| **Manus Hosting** | Web application, API gateway, orchestration | Main platform, tRPC API, OAuth, **Chroma Scratch Space** |
-| **salem-nexus (VPS1)** | Storage, CMS, chat interfaces | PostgreSQL (59 extensions), MariaDB, FerretDB, Directus, PhotoPrism, n8n, LibreChat, Open WebUI |
-| **salem-forge (VPS2)** | Backend compute, AI services | LiteLLM, MetaMCP, **Chroma (Working Memory)**, Redis, Kasm Workspace, Browserless, Playwright |
+### Service Map (Two-VPS split)
+- **Nexus (116.203.199.238, storage)**: `postgres` (TCP, tailnet/Access), `cms` (Directus), `photos` (PhotoPrism), `n8n`, `nexus` (Coolify UI; public behind Access). Logging stack TBD.
+- **Forge (188.245.189.218 / 116.203.198.77 for UI, compute)**: `llm` (LiteLLM), `mcp` (MetaMCP), `chroma`, `ollama`, `ui` (Open WebUI/LibreChat), `kasm` (desktop, tailnet/Access/backdoor via Access/CF basic auth), `browser` (browserless/playwright, tailnet/Access). Logging stack TBD.
+- Dragonfly backs LiteLLM caching (Redis-compatible); Chroma for vectors; Postgres/PGVector on Nexus; Neo4j/Graphiti for graphs.
 
-Additional cloud services:
-- **Cloudflare**: Workers (edge functions), R2 (storage with WORM, zero egress)
-- **Google Cloud**: Document AI, Vision, NLP, Graphiti on Cloud Run
-- **Neo4j Aura**: Knowledge graph (Graphiti backend)
+### Headless Colab Enterprise
+- Configurable in Settings (project/region/runtime/service account/notebook/sync bucket).
+- Runs GPU notebooks/jobs headlessly; outputs can sync to R2 or Nexus storage.
+- UI embedding is not used; access via job runner APIs/MCP tools.
 
----
+### Postgres Extensions (Nexus)
+- Require Supabase-style set: `vector`, `postgis` (+raster/topology/sfcgal), `pg_graphql`, `pg_net`, `pg_cron`, `pgsodium`, `wrappers`, `pgroonga`, `rum`, `bloom`, `pg_trgm`, `pg_stat_statements`, `citext`, `hstore`, `uuid-ossp`, `pgcrypto`, `btree_gin/gist`, `pg_repack`, `pgmq`, `pg_walinspect`, `pgaudit`, `pg_prewarm`, `pg_hashids`, `pg_jsonschema`.
 
-## Three-Tier Memory Architecture
 
-| Tier | Storage | Location | TTL | Purpose |
-|------|---------|----------|-----|---------|
-| **Persistent Context** | Graphiti + Neo4j | Cloud Run | ∞ | Entities, relationships, timelines |
-| **Persistent Vectors** | pgvector | salem-nexus | ∞ | Evidence embeddings, semantic search |
-| **Working Memory** | Chroma | salem-forge | 72hr | Active analysis, conversation context |
-| **Scratch Space** | Chroma | **Manus platform** | 1hr | Agent coordination, workflow state |
-| **Session/Cache** | Redis | salem-forge | Variable | Job queue, locks, rate limits |
+## Core Features
 
-**CRITICAL:** Scratch Chroma runs **ON MANUS** (`/server/_core/chroma-scratch.ts`), not on VPS.
+### MCP Gateway API (4 Endpoints)
 
----
+| Endpoint | Purpose | Token Efficiency |
+|----------|---------|------------------|
+| `search_tools` | Discover available tools | Returns compact tool cards (name, category, tags) |
+| `describe_tool` | Get full tool specification | On-demand loading of schemas and examples |
+| `invoke_tool` | Execute tools | Reference-based returns for large outputs |
+| `get_ref` | Retrieve content | Paged retrieval (4KB default pages) |
 
-## Key Features
+### Content-Addressed Storage
 
-- **UUIDv7 everywhere** (time-ordered, monotonic IDs)
-- **Evidence WORM storage** (Cloudflare R2 with Bucket Lock, 1-year retention)
-- **Job queue** (pgmq + Redis with retry logic, exponential backoff)
-- **Multi-agent coordination** (Redis Streams + Chroma Scratch Space)
-- **59 PostgreSQL extensions** (pgvector, pgmq, pg_cron, pg_net, pgsodium, pg_graphql, PostGIS suite)
-- **MCP Gateway** (65+ tools for evidence processing)
-- **Chain of custody** (SHA-256 hashing, immutable audit trail)
+All large artifacts are stored using SHA-256 content hashes, enabling:
+- **Deduplication**: Identical content stored once
+- **Paging**: Token-efficient retrieval of large results
+- **Caching**: Content-addressed lookups for repeated operations
 
----
+### Plugin Suite
+
+| Category | Tools | Description |
+|----------|-------|-------------|
+| **Search** | `search.ripgrep`, `search.ugrep` | Fast regex search with JSON output |
+| **Document** | `doc.convert_to_markdown`, `doc.ocr_image_or_pdf`, `doc.segment` | Pandoc conversion, Tesseract OCR, chunking |
+| **NLP** | `nlp.detect_language`, `nlp.extract_entities`, `nlp.extract_keywords`, `nlp.analyze_sentiment` | Provider-agnostic NLP operations |
+| **Rules** | `rules.evaluate` | YAML/JSON rule sets with pattern matching |
+| **Diff** | `diff.text`, `diff.similarity` | Text comparison and similarity analysis |
+| **Filesystem** | `fs.list_dir`, `fs.read_file`, `fs.write_file` | Sandboxed file operations |
+| **ML** | `ml.embed`, `ml.semantic_search` | Embeddings and semantic search (optional) |
+| **Summarization** | `summarize.hierarchical` | Map-reduce summarization with citations |
+| **Retrieval** | `retrieve.supporting_spans` | BM25 + semantic retrieval |
+
+### Human-in-the-Loop (HITL)
+
+All destructive operations require approval:
+- Preview of proposed changes
+- Diff visualization
+- Rollback capability via content store
+- Audit logging
+
+### LLM Provider Support
+
+Provider-agnostic design supporting:
+- **Ollama** (cloud-hosted or local)
+- **Gemini** (2.5 Flash/Pro)
+- **OpenRouter** (free models)
+- **OpenAI** / **Anthropic**
+- **Local BERT** (sentence-transformers)
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 22+
+- pnpm 10+
+- (Optional) ripgrep, ugrep, Pandoc, Tesseract for full plugin support
+
+### Installation
+
+```bash
+# Clone and install dependencies
+cd mcp-tool-platform
+pnpm install
+
+# Push database schema
+pnpm db:push
+
+# Start development server
+pnpm dev
+```
+
+### Environment Variables
+
+The platform uses pre-configured environment variables for:
+- Database connection (`DATABASE_URL`)
+- Authentication (`JWT_SECRET`, `OAUTH_SERVER_URL`)
+- Built-in APIs (`BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY`)
+
+## API Usage
+
+### Search for Tools
+
+```typescript
+const result = await trpc.mcp.searchTools.query({
+  query: "extract entities",
+  topK: 10,
+  category: "nlp"
+});
+// Returns: { success: true, data: [{ name, category, description, tags }] }
+```
+
+### Get Tool Specification
+
+```typescript
+const spec = await trpc.mcp.describeTool.query({
+  toolName: "nlp.extract_entities"
+});
+// Returns: Full schema, examples, permissions
+```
+
+### Invoke a Tool
+
+```typescript
+const result = await trpc.mcp.invokeTool.mutate({
+  toolName: "doc.ocr_image_or_pdf",
+  args: { path: "/data/document.pdf", language: "eng" },
+  options: { returnRef: true }
+});
+// Returns: { success: true, data: { textRef: "sha256:...", pages: 5 } }
+```
+
+### Retrieve Large Content
+
+```typescript
+const page = await trpc.mcp.getRef.query({
+  ref: "sha256:abc123...",
+  page: 1,
+  pageSize: 4096
+});
+// Returns: { content: "...", page: 1, totalPages: 10, hasMore: true }
+```
+
+## Data Flow
+
+1. **Ingest**: Raw documents enter via filesystem or upload
+2. **Convert**: Pandoc/Tesseract extract text content
+3. **Analyze**: NLP plugins extract entities, sentiment, keywords
+4. **Chunk**: Document segmentation with offset tracking
+5. **Embed**: Optional ML embeddings for semantic search
+6. **Stage**: Working memory in Chroma for intermediate results
+7. **Export**: Structured data flows to Neo4j/Supabase/Vector DBs
+
+## Token Efficiency Strategies
+
+| Strategy | Implementation |
+|----------|----------------|
+| Reference-based returns | Large outputs return `sha256:` refs instead of inline content |
+| Paged retrieval | 4KB default pages, configurable up to 64KB |
+| Compact tool cards | Search returns minimal metadata, full spec on demand |
+| Structured metadata | Offsets and citations enable precise retrieval |
+| Hierarchical summarization | Map-reduce compression with citation tracking |
+
+## Testing
+
+```bash
+# Run all tests
+pnpm test
+
+# Run specific test file
+pnpm test server/mcp/store/content-store.test.ts
+```
 
 ## Project Structure
 
 ```
-mcp-tool-platform/
-├── client/                 # React 19 frontend (Vite + Tailwind 4)
-├── server/                 # Express 4 + tRPC 11 backend
-│   ├── _core/              # Auth, LLM, Chroma Scratch, database
-│   ├── mcp/                # MCP gateway (65+ tools)
-│   │   ├── plugins/        # Tool implementations
-│   │   ├── plugins-pending/# GCP plugins (need fixing)
-│   │   └── orchestration/  # LangChain/LangGraph
-│   ├── db.ts               # Database helpers
-│   └── routers.ts          # tRPC procedures
-├── deploy/                 # Deployment configs
-│   ├── docker/             # VPS docker-compose, Dockerfiles, postgres-init.sql
-│   ├── cloudflare/         # Edge workers (6 workers)
-│   └── gcp/                # Cloud Run services
-├── docs/                   # Documentation
-│   ├── architecture/       # System design
-│   ├── deployment/         # Deployment guides
-│   └── handoff/            # Task handoffs (3 parallel threads)
-├── drizzle/                # Database schema
-├── PROJECT_GUIDE.md        # Comprehensive architecture guide
-├── MANUS_PROJECT_INSTRUCTIONS.md  # Concise instructions for Manus
-└── todo.md                 # Master task list
+server/
+  mcp/
+    gateway.ts          # MCP Gateway API (4 endpoints)
+    store/
+      content-store.ts  # Content-addressed storage
+    plugins/
+      search.ts         # ripgrep/ugrep integration
+      document.ts       # Pandoc/Tesseract
+      nlp.ts            # Entity extraction, sentiment, etc.
+      rules.ts          # Rule engine
+      diff.ts           # Text comparison
+      filesystem.ts     # Sandboxed file ops
+      ml.ts             # Embeddings (optional)
+      summarization.ts  # Map-reduce summarization
+      retrieval.ts      # BM25 retrieval
+      registry.ts       # Plugin registry
+    workers/
+      executor.ts       # Task execution
+    hitl/
+      approval.ts       # HITL approval system
+    export/
+      pipeline.ts       # Export to Neo4j/Supabase/VectorDB
+    observability/
+      tracing.ts        # Distributed tracing
+shared/
+  mcp-types/
+    index.ts            # Shared type definitions
+client/
+  src/
+    pages/
+      Home.tsx          # Dashboard
 ```
-
----
-
-## Development Workflow
-
-### Adding Features
-
-1. **Update schema:** `drizzle/schema.ts`
-2. **Push migration:** `pnpm db:push`
-3. **Add DB helpers:** `server/db.ts`
-4. **Create tRPC procedures:** `server/routers.ts`
-5. **Build UI:** `client/src/pages/`
-6. **Write tests:** `server/*.test.ts`
-
-### Evidence Processing Flow
-
-1. **Ingest** → Upload to R2, compute SHA-256
-2. **Embed** → Generate embeddings, store in pgvector
-3. **Extract** → Parse entities/events, send to Graphiti
-4. **Analyze** → Multi-agent coordination via Redis Streams
-5. **Store** → Results in Neo4j, evidence chain in PostgreSQL
-
----
-
-## Documentation
-
-- **[PROJECT_GUIDE.md](PROJECT_GUIDE.md)** - Comprehensive architecture, design decisions, deployment guide
-- **[MANUS_PROJECT_INSTRUCTIONS.md](MANUS_PROJECT_INSTRUCTIONS.md)** - Concise instructions for Manus project settings
-- **[/docs/handoff/](docs/handoff/)** - AI agent delegation instructions (3 parallel threads)
-- **[/docs/CHATGPT_SPEC_REVIEW.md](docs/CHATGPT_SPEC_REVIEW.md)** - ChatGPT's 5 milestones analysis
-- **[/docs/architecture/](docs/architecture/)** - System design documents
-- **[/docs/deployment/](docs/deployment/)** - Deployment guides
-- **[/todo.md](todo.md)** - Master task list
-
----
-
-## Infrastructure Deployment
-
-### Thread 1: VPS Infrastructure
-**Handoff:** `/docs/handoff/HANDOFF_VPS_INFRASTRUCTURE.md`  
-**Tasks:**
-- Deploy salem-nexus services (PostgreSQL, Directus, PhotoPrism, n8n, LibreChat)
-- Deploy salem-forge services (Chroma, Redis, LiteLLM, MetaMCP, Kasm)
-- Configure cross-VPS firewall rules
-- Deploy Cloudflare Workers
-
-### Thread 2: GCP Integration
-**Handoff:** `/docs/handoff/HANDOFF_GCP_INTEGRATION.md`  
-**Tasks:**
-- Fix TypeScript errors in Graphiti codebase
-- Build Docker image
-- Deploy to Cloud Run
-- Wire Neo4j Aura connection
-
-### Thread 3: Platform Features
-**Handoff:** `/docs/handoff/HANDOFF_PLATFORM_FEATURES.md`  
-**Tasks:**
-- Implement agent coordination (Redis Streams + Chroma Scratch)
-- Build evidence parsers (Facebook, Instagram, SMS, email)
-- Create timeline UI
-
-**BLOCKED:** Needs user's "thinking types" specification for cognitive architecture.
-
----
-
-## PostgreSQL Extensions (59 Total)
-
-Auto-install via `/deploy/docker/postgres-init.sql`:
-
-**Critical Extensions:**
-- `vector` (pgvector) - Embeddings and semantic search
-- `pgmq` - Lightweight message queue (like AWS SQS)
-- `pg_cron` - Job scheduler
-- `pg_net` - Async HTTP client for database webhooks
-- `pgsodium` - libsodium cryptographic functions (Vault)
-- `pg_graphql` - GraphQL support
-- `pg_jsonschema` - JSON schema validation
-- PostGIS suite (8 extensions) - Geospatial data
-
-**Requires:** `supabase/postgres:15` image (not `postgres:16-alpine`).
-
-Full list: ltree, pgstattuple, citext, pg_stat_statements, bloom, dblink, hypopg, pgrowlocks, rum, pgroonga, wrappers, postgis, postgis_raster, postgis_sfcgal, postgis_tiger_geocoder, postgis_topology, pgrouting, address_standardizer, unaccent, pg_walinspect, pg_prewarm, pgaudit, dict_int, dict_xsyn, earthdistance, fuzzystrmatch, http, tcn, pgcrypto, insert_username, pgtap, btree_gin, btree_gist, tablefunc, hstore, index_advisor, sslinfo, plpgsql_check, pg_hashids, cube, uuid-ossp, pg_repack, intarray, postgres_fdw, autoinc, tsm_system_time, tsm_system_rows, moddatetime, lo, isn, seg.
-
----
-
-## Stack
-
-**Frontend:**
-- React 19
-- Tailwind CSS 4
-- Wouter (routing)
-- tRPC client
-- shadcn/ui components
-
-**Backend:**
-- Express 4
-- tRPC 11
-- Drizzle ORM
-- Superjson
-- Zod validation
-
-**Databases:**
-- PostgreSQL 16 (salem-nexus)
-- Neo4j Aura (Cloud Run)
-- Chroma (salem-forge + Manus)
-- Redis (salem-forge)
-- MySQL/TiDB (Manus-provided)
-
-**Storage:**
-- Cloudflare R2 (evidence files with WORM)
-- pgvector (embeddings)
-
-**LLM:**
-- LiteLLM proxy (salem-forge)
-- Multiple providers (Groq, Gemini, OpenRouter, Anthropic, Cohere, Perplexity, Mistral, Grok)
-
----
-
-## Current Status (Jan 10, 2026)
-
-**Completed:**
-- ✅ MCP Gateway with 65+ tools
-- ✅ LangGraph forensic workflows
-- ✅ VPS docker-compose files (salem-nexus, salem-forge)
-- ✅ Cloudflare Workers (6 workers)
-- ✅ R2 integration with WORM
-- ✅ Python bridge for remote execution
-- ✅ PostgreSQL 59 extensions setup
-- ✅ Chroma Scratch Space on Manus
-- ✅ Three-tier memory architecture
-- ✅ PROJECT_GUIDE.md and MANUS_PROJECT_INSTRUCTIONS.md
-
-**In Progress:**
-- 🔄 GCP service integration (plugins need TypeScript fixes)
-- 🔄 VPS deployment to Coolify
-- 🔄 Agent coordination implementation
-
-**Blocked:**
-- ⛔ Thinking types spec (needs user input)
-- ⛔ Cognitive architecture design
-
----
-
-## Common Mistakes to Avoid
-
-### ❌ Scratch Space on VPS
-**Wrong:** Adding scratch Chroma to docker-compose  
-**Right:** Scratch Chroma runs on Manus platform (`/server/_core/chroma-scratch.ts`)
-
-### ❌ Using Standard PostgreSQL Image
-**Wrong:** `postgres:16-alpine` (missing pgmq, pg_net, pgsodium)  
-**Right:** `supabase/postgres:15` or custom build
-
-### ❌ Forgetting Evidence Chain
-**Wrong:** Processing evidence without logging  
-**Right:** Every operation logs traceId (UUIDv7), SHA-256 hashes, timestamps
-
-### ❌ Mixing Memory Tiers
-**Wrong:** Storing permanent data in Chroma  
-**Right:** Permanent → Neo4j/pgvector, Working → Chroma (72hr), Scratch → Chroma (1hr)
-
----
-
-## Next Steps
-
-1. **Deploy VPS infrastructure** (Thread 1) - Coolify deployment of salem-nexus + salem-forge
-2. **Deploy Graphiti to Cloud Run** (Thread 2) - Fix TypeScript errors, build Docker image
-3. **Implement agent coordination** (Thread 3) - Needs thinking types spec from user
-4. **Build evidence parsers** (Facebook, Instagram, SMS, email)
-5. **Create timeline UI** (visualize knowledge graph)
-
----
 
 ## License
 
-Private - All rights reserved.
-
----
-
-**Full Documentation:** See [PROJECT_GUIDE.md](PROJECT_GUIDE.md) for comprehensive architecture and deployment instructions.
+MIT

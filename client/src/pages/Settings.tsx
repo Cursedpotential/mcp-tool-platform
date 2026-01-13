@@ -1,4 +1,6 @@
-import { useAuth } from "@/_core/hooks/useAuth";
+// File: client/src/pages/Settings.tsx | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
+import { useAuth } from "@/core/hooks/useAuth";
+
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -26,8 +28,10 @@ import {
   Upload,
   Zap,
   Globe,
-  Server
+  Server,
+  Rocket
 } from "lucide-react";
+
 
 const PROVIDER_INFO: Record<string, { name: string; icon: React.ReactNode; description: string; type: 'local' | 'cloud' | 'cli' }> = {
   ollama: { name: 'Ollama', icon: <Cpu className="h-4 w-4" />, description: 'Local LLM server (CPU-friendly)', type: 'local' },
@@ -54,6 +58,15 @@ export default function Settings() {
   const { data: providers, isLoading, refetch } = trpc.llm.listProviders.useQuery();
   const { data: available } = trpc.llm.detectAvailable.useQuery();
   const { data: configExport } = trpc.config.exportAll.useQuery();
+
+  const [colabConfig, setColabConfig] = useState({
+    projectId: '',
+    region: '',
+    runtimeTemplate: '',
+    serviceAccountJson: '',
+    notebookPath: '',
+    syncBucket: '',
+  });
   
   const configureMutation = trpc.llm.configureProvider.useMutation({
     onSuccess: () => {
@@ -72,6 +85,17 @@ export default function Settings() {
       }
     },
   });
+
+  const testColab = trpc.settings.testColab.useMutation({
+    onSuccess: (res) => toast.success(res.message),
+    onError: (err) => toast.error(err.message),
+  });
+
+  const saveColab = trpc.settings.saveColabConfig.useMutation({
+    onSuccess: (res) => toast.success(res.message),
+    onError: (err) => toast.error(err.message),
+  });
+
 
   if (authLoading || isLoading) {
     return (
@@ -506,7 +530,104 @@ export default function Settings() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Colab Enterprise (Headless GPU Jobs) */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Rocket className="h-5 w-5" />
+                  Colab Enterprise (Headless)
+                </CardTitle>
+                <CardDescription>Configure Colab Enterprise for GPU notebooks/jobs (headless)</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="colab-project">Project ID</Label>
+                      <Input
+                        id="colab-project"
+                        placeholder="gcp-project-id"
+                        value={colabConfig.projectId}
+                        onChange={(e) => setColabConfig({ ...colabConfig, projectId: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="colab-region">Region</Label>
+                      <Input
+                        id="colab-region"
+                        placeholder="us-central1"
+                        value={colabConfig.region}
+                        onChange={(e) => setColabConfig({ ...colabConfig, region: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="colab-runtime">Runtime template</Label>
+                      <Input
+                        id="colab-runtime"
+                        placeholder="gpu-template-name"
+                        value={colabConfig.runtimeTemplate}
+                        onChange={(e) => setColabConfig({ ...colabConfig, runtimeTemplate: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="colab-notebook">Notebook path (optional)</Label>
+                      <Input
+                        id="colab-notebook"
+                        placeholder="gs://bucket/path/notebook.ipynb"
+                        value={colabConfig.notebookPath}
+                        onChange={(e) => setColabConfig({ ...colabConfig, notebookPath: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="colab-sa">Service account JSON (optional)</Label>
+                    <Input
+                      id="colab-sa"
+                      placeholder="{ \"type\": \"service_account\", ... }"
+                      value={colabConfig.serviceAccountJson}
+                      onChange={(e) => setColabConfig({ ...colabConfig, serviceAccountJson: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="colab-sync">Sync bucket / storage (optional)</Label>
+                    <Input
+                      id="colab-sync"
+                      placeholder="gs://bucket-or-r2-path"
+                      value={colabConfig.syncBucket}
+                      onChange={(e) => setColabConfig({ ...colabConfig, syncBucket: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => testColab.mutate(colabConfig)}
+                      disabled={testColab.isPending}
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Test Connection
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => saveColab.mutate(colabConfig)}
+                      disabled={saveColab.isPending}
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Save
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
+
 
           <TabsContent value="routing" className="space-y-4">
             <Card>

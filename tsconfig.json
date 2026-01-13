@@ -1,6 +1,7 @@
 {
   "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
-  "exclude": ["node_modules", "build", "dist", "**/*.test.ts", "server/mcp/plugins-pending/**/*"],
+  "exclude": ["node_modules", "build", "dist"],
+
   "compilerOptions": {
     "incremental": true,
     "tsBuildInfoFile": "./node_modules/typescript/tsbuildinfo",
@@ -17,7 +18,12 @@
     "types": ["node", "vite/client"],
     "paths": {
       "@/*": ["./client/src/*"],
-      "@shared/*": ["./shared/*"]
+      "@shared/*": ["./shared/*"],
+      "@server/*": ["./server/*"],
+      "@core/*": ["./server/core/*"],
+      "@api/*": ["./server/api/*"],
+      "@mcp/*": ["./server/mcp/*"]
     }
+
   }
 }
