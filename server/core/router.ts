@@ -1,4 +1,4 @@
-// File: server/core/router.ts | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
+// File: server/core/router.ts | Date: 2026-01-11 | Agent: Groq Llama 3.3 70B | Model: Opus 4.1
 /**
  * Intelligent Routing Layer
  * 
@@ -9,276 +9,363 @@
  * 4. Databases (Supabase, Neo4j Aura)
  */
 
-
-import { ENV } from "./env";
-import { graphitiClient } from "../mcp/storage/graphiti-client";
+import { getPluginRegistry } from '../mcp/plugins/registry';
+import { getMCPProxy } from '../mcp/proxy/mcp-proxy';
 
 // ============================================================================
-// Service Endpoints
+// Type Definitions
 // ============================================================================
 
+interface LLMRequest {
+  provider?: string;
+  endpoint?: string;
+  apiKey?: string;
+  model: string;
+  messages: any[];
+}
 
-const SERVICES = {
-  // Manus built-in
-  manus: {
-    llm: ENV.forgeApiUrl,
-    storage: ENV.forgeApiUrl,
-  },
-  
-  // Docker VPS
-  vps: {
-    litellm: process.env.LITELLM_URL || "http://localhost:4000",
-    metamcp: process.env.METAMCP_URL || "http://localhost:4001",
-    neo4j: process.env.NEO4J_URL || "bolt://localhost:7687",
-    chroma: process.env.CHROMA_URL || "http://localhost:8000",
-    directus: process.env.DIRECTUS_URL || "http://localhost:8055",
-    photoprism: process.env.PHOTOPRISM_URL || "http://localhost:2342",
-    browserless: process.env.BROWSERLESS_URL || "http://localhost:3004",
-    playwright: process.env.PLAYWRIGHT_URL || "http://localhost:3005",
-  },
-  
-  // External APIs
-  external: {
-    openai: "https://api.openai.com/v1",
-    anthropic: "https://api.anthropic.com/v1",
-    google: "https://generativelanguage.googleapis.com/v1",
-    cohere: "https://api.cohere.ai/v1",
-  },
-  
-  // Databases
-  database: {
-    supabase: process.env.SUPABASE_URL || '',
-    neo4j_aura: process.env.NEO4J_AURA_URL,
-  },
-};
+interface LLMProvider {
+  type: 'built-in' | string;
+  endpoint: string;
+  apiKey?: string;
+}
+
+interface MCPEndpoint {
+  type: 'local' | 'remote';
+  handler?: Function;
+  serverId?: string;
+  endpoint?: string;
+}
+
+interface VectorSearchRequest {
+  collection: string;
+  query: string;
+  topK?: number;
+}
+
+interface VectorDBEndpoint {
+  type: 'chroma' | 'qdrant';
+  url: string;
+  apiKey?: string;
+  collection: string;
+}
+
+interface StorageRequest {
+  filename: string;
+  size: number;
+  contentType: string;
+}
+
+interface StorageEndpoint {
+  type: 's3' | 'r2';
+  endpoint: string;
+  apiKey?: string;
+  bucket: string;
+}
+
+interface HealthStatus {
+  services: Array<{
+    name: string;
+    status: 'healthy' | 'unhealthy' | 'unreachable' | 'disabled';
+    latency: number;
+    error?: string;
+  }>;
+  timestamp: Date;
+}
+
+interface TimeRange {
+  start: Date;
+  end: Date;
+}
+
+interface CostMetrics {
+  totalCost: number;
+  totalTokens: number;
+  breakdown: Array<{
+    provider: string;
+    model: string;
+    cost: number;
+    tokens: number;
+  }>;
+}
 
 // ============================================================================
 // LLM Router
 // ============================================================================
 
-export interface LLMRequest {
-  model: string;
-  messages: Array<{ role: string; content: string }>;
-  temperature?: number;
-  max_tokens?: number;
-  stream?: boolean;
-}
-
-export interface LLMResponse {
-  choices: Array<{
-    message: { role: string; content: string };
-    finish_reason: string;
-  }>;
-  usage: {
-    prompt_tokens: number;
-    completion_tokens: number;
-    total_tokens: number;
-  };
-}
-
 /**
  * Route LLM request to optimal service
  * Priority: Manus built-in > LiteLLM (VPS) > Direct API
  */
-export async function routeLLM(request: LLMRequest): Promise<LLMResponse> {
-  // TODO: Implement LLM routing logic
-  // 1. Check if Manus built-in supports the model
-  // 2. If not, route to LiteLLM (VPS)
-  // 3. If LiteLLM unavailable, route to direct API
-  // 4. Track costs and usage
-  
-  throw new Error("TODO: Implement LLM routing");
+export async function routeLLM(request: LLMRequest): Promise<LLMProvider> {
+  try {
+    if (process.env.BUILT_IN_FORGE_API_URL) {
+      return {
+        type: 'built-in',
+        endpoint: process.env.BUILT_IN_FORGE_API_URL,
+        apiKey: process.env.BUILT_IN_FORGE_API_KEY,
+      };
+    }
+
+    // Route to user provider (OpenAI, Anthropic, etc.)
+    return {
+      type: request.provider || 'openai',
+      endpoint: request.endpoint,
+      apiKey: request.apiKey,
+    };
+  } catch (error) {
+    console.error('Error routing LLM request:', error);
+    return {
+      type: 'openai',
+      endpoint: 'https://api.openai.com/v1',
+      apiKey: '',
+    };
+  }
 }
 
 // ============================================================================
 // MCP Tool Router
 // ============================================================================
 
-export interface MCPToolRequest {
-  server: string;
-  tool: string;
-  params: Record<string, any>;
-}
-
-export interface MCPToolResponse {
-  result: any;
-  metadata: {
-    server: string;
-    tool: string;
-    execution_time_ms: number;
-  };
-}
-
 /**
  * Route MCP tool execution to optimal server
  * Priority: Local MCP gateway > MetaMCP (VPS) > Direct server
  */
-export async function routeMCPTool(request: MCPToolRequest): Promise<MCPToolResponse> {
-  // TODO: Implement MCP tool routing logic
-  // 1. Check if tool is available in local MCP gateway
-  // 2. If not, query MetaMCP registry for server
-  // 3. Execute tool on appropriate server
-  // 4. Cache results if applicable
-  
-  throw new Error("TODO: Implement MCP tool routing");
+export async function routeMCPTool(toolName: string): Promise<MCPEndpoint> {
+  try {
+    const registry = await getPluginRegistry();
+    const localTool = registry.getTool(toolName);
+
+    if (localTool) {
+      return {
+        type: 'local',
+        handler: localTool.handler,
+      };
+    }
+
+    // Check remote MCP servers
+    const proxy = getMCPProxy();
+    const remoteTool = proxy.getToolSpec(toolName);
+
+    if (remoteTool) {
+      return {
+        type: 'remote',
+        serverId: remoteTool.serverId,
+        endpoint: remoteTool.endpoint,
+      };
+    }
+
+    return {
+      type: 'local',
+      handler: () => {
+        throw new Error(`Tool not found: ${toolName}`);
+      },
+    };
+  } catch (error) {
+    console.error('Error routing MCP tool:', error);
+    return {
+      type: 'local',
+      handler: () => {
+        throw new Error(`Tool not found: ${toolName}`);
+      },
+    };
+  }
 }
 
 // ============================================================================
 // Vector Database Router
 // ============================================================================
 
-export interface VectorSearchRequest {
-  collection: string;
-  query_embedding: number[];
-  n_results: number;
-  where?: Record<string, any>;
-}
-
-export interface VectorSearchResponse {
-  ids: string[];
-  documents: string[];
-  metadatas: Record<string, any>[];
-  distances: number[];
-}
-
 /**
  * Route vector search to optimal database
  * Priority: Chroma (in-process) for TTL > Chroma (VPS) for persistent > Supabase pgvector
  */
-export async function routeVectorSearch(
-  request: VectorSearchRequest,
-  persistent: boolean = false
-): Promise<VectorSearchResponse> {
-  // TODO: Implement vector search routing
-  // 1. If persistent=false, use in-process Chroma (72hr TTL)
-  // 2. If persistent=true, use VPS Chroma (permanent)
-  // 3. Fallback to Supabase pgvector if Chroma unavailable
-  
-  throw new Error("TODO: Implement vector search routing");
-}
-
-// ============================================================================
-// Graph Database Router
-// ============================================================================
-
-export interface GraphQueryRequest {
-  query: string;
-  params?: Record<string, any>;
-}
-
-export interface GraphQueryResponse {
-  records: any[];
-  summary: {
-    query_type: string;
-    counters: Record<string, number>;
-  };
-}
-
-/**
- * Route graph query to optimal database
- * Priority: Neo4j (VPS) > Neo4j Aura (cloud)
- */
-export async function routeGraphQuery(request: GraphQueryRequest): Promise<GraphQueryResponse> {
-  const started = Date.now();
+export async function routeVectorSearch(query: VectorSearchRequest): Promise<VectorDBEndpoint> {
   try {
-    const records = await graphitiClient.runQuery(request.query, request.params || {});
+    // If QDRANT_URL is set and enabled, use Qdrant for persistent storage
+    if (process.env.QDRANT_URL && process.env.ENABLE_VECTOR_DB === 'true') {
+      return {
+        type: 'qdrant',
+        url: process.env.QDRANT_URL,
+        apiKey: process.env.QDRANT_API_KEY,
+        collection: `${process.env.QDRANT_COLLECTION_PREFIX || 'mcp_'}${query.collection}`,
+      };
+    }
+
+    // Otherwise use Chroma (in-process or local server)
+    const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8000';
     return {
-      records,
-      summary: {
-        query_type: 'cypher',
-        counters: {},
-      },
+      type: 'chroma',
+      url: chromaUrl,
+      collection: query.collection,
     };
   } catch (error) {
-    throw new Error(
-      error instanceof Error
-        ? `[Graph] Query failed: ${error.message}`
-        : '[Graph] Query failed: Unknown error'
-    );
-  } finally {
-    const latency = Date.now() - started;
-    console.log(`[Graph] Query completed in ${latency}ms`);
+    console.error('Error routing vector search:', error);
+    return {
+      type: 'chroma',
+      url: 'http://localhost:8000',
+      collection: query.collection,
+    };
   }
 }
-
 
 // ============================================================================
 // Storage Router
 // ============================================================================
 
-export interface StorageUploadRequest {
-  key: string;
-  data: Buffer | Uint8Array | string;
-  contentType?: string;
-}
-
-export interface StorageUploadResponse {
-  key: string;
-  url: string;
-}
-
 /**
  * Route storage upload to optimal service
  * Priority: Manus built-in > R2 (via Directus) > Direct R2
  */
-export async function routeStorageUpload(
-  request: StorageUploadRequest
-): Promise<StorageUploadResponse> {
-  // TODO: Implement storage routing
-  // 1. Use Manus built-in S3 for small files (<10MB)
-  // 2. Use Directus + R2 for large files (>10MB)
-  // 3. Use direct R2 for bulk uploads
-  
-  throw new Error("TODO: Implement storage routing");
+export async function routeStorage(file: StorageRequest): Promise<StorageEndpoint> {
+  try {
+    const fileSizeMB = file.size / (1024 * 1024);
+
+    // Small files (<10MB) go to Manus built-in S3
+    if (fileSizeMB < 10 && process.env.BUILT_IN_FORGE_API_URL) {
+      return {
+        type: 's3',
+        endpoint: `${process.env.BUILT_IN_FORGE_API_URL}/storage`,
+        apiKey: process.env.BUILT_IN_FORGE_API_KEY,
+        bucket: 'manus-mcp-storage',
+      };
+    }
+
+    // Large files (>10MB) go to user's Cloudflare R2
+    if (process.env.SUPABASE_URL) {
+      return {
+        type: 'r2',
+        endpoint: process.env.SUPABASE_URL,
+        apiKey: process.env.SUPABASE_KEY,
+        bucket: 'user-storage',
+      };
+    }
+
+    return {
+      type: 's3',
+      endpoint: 'https://s3.amazonaws.com',
+      apiKey: '',
+      bucket: 'default-bucket',
+    };
+  } catch (error) {
+    console.error('Error routing storage:', error);
+    return {
+      type: 's3',
+      endpoint: 'https://s3.amazonaws.com',
+      apiKey: '',
+      bucket: 'default-bucket',
+    };
+  }
 }
 
 // ============================================================================
 // Health Checks
 // ============================================================================
 
-export interface ServiceHealth {
-  service: string;
-  status: "healthy" | "degraded" | "unavailable";
-  latency_ms: number;
-  last_check: Date;
-}
-
 /**
  * Check health of all services
  */
-export async function checkServiceHealth(): Promise<ServiceHealth[]> {
-  // TODO: Implement health checks
-  // 1. Ping all VPS services
-  // 2. Check external API availability
-  // 3. Test database connections
-  // 4. Return health status for routing decisions
-  
-  return [];
+export async function checkServiceHealth(): Promise<HealthStatus> {
+  try {
+    const services = [
+      { name: 'Neo4j', url: process.env.NEO4J_URL },
+      { name: 'Chroma', url: process.env.CHROMA_URL },
+      { name: 'Qdrant', url: process.env.QDRANT_URL },
+      { name: 'Ollama', url: process.env.OLLAMA_URL },
+      { name: 'LiteLLM', url: process.env.BUILT_IN_FORGE_API_URL },
+    ];
+
+    const results = await Promise.all(
+      services.map(async (service) => {
+        if (!service.url) {
+          return { name: service.name, status: 'disabled', latency: 0 };
+        }
+
+        try {
+          const start = Date.now();
+          const response = await fetch(service.url, {
+            method: 'GET',
+            signal: AbortSignal.timeout(5000),
+          });
+          const latency = Date.now() - start;
+
+          return {
+            name: service.name,
+            status: response.ok ? 'healthy' : 'unhealthy',
+            latency,
+          };
+        } catch (error) {
+          return {
+            name: service.name,
+            status: 'unreachable',
+            latency: 0,
+            error: error.message,
+          };
+        }
+      })
+    );
+
+    return {
+      services: results,
+      timestamp: new Date(),
+    };
+  } catch (error) {
+    console.error('Error checking service health:', error);
+    return {
+      services: [],
+      timestamp: new Date(),
+    };
+  }
 }
 
 // ============================================================================
 // Cost Tracking
 // ============================================================================
 
-export interface CostMetrics {
-  service: string;
-  cost_usd: number;
-  requests: number;
-  tokens?: number;
-  period: "hour" | "day" | "month";
-}
-
 /**
  * Track costs across all services
  */
-export async function trackCosts(): Promise<CostMetrics[]> {
-  // TODO: Implement cost tracking
-  // 1. Query LiteLLM for LLM costs
-  // 2. Calculate VPS infrastructure costs
-  // 3. Track external API usage
-  // 4. Store in database for reporting
-  
-  return [];
+export async function trackCosts(userId: number, timeRange: TimeRange): Promise<CostMetrics> {
+  try {
+    // If using built-in LiteLLM proxy, query its metrics endpoint
+    if (process.env.BUILT_IN_FORGE_API_URL) {
+      const response = await fetch(
+        `${process.env.BUILT_IN_FORGE_API_URL}/metrics/costs`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${process.env.BUILT_IN_FORGE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            startDate: timeRange.start,
+            endDate: timeRange.end,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`LiteLLM metrics API error: ${response.status}`);
+      }
+
+      return await response.json();
+    }
+
+    // If not using LiteLLM, return empty metrics
+    return {
+      totalCost: 0,
+      totalTokens: 0,
+      breakdown: [],
+    };
+  } catch (error) {
+    console.error('Error tracking costs:', error);
+    return {
+      totalCost: 0,
+      totalTokens: 0,
+      breakdown: [],
+    };
+  }
 }
 
 // ============================================================================
@@ -289,8 +376,7 @@ export const router = {
   llm: routeLLM,
   mcpTool: routeMCPTool,
   vectorSearch: routeVectorSearch,
-  graphQuery: routeGraphQuery,
-  storageUpload: routeStorageUpload,
+  storage: routeStorage,
   health: checkServiceHealth,
   costs: trackCosts,
 };

@@ -1,3 +1,31 @@
+# TASK 00: Setup Dependencies & Environment
+
+**Priority:** CRITICAL (BLOCKING)  
+**Estimated Time:** 30 minutes  
+**Delegate To:** Shell commands (can be executed immediately)  
+**Cost:** Free
+
+---
+
+## 1. Install Node Dependencies
+
+```bash
+cd /home/ubuntu/mcp-tool-platform
+pnpm install
+```
+
+This will:
+- Install all dependencies from `package.json`
+- Enable TypeScript checking (`pnpm check`)
+- Enable all dev tools
+
+---
+
+## 2. Fix `.env.example` File
+
+Replace the current `.env.example` with this complete version:
+
+```bash
 # ============================================================================
 # Database Configuration
 # ============================================================================
@@ -136,3 +164,122 @@ ENABLE_N8N=false
 # ============================================================================
 DATABASE_HEALTH_CHECK_INTERVAL=30000
 LOG_LEVEL=info
+```
+
+---
+
+## 3. Create `.env` File
+
+Copy `.env.example` to `.env` and fill in actual values:
+
+```bash
+cp .env.example .env
+```
+
+**REQUIRED VALUES TO SET:**
+1. `ENCRYPTION_KEY` - Generate with: `openssl rand -hex 32`
+2. `DATABASE_URL` - Your MySQL/PostgreSQL connection string
+3. `JWT_SECRET` - Generate with: `openssl rand -hex 32`
+
+**OPTIONAL BUT RECOMMENDED:**
+- `CHROMA_URL` - If using vector search
+- `NEO4J_URL`, `NEO4J_PASSWORD` - If using graph database
+- `OPENAI_API_KEY` or `GOOGLE_API_KEY` - For LLM features
+
+---
+
+## 4. Setup Python Environment (Optional but Recommended)
+
+```bash
+cd /home/ubuntu/mcp-tool-platform/server/python-tools
+
+# Create virtual environment
+python3 -m venv venv
+
+# Activate virtual environment
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Download spaCy language model
+python -m spacy download en_core_web_sm
+```
+
+**Note:** Python dependencies are heavy (torch, transformers, spacy). This is optional if you're only using JavaScript implementations.
+
+---
+
+## 5. Initialize Database Schema
+
+```bash
+cd /home/ubuntu/mcp-tool-platform
+
+# Generate migration files
+pnpm db:push
+```
+
+This will:
+- Generate Drizzle migration files
+- Apply schema to database
+- Create all tables
+
+---
+
+## 6. Verify Setup
+
+```bash
+# Check TypeScript types
+pnpm check
+
+# Run tests
+pnpm test
+
+# Start development server
+pnpm dev
+```
+
+---
+
+## 7. Create Required Directories
+
+```bash
+mkdir -p /data/chroma
+mkdir -p /data/rules
+mkdir -p /tmp/mcp-sandbox
+```
+
+---
+
+## Troubleshooting
+
+### If `pnpm install` fails:
+```bash
+# Clear cache and reinstall
+rm -rf node_modules pnpm-lock.yaml
+pnpm install
+```
+
+### If database migration fails:
+```bash
+# Check database connection
+# Ensure DATABASE_URL is correct
+# Ensure database server is running
+```
+
+### If Python installation fails:
+```bash
+# Use lighter dependencies (remove torch)
+# Or use Docker image with pre-installed dependencies
+```
+
+---
+
+## Output
+
+After completion, verify:
+- [ ] `node_modules` directory exists
+- [ ] `.env` file created with required values
+- [ ] `pnpm check` runs without errors
+- [ ] Database schema applied successfully
+- [ ] Server starts with `pnpm dev`
