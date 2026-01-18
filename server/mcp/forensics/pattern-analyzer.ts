@@ -1,17 +1,32 @@
 /**
  * Communication Pattern Analyzer
- * 
+ *
  * Analyzes text for behavioral patterns in communication - both negative
  * (manipulation, gaslighting, threats) and positive (love bombing, affirmations).
- * 
+ *
  * This dual-polarity approach is essential for identifying narcissistic abuse
- * patterns where the abuser cycles between idealize → devalue → discard phases.
+ * patterns where abuser cycles between idealization → devalue → discard phases.
  * Tracking positive statements allows detection of contradictions and reversals.
+ *
+ * ================================================================================
+ * IMPORTANT: TEMPORARY DEVELOPMENT MODE
+ * ================================================================================
+ * This module is using SQL.js for local development (see: server/core/db.ts)
+ * PRODUCTION will use Drizzle ORM with MySQL/TiDB.
+ *
+ * The Drizzle imports below are COMMENTED OUT but NOT DELETED.
+ * When switching to production, simply:
+ *   1. Uncomment the Drizzle imports (lines 13-15)
+ *   2. Uncomment db queries (lines using drizzle-orm)
+ *   3. Switch server/core/db.ts back to Drizzle version
+ * ================================================================================
  */
 
 import { getDb } from '../../core/db';
 import { behavioralPatterns, patternCategories, forensicResults, mclFactors } from '../../../drizzle/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+
+// TEMPOARY: Drizzle imports commented out for SQL.js development
+// import { eq, and, inArray } from 'drizzle-orm';
 
 // ============================================================================
 // TYPES
@@ -40,6 +55,42 @@ export interface PatternMatch {
   category: 'negative' | 'positive' | 'neutral';
   position: { start: number; end: number };
   mclFactors?: string[];
+  subcategory?: string;
+}
+
+export interface DbPattern {
+  id: number;
+  name: string;
+  category: string;
+  pattern: string;
+  description: string | null;
+  severity: number;
+  mclFactors: string | null;
+  examples: string | null;
+  isActive: string;
+}
+
+export interface LinguisticAnalysis {
+  pronouns: {
+    iCount: number;
+    youCount: number;
+    ratio: string;
+    weCount: number;
+    iWeRatio: string;
+  };
+  hedgeVsCertainty: {
+    hedgeCount: number;
+    certaintyCount: number;
+    ratio: string;
+    hedgeWords: string[];
+    certaintyWords: string[];
+  };
+  sentenceLength: {
+    avgLength: number;
+    maxLength: number;
+    overelaborationScore: number;
+    longSentenceCount: number;
+  };
 }
 
 export interface AnalysisResult {
@@ -723,10 +774,60 @@ export const BUILT_IN_PATTERNS: Record<string, { patterns: string[]; examples: s
 export class CommunicationPatternAnalyzer {
   private modules: AnalysisModule[] = [];
   private customPatterns: Map<string, { patterns: string[]; examples: string[] }> = new Map();
+  private dbPatterns: Map<string, DbPattern[]> = new Map();
+  private dbPatternsLoaded: boolean = false;
 
   constructor() {
-    // Deep copy to avoid shared state mutation between instances
     this.modules = BUILT_IN_MODULES.map(m => ({ ...m, mclFactors: [...(m.mclFactors || [])] }));
+  }
+
+  /**
+   * Load all seeded patterns from the database into memory for fast matching
+   * Uses SQL.js raw queries since the db wrapper doesn't support drizzle-orm
+   */
+  async loadDbPatterns(): Promise<void> {
+    if (this.dbPatternsLoaded) return;
+
+    const db = await getDb();
+    if (!db) {
+      console.warn('Database not initialized, skipping DB pattern load');
+      return;
+    }
+
+    try {
+      // Use SQL.js query function instead of drizzle-orm
+      const { query } = await import('../../core/db');
+      const results = await query('SELECT * FROM behavioralPatterns WHERE isActive = 1');
+
+      for (const row of results) {
+        const category = row.category || 'uncategorized';
+        const existing = this.dbPatterns.get(category) || [];
+        existing.push({
+          id: row.id,
+          name: row.name,
+          category: row.category,
+          pattern: row.pattern,
+          description: row.description,
+          severity: row.severity,
+          mclFactors: row.mclFactors,
+          examples: row.examples,
+          isActive: row.isActive
+        });
+        this.dbPatterns.set(category, existing);
+      }
+
+      this.dbPatternsLoaded = true;
+      console.log(`Loaded ${results.length} patterns from database`);
+    } catch (error) {
+      console.warn('Failed to load DB patterns:', error);
+    }
+  }
+
+  /**
+   * Get patterns from database by category
+   */
+  getDbPatternsByCategory(category: string): DbPattern[] {
+    return this.dbPatterns.get(category) || [];
   }
 
   /**
@@ -784,7 +885,7 @@ export class CommunicationPatternAnalyzer {
   }
 
   /**
-   * Analyze text for patterns
+   * Analyze text for patterns using both built-in and database-seeded patterns
    */
   async analyze(
     text: string,
@@ -792,13 +893,20 @@ export class CommunicationPatternAnalyzer {
       moduleIds?: string[];
       includeContext?: boolean;
       contextChars?: number;
+      useDbPatterns?: boolean;
     } = {}
   ): Promise<AnalysisResult> {
     const {
       moduleIds,
       includeContext = true,
-      contextChars = 100
+      contextChars = 100,
+      useDbPatterns = true
     } = options;
+
+    // Load DB patterns if requested and not yet loaded
+    if (useDbPatterns) {
+      await this.loadDbPatterns();
+    }
 
     const enabledModules = moduleIds
       ? this.modules.filter(m => moduleIds.includes(m.id))
@@ -824,20 +932,19 @@ export class CommunicationPatternAnalyzer {
           const match: PatternMatch = {
             moduleId: module.id,
             moduleName: module.name,
-            patternId: 0, // Will be set if from DB
+            patternId: 0,
             patternName: pattern,
             matchedText: text.substring(index, index + pattern.length),
             context: includeContext
               ? this.extractContext(text, index, pattern.length, contextChars)
               : '',
-            confidence: 80, // Base confidence, could be enhanced with ML
+            confidence: 80,
             severity: module.weight,
             category: module.category,
             position: { start: index, end: index + pattern.length },
             mclFactors: module.mclFactors
           };
 
-          // Categorize match
           if (module.category === 'negative') {
             negativeMatches.push(match);
           } else if (module.category === 'positive') {
@@ -846,27 +953,37 @@ export class CommunicationPatternAnalyzer {
             neutralMatches.push(match);
           }
 
-          // Count MCL factors
           for (const factor of module.mclFactors || []) {
             mclFactorCounts[factor] = (mclFactorCounts[factor] || 0) + 1;
           }
 
-          // Find next occurrence
           index = textLower.indexOf(patternLower, index + 1);
         }
       }
     }
 
-    // Calculate severity score (weighted average of negative matches)
+    // Also match against database patterns for categories that have DB entries
+    if (useDbPatterns) {
+      const dbMatches = await this.analyzeWithDbPatterns(text, enabledModules, includeContext, contextChars);
+      
+      for (const match of dbMatches) {
+        if (match.category === 'negative') {
+          negativeMatches.push(match);
+        } else if (match.category === 'positive') {
+          positiveMatches.push(match);
+        } else {
+          neutralMatches.push(match);
+        }
+
+        for (const factor of match.mclFactors || []) {
+          mclFactorCounts[factor] = (mclFactorCounts[factor] || 0) + 1;
+        }
+      }
+    }
+
     const severityScore = this.calculateSeverityScore(negativeMatches);
-
-    // Detect contradictions (positive statement followed/preceded by contradicting negative)
     const contradictions = this.detectContradictions(positiveMatches, negativeMatches);
-
-    // Build timeline
     const timeline = this.buildTimeline([...negativeMatches, ...positiveMatches, ...neutralMatches]);
-
-    // Generate summary
     const summary = this.generateSummary(negativeMatches, positiveMatches, contradictions, severityScore);
 
     return {
@@ -883,6 +1000,71 @@ export class CommunicationPatternAnalyzer {
       timeline,
       summary
     };
+  }
+
+  /**
+   * Analyze text using database-seeded patterns
+   */
+  private async analyzeWithDbPatterns(
+    text: string,
+    enabledModules: AnalysisModule[],
+    includeContext: boolean,
+    contextChars: number
+  ): Promise<PatternMatch[]> {
+    const matches: PatternMatch[] = [];
+    const textLower = text.toLowerCase();
+
+    const dbCategoryMap: Record<string, string[]> = {
+      darvo: ['darvo_deny', 'darvo_attack', 'darvo_reverse'],
+      overelaboration: ['overelaboration'],
+      medical_abuse: ['medical_abuse'],
+      reproductive_coercion: ['reproductive_coercion'],
+      power_asymmetry: ['victim_deference', 'abuser_directives'],
+      certainty_absolutes: ['certainty_absolutes'],
+      hedge_words: ['hedge_words']
+    };
+
+    for (const module of enabledModules) {
+      const categories = dbCategoryMap[module.id];
+      if (!categories) continue;
+
+      for (const category of categories) {
+        const dbPatterns = this.getDbPatternsByCategory(category);
+        
+        for (const dbPattern of dbPatterns) {
+          const patternLower = dbPattern.pattern.toLowerCase();
+          let index = textLower.indexOf(patternLower);
+          
+          while (index !== -1) {
+            const mclFactors = dbPattern.mclFactors 
+              ? JSON.parse(dbPattern.mclFactors) 
+              : module.mclFactors || [];
+
+            const match: PatternMatch = {
+              moduleId: module.id,
+              moduleName: module.name,
+              patternId: dbPattern.id,
+              patternName: dbPattern.name,
+              matchedText: text.substring(index, index + dbPattern.pattern.length),
+              context: includeContext
+                ? this.extractContext(text, index, dbPattern.pattern.length, contextChars)
+                : '',
+              confidence: 75 + (dbPattern.severity * 2),
+              severity: dbPattern.severity * 10,
+              category: module.category,
+              position: { start: index, end: index + dbPattern.pattern.length },
+              mclFactors: mclFactors,
+              subcategory: category
+            };
+
+            matches.push(match);
+            index = textLower.indexOf(patternLower, index + 1);
+          }
+        }
+      }
+    }
+
+    return matches;
   }
 
   private extractContext(text: string, index: number, matchLength: number, contextChars: number): string {
@@ -1016,107 +1198,436 @@ export class CommunicationPatternAnalyzer {
   }
 
   /**
-   * Analyze pronoun usage patterns (I vs You counts)
-   * Higher "you" counts may indicate blame-shifting or accusatory patterns
-   */
-  analyzePronounRatio(text: string): { iCount: number; youCount: number; ratio: number } {
+    * Analyze pronoun usage patterns (I vs You counts)
+    * Higher "you" counts may indicate blame-shifting or accusatory patterns
+    * Also analyzes "we" usage for collaborative vs controlling language
+    */
+  analyzePronounRatio(text: string): { iCount: number; youCount: number; ratio: string; weCount: number; iWeRatio: string } {
     const textLower = text.toLowerCase();
     const words = textLower.split(/\s+/);
     
-    const iCount = words.filter(w => w === 'i' || w === 'i\'m' || w === 'i\'ll' || w === 'i\'ve').length;
-    const youCount = words.filter(w => w === 'you' || w === 'you\'re' || w === 'you\'ll' || w === 'you\'ve').length;
+    const iCount = words.filter(w => w === 'i' || w === 'i\'m' || w === 'i\'ll' || w === 'i\'ve' || w === 'i\'d' || w === 'id' || w === 'im' || w === 'ill' || w === 'ive').length;
+    const youCount = words.filter(w => w === 'you' || w === 'you\'re' || w === 'you\'ll' || w === 'you\'ve' || w === 'you\'d' || w === 'your' || w === 'youve' || w === 'youre' || w === 'youll').length;
+    const weCount = words.filter(w => w === 'we' || w === 'we\'re' || w === 'we\'ll' || w === 'we\'ve' || w === 'we\'d' || w === 'weve' || w === 'were' || w === 'well' || w === 'wed').length;
     
-    const ratio = youCount > 0 ? iCount / youCount : iCount;
+    const ratio = youCount > 0 ? (iCount / youCount).toFixed(2) : iCount > 0 ? 'inf' : '0';
+    const iWeRatio = weCount > 0 ? (iCount / weCount).toFixed(2) : iCount > 0 ? 'inf' : '0';
     
-    return { iCount, youCount, ratio };
+    return { iCount, youCount, ratio, weCount, iWeRatio };
   }
 
   /**
-   * Analyze hedge words vs certainty markers
-   * Abusers often use certainty absolutes; victims may use more hedge words
-   */
-  analyzeHedgeVsCertainty(text: string): { hedgeCount: number; certaintyCount: number; ratio: number } {
+    * Analyze hedge words vs certainty markers
+    * Abusers often use certainty absolutes; victims may use more hedge words
+    * Returns detailed breakdown of which words were found
+    */
+  analyzeHedgeVsCertainty(text: string): { hedgeCount: number; certaintyCount: number; ratio: string; hedgeWords: string[]; certaintyWords: string[] } {
     const textLower = text.toLowerCase();
     
-    const hedgeWords = ['maybe', 'perhaps', 'possibly', 'might', 'could', 'i think', 'i guess', 'sort of', 'kind of', 'probably'];
-    const certaintyWords = ['always', 'never', 'nothing', 'everything', 'everyone', 'nobody', 'fact', 'obviously', 'clearly', 'literally'];
+    const hedgeWords = ['maybe', 'perhaps', 'possibly', 'might', 'could', 'i think', 'i guess', 'sort of', 'kind of', 'probably', 'i feel like', 'i suppose', 'im not sure', 'im not certain', 'im uncertain'];
+    const certaintyWords = ['always', 'never', 'nothing', 'everything', 'everyone', 'nobody', 'fact', 'obviously', 'clearly', 'literally', 'definitely', 'absolutely', 'certainly', 'without doubt', 'no doubt'];
     
     let hedgeCount = 0;
     let certaintyCount = 0;
+    const foundHedgeWords: string[] = [];
+    const foundCertaintyWords: string[] = [];
     
     for (const word of hedgeWords) {
-      const regex = new RegExp(`\\b${word}\\b`, 'gi');
+      const regex = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
       const matches = textLower.match(regex);
-      hedgeCount += matches ? matches.length : 0;
+      if (matches && matches.length > 0) {
+        hedgeCount += matches.length;
+        foundHedgeWords.push(`${word}:${matches.length}`);
+      }
     }
     
     for (const word of certaintyWords) {
-      const regex = new RegExp(`\\b${word}\\b`, 'gi');
+      const regex = new RegExp(`\\b${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
       const matches = textLower.match(regex);
-      certaintyCount += matches ? matches.length : 0;
+      if (matches && matches.length > 0) {
+        certaintyCount += matches.length;
+        foundCertaintyWords.push(`${word}:${matches.length}`);
+      }
     }
     
-    const ratio = certaintyCount > 0 ? hedgeCount / certaintyCount : hedgeCount;
+    const ratio = certaintyCount > 0 ? (hedgeCount / certaintyCount).toFixed(2) : hedgeCount > 0 ? 'inf' : '0';
     
-    return { hedgeCount, certaintyCount, ratio };
+    return { 
+      hedgeCount, 
+      certaintyCount, 
+      ratio, 
+      hedgeWords: foundHedgeWords,
+      certaintyWords: foundCertaintyWords
+    };
   }
 
   /**
-   * Analyze sentence length patterns
-   * Overelaboration often results in longer, more detailed sentences
-   */
-  analyzeSentenceLengths(text: string): { 
-    avgLength: number; 
-    maxLength: number; 
-    longSentenceCount: number;
-    sentences: number;
-  } {
-    // Split on sentence boundaries
+    * Analyze sentence length patterns
+    * Overelaboration often results in longer, more detailed sentences
+    * Returns overelaboration score based on sentence complexity
+    */
+  analyzeSentenceLength(text: string): { avgLength: number; maxLength: number; overelaborationScore: number; longSentenceCount: number } {
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
     
     if (sentences.length === 0) {
-      return { avgLength: 0, maxLength: 0, longSentenceCount: 0, sentences: 0 };
+      return { avgLength: 0, maxLength: 0, overelaborationScore: 0, longSentenceCount: 0 };
     }
     
     const lengths = sentences.map(s => s.trim().split(/\s+/).length);
     const avgLength = lengths.reduce((sum, len) => sum + len, 0) / lengths.length;
     const maxLength = Math.max(...lengths);
-    const longSentenceCount = lengths.filter(len => len > 30).length; // >30 words = potentially overelaborating
+    const longSentenceCount = lengths.filter(len => len > 30).length;
+    
+    const overelaborationScore = Math.min(100, Math.round(
+      (avgLength > 25 ? 40 : avgLength > 20 ? 30 : avgLength > 15 ? 20 : 10) +
+      (longSentenceCount > 2 ? 30 : longSentenceCount > 1 ? 20 : longSentenceCount > 0 ? 10 : 0) +
+      (maxLength > 50 ? 20 : maxLength > 40 ? 15 : maxLength > 30 ? 10 : 0)
+    ));
     
     return {
       avgLength: Math.round(avgLength * 10) / 10,
       maxLength,
-      longSentenceCount,
-      sentences: sentences.length
+      overelaborationScore,
+      longSentenceCount
     };
   }
 
   /**
-   * Enhanced analysis with linguistic markers
-   */
+    * Enhanced analysis with linguistic markers
+    * Provides comprehensive linguistic analysis alongside pattern matching
+    */
   async analyzeWithLinguistics(
     text: string,
     options: {
       moduleIds?: string[];
       includeContext?: boolean;
       contextChars?: number;
+      useDbPatterns?: boolean;
     } = {}
   ): Promise<AnalysisResult & {
-    linguistics: {
-      pronouns: ReturnType<typeof this.analyzePronounRatio>;
-      hedgeVsCertainty: ReturnType<typeof this.analyzeHedgeVsCertainty>;
-      sentenceLengths: ReturnType<typeof this.analyzeSentenceLengths>;
-    };
+    linguistics: LinguisticAnalysis;
   }> {
     const baseResult = await this.analyze(text, options);
+    const pronouns = this.analyzePronounRatio(text);
+    const hedgeVsCertainty = this.analyzeHedgeVsCertainty(text);
+    const sentenceLength = this.analyzeSentenceLength(text);
     
     return {
       ...baseResult,
       linguistics: {
-        pronouns: this.analyzePronounRatio(text),
-        hedgeVsCertainty: this.analyzeHedgeVsCertainty(text),
-        sentenceLengths: this.analyzeSentenceLengths(text)
+        pronouns,
+        hedgeVsCertainty,
+        sentenceLength
       }
+    };
+  }
+
+  /**
+    * DARVO Detection Module
+    * Detects Deny, Attack, Reverse Victim/Offender patterns using database patterns
+    */
+  async analyzeDarvo(text: string): Promise<PatternMatch[]> {
+    await this.loadDbPatterns();
+    const matches: PatternMatch[] = [];
+    const textLower = text.toLowerCase();
+
+    const darvoCategories = ['darvo_deny', 'darvo_attack', 'darvo_reverse'];
+    const severityMap: Record<string, number> = {
+      darvo_deny: 80,
+      darvo_attack: 90,
+      darvo_reverse: 100
+    };
+
+    for (const category of darvoCategories) {
+      const patterns = this.getDbPatternsByCategory(category);
+      
+      for (const pattern of patterns) {
+        const regex = new RegExp(pattern.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        let match;
+        
+        while ((match = regex.exec(text)) !== null) {
+          matches.push({
+            moduleId: 'darvo',
+            moduleName: 'DARVO Detection',
+            patternId: pattern.id,
+            patternName: pattern.name,
+            matchedText: match[0],
+            context: '',
+            confidence: 80 + (pattern.severity * 2),
+            severity: severityMap[category] || 90,
+            category: 'negative',
+            position: { start: match.index, end: match.index + match[0].length },
+            mclFactors: ['j', 'l'],
+            subcategory: category
+          });
+        }
+      }
+    }
+
+    return matches;
+  }
+
+  /**
+    * Overelaboration Detection Module
+    * Detects excessive detail about location, timing, and justifications
+    */
+  async analyzeOverelaboration(text: string): Promise<PatternMatch[]> {
+    await this.loadDbPatterns();
+    const matches: PatternMatch[] = [];
+    const textLower = text.toLowerCase();
+
+    const patterns = this.getDbPatternsByCategory('overelaboration');
+    
+    for (const pattern of patterns) {
+      const regex = new RegExp(pattern.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      let match;
+      
+      while ((match = regex.exec(text)) !== null) {
+        matches.push({
+          moduleId: 'overelaboration',
+          moduleName: 'Overelaboration Detection',
+          patternId: pattern.id,
+          patternName: pattern.name,
+          matchedText: match[0],
+          context: '',
+          confidence: 70 + (pattern.severity * 2),
+          severity: pattern.severity * 8,
+          category: 'negative',
+          position: { start: match.index, end: match.index + match[0].length },
+          mclFactors: ['l'],
+          subcategory: 'overelaboration'
+        });
+      }
+    }
+
+    return matches;
+  }
+
+  /**
+    * Medical Abuse Detection Module
+    * Detects weaponization of medication, diagnoses, and mental health status
+    */
+  async analyzeMedicalAbuse(text: string): Promise<PatternMatch[]> {
+    await this.loadDbPatterns();
+    const matches: PatternMatch[] = [];
+
+    const patterns = this.getDbPatternsByCategory('medical_abuse');
+    
+    for (const pattern of patterns) {
+      const regex = new RegExp(pattern.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      let match;
+      
+      while ((match = regex.exec(text)) !== null) {
+        matches.push({
+          moduleId: 'medical_abuse',
+          moduleName: 'Medical Abuse Detection',
+          patternId: pattern.id,
+          patternName: pattern.name,
+          matchedText: match[0],
+          context: '',
+          confidence: 85 + (pattern.severity * 2),
+          severity: pattern.severity * 10,
+          category: 'negative',
+          position: { start: match.index, end: match.index + match[0].length },
+          mclFactors: ['f', 'j'],
+          subcategory: 'medical_abuse'
+        });
+      }
+    }
+
+    return matches;
+  }
+
+  /**
+    * Reproductive Coercion Detection Module
+    * Detects attempts to control reproductive choices and pregnancy manipulation
+    */
+  async analyzeReproductiveCoercion(text: string): Promise<PatternMatch[]> {
+    await this.loadDbPatterns();
+    const matches: PatternMatch[] = [];
+
+    const patterns = this.getDbPatternsByCategory('reproductive_coercion');
+    
+    for (const pattern of patterns) {
+      const regex = new RegExp(pattern.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      let match;
+      
+      while ((match = regex.exec(text)) !== null) {
+        matches.push({
+          moduleId: 'reproductive_coercion',
+          moduleName: 'Reproductive Coercion Detection',
+          patternId: pattern.id,
+          patternName: pattern.name,
+          matchedText: match[0],
+          context: '',
+          confidence: 90 + (pattern.severity * 2),
+          severity: pattern.severity * 10,
+          category: 'negative',
+          position: { start: match.index, end: match.index + match[0].length },
+          mclFactors: ['j', 'l'],
+          subcategory: 'reproductive_coercion'
+        });
+      }
+    }
+
+    return matches;
+  }
+
+  /**
+    * Power Asymmetry Detection Module
+    * Detects power dynamics through victim deference vs abuser directives
+    */
+  async analyzePowerAsymmetry(text: string): Promise<{ deferenceMatches: PatternMatch[]; directiveMatches: PatternMatch[] }> {
+    await this.loadDbPatterns();
+    const deferenceMatches: PatternMatch[] = [];
+    const directiveMatches: PatternMatch[] = [];
+
+    const deferencePatterns = this.getDbPatternsByCategory('victim_deference');
+    const directivePatterns = this.getDbPatternsByCategory('abuser_directives');
+
+    for (const pattern of deferencePatterns) {
+      const regex = new RegExp(pattern.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      let match;
+      
+      while ((match = regex.exec(text)) !== null) {
+        deferenceMatches.push({
+          moduleId: 'power_asymmetry',
+          moduleName: 'Power Asymmetry - Victim Deference',
+          patternId: pattern.id,
+          patternName: pattern.name,
+          matchedText: match[0],
+          context: '',
+          confidence: 70 + (pattern.severity * 2),
+          severity: pattern.severity * 6,
+          category: 'neutral',
+          position: { start: match.index, end: match.index + match[0].length },
+          mclFactors: ['j', 'l'],
+          subcategory: 'victim_deference'
+        });
+      }
+    }
+
+    for (const pattern of directivePatterns) {
+      const regex = new RegExp(pattern.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      let match;
+      
+      while ((match = regex.exec(text)) !== null) {
+        directiveMatches.push({
+          moduleId: 'power_asymmetry',
+          moduleName: 'Power Asymmetry - Abuser Directives',
+          patternId: pattern.id,
+          patternName: pattern.name,
+          matchedText: match[0],
+          context: '',
+          confidence: 75 + (pattern.severity * 2),
+          severity: pattern.severity * 8,
+          category: 'negative',
+          position: { start: match.index, end: match.index + match[0].length },
+          mclFactors: ['j', 'l'],
+          subcategory: 'abuser_directives'
+        });
+      }
+    }
+
+    return { deferenceMatches, directiveMatches };
+  }
+
+  /**
+    * Statistical Markers Analysis
+    * Analyzes certainty absolutes and hedge words for linguistic patterns
+    */
+  analyzeStatisticalMarkers(text: string): { absolutes: PatternMatch[]; hedges: PatternMatch[] } {
+    const absolutes: PatternMatch[] = [];
+    const hedges: PatternMatch[] = [];
+
+    const absolutePatterns = this.getDbPatternsByCategory('certainty_absolutes');
+    const hedgePatterns = this.getDbPatternsByCategory('hedge_words');
+
+    for (const pattern of absolutePatterns) {
+      const regex = new RegExp(pattern.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      let match;
+      
+      while ((match = regex.exec(text)) !== null) {
+        absolutes.push({
+          moduleId: 'statistical_markers',
+          moduleName: 'Certainty Absolutes',
+          patternId: pattern.id,
+          patternName: pattern.name,
+          matchedText: match[0],
+          context: '',
+          confidence: 70,
+          severity: pattern.severity * 5,
+          category: 'neutral',
+          position: { start: match.index, end: match.index + match[0].length },
+          mclFactors: [],
+          subcategory: 'certainty_absolutes'
+        });
+      }
+    }
+
+    for (const pattern of hedgePatterns) {
+      const regex = new RegExp(pattern.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      let match;
+      
+      while ((match = regex.exec(text)) !== null) {
+        hedges.push({
+          moduleId: 'statistical_markers',
+          moduleName: 'Hedge Words',
+          patternId: pattern.id,
+          patternName: pattern.name,
+          matchedText: match[0],
+          context: '',
+          confidence: 70,
+          severity: pattern.severity * 5,
+          category: 'neutral',
+          position: { start: match.index, end: match.index + match[0].length },
+          mclFactors: [],
+          subcategory: 'hedge_words'
+        });
+      }
+    }
+
+    return { absolutes, hedges };
+  }
+
+  /**
+    * Run complete forensic analysis with all modules
+    */
+  async fullAnalysis(
+    text: string,
+    options: {
+      includeContext?: boolean;
+      contextChars?: number;
+    } = {}
+  ): Promise<{
+    baseResult: AnalysisResult;
+    darvoMatches: PatternMatch[];
+    overelaborationMatches: PatternMatch[];
+    medicalAbuseMatches: PatternMatch[];
+    reproductiveCoercionMatches: PatternMatch[];
+    powerAsymmetry: { deferenceMatches: PatternMatch[]; directiveMatches: PatternMatch[] };
+    statisticalMarkers: { absolutes: PatternMatch[]; hedges: PatternMatch[] };
+    linguistics: LinguisticAnalysis;
+  }> {
+    const baseResult = await this.analyzeWithLinguistics(text, options);
+    const [darvoMatches, overelaborationMatches, medicalAbuseMatches, reproductiveCoercionMatches] = await Promise.all([
+      this.analyzeDarvo(text),
+      this.analyzeOverelaboration(text),
+      this.analyzeMedicalAbuse(text),
+      this.analyzeReproductiveCoercion(text)
+    ]);
+    const powerAsymmetry = await this.analyzePowerAsymmetry(text);
+    const statisticalMarkers = this.analyzeStatisticalMarkers(text);
+
+    return {
+      baseResult,
+      darvoMatches,
+      overelaborationMatches,
+      medicalAbuseMatches,
+      reproductiveCoercionMatches,
+      powerAsymmetry,
+      statisticalMarkers,
+      linguistics: baseResult.linguistics
     };
   }
 
