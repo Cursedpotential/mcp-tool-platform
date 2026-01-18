@@ -5,7 +5,7 @@
  */
 
 import { randomBytes, createHash } from 'crypto';
-import { getDb } from '../../db';
+import { getDb } from '../../core/db';
 import { apiKeys, apiKeyUsageLogs, type ApiKey, type InsertApiKey } from '../../../drizzle/schema';
 import { eq, and, desc } from 'drizzle-orm';
 

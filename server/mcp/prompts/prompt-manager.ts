@@ -5,7 +5,7 @@
  * with versioning, A/B testing, and performance tracking.
  */
 
-import { getDb } from '../../db';
+import { getDb } from '../../core/db';
 import { systemPrompts, workflowTemplates, type SystemPrompt, type InsertSystemPrompt, type WorkflowTemplate, type InsertWorkflowTemplate } from '../../../drizzle/schema';
 import { eq, and, desc, like } from 'drizzle-orm';
 

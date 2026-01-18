@@ -3,7 +3,7 @@ import { z } from "zod";
 import { protectedProcedure, router } from "../../core/trpc";
 import { getDb } from "../../core/db";
 import { behavioralPatterns, patternCategories } from "../../../drizzle/schema";
-import { eq, and, or, isNull, like, count, gt } from "drizzle-orm";
+import { eq, and, or, isNull, like, count, gt, lte } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 export const patternsRouter = router({
@@ -24,16 +24,22 @@ export const patternsRouter = router({
     )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Database not available'
+        });
+      }
 
-      const whereClauses = and(
+      const conditions = [
         or(
           eq(behavioralPatterns.userId, ctx.user.id),
           isNull(behavioralPatterns.userId)
         )
-      );
+      ];
 
       if (input.search) {
-        whereClauses._and.push(
+        conditions.push(
           or(
             like(behavioralPatterns.name, `%${input.search}%`),
             like(behavioralPatterns.description, `%${input.search}%`)
@@ -42,16 +48,18 @@ export const patternsRouter = router({
       }
 
       if (input.category) {
-        whereClauses._and.push(eq(behavioralPatterns.category, input.category));
+        conditions.push(eq(behavioralPatterns.category, input.category));
       }
 
       if (input.severityMin !== undefined) {
-        whereClauses._and.push(gt(behavioralPatterns.severity, input.severityMin - 1));
+        conditions.push(gt(behavioralPatterns.severity, input.severityMin - 1));
       }
 
       if (input.severityMax !== undefined) {
-        whereClauses._and.push(gt(11, input.severityMax)); // Effectively less than or equal to
+        conditions.push(lte(behavioralPatterns.severity, input.severityMax));
       }
+
+      const whereClauses = and(...conditions);
 
       const patterns = await db.select()
         .from(behavioralPatterns)
@@ -75,6 +83,12 @@ export const patternsRouter = router({
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Database not available'
+        });
+      }
 
       const pattern = await db.select()
         .from(behavioralPatterns)
@@ -114,8 +128,14 @@ export const patternsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Database not available'
+        });
+      }
 
-      const [newPattern] = await db.insert(behavioralPatterns)
+      const result = await db.insert(behavioralPatterns)
         .values({
           userId: ctx.user.id,
           name: input.name,
@@ -127,10 +147,13 @@ export const patternsRouter = router({
           examples: JSON.stringify(input.examples || []),
           isCustom: 'true',
           isActive: 'true',
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .returning();
+        });
+
+      const insertId = Number((result as any).insertId);
+      const [newPattern] = await db.select()
+        .from(behavioralPatterns)
+        .where(eq(behavioralPatterns.id, insertId))
+        .limit(1);
 
       return newPattern;
     }),
@@ -151,6 +174,12 @@ export const patternsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Database not available'
+        });
+      }
 
       const existingPattern = await db.select()
         .from(behavioralPatterns)
@@ -189,8 +218,7 @@ export const patternsRouter = router({
         mclFactors?: string;
         examples?: string;
         isActive?: 'true' | 'false';
-        updatedAt: Date;
-      } = { updatedAt: new Date() };
+      } = {};
 
       if (input.name !== undefined) {
         updateValues.name = input.name;
@@ -217,10 +245,14 @@ export const patternsRouter = router({
         updateValues.isActive = input.isActive ? 'true' : 'false';
       }
 
-      const [updated] = await db.update(behavioralPatterns)
+      await db.update(behavioralPatterns)
         .set(updateValues)
+        .where(eq(behavioralPatterns.id, input.id));
+
+      const [updated] = await db.select()
+        .from(behavioralPatterns)
         .where(eq(behavioralPatterns.id, input.id))
-        .returning();
+        .limit(1);
 
       return updated;
     }),
@@ -229,6 +261,12 @@ export const patternsRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Database not available'
+        });
+      }
 
       const existingPattern = await db.select()
         .from(behavioralPatterns)
@@ -317,6 +355,13 @@ export const patternsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Database not available'
+        });
+      }
+
       let imported = 0;
       let skipped = 0;
       const errors: string[] = [];
@@ -342,7 +387,6 @@ export const patternsRouter = router({
                   severity: patternData.severity,
                   mclFactors: JSON.stringify(patternData.mclFactors || []),
                   examples: JSON.stringify(patternData.examples || []),
-                  updatedAt: new Date(),
                 })
                 .where(eq(behavioralPatterns.id, existing.id));
               imported++;
@@ -367,8 +411,6 @@ export const patternsRouter = router({
                   examples: JSON.stringify(patternData.examples || []),
                   isCustom: 'true',
                   isActive: 'true',
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
                 });
               imported++;
             }
@@ -385,8 +427,6 @@ export const patternsRouter = router({
                 examples: JSON.stringify(patternData.examples || []),
                 isCustom: 'true',
                 isActive: 'true',
-                createdAt: new Date(),
-                updatedAt: new Date(),
               });
             imported++;
           }
@@ -407,6 +447,12 @@ export const patternsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Database not available'
+        });
+      }
 
       const whereClauses = input.includeBuiltIn
         ? or(eq(behavioralPatterns.userId, ctx.user.id), isNull(behavioralPatterns.userId))
@@ -437,6 +483,12 @@ export const patternsRouter = router({
 
   getStats: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Database not available'
+      });
+    }
 
     const totalPatterns = await db.select({ count: count() }).from(behavioralPatterns);
     const customPatterns = await db.select({ count: count() }).from(behavioralPatterns).where(eq(behavioralPatterns.userId, ctx.user.id));
@@ -465,6 +517,12 @@ export const patternsRouter = router({
 
   getCategories: protectedProcedure.query(async ({ ctx }) => {
     const db = await getDb();
+    if (!db) {
+      throw new TRPCError({
+        code: 'INTERNAL_SERVER_ERROR',
+        message: 'Database not available'
+      });
+    }
 
     const categories = await db.select({
       id: patternCategories.id,
@@ -494,18 +552,27 @@ export const patternsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Database not available'
+        });
+      }
 
-      const [newCategory] = await db.insert(patternCategories)
+      const result = await db.insert(patternCategories)
         .values({
           name: input.name,
           description: input.description,
           color: input.color,
           icon: input.icon,
           defaultSeverity: input.defaultSeverity,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .returning();
+        });
+
+      const insertId = Number((result as any).insertId);
+      const [newCategory] = await db.select()
+        .from(patternCategories)
+        .where(eq(patternCategories.id, insertId))
+        .limit(1);
 
       return newCategory;
     }),
@@ -524,6 +591,12 @@ export const patternsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Database not available'
+        });
+      }
 
       const updateValues: {
         name?: string;
@@ -531,8 +604,7 @@ export const patternsRouter = router({
         color?: string;
         icon?: string;
         defaultSeverity?: number;
-        updatedAt: Date;
-      } = { updatedAt: new Date() };
+      } = {};
 
       if (input.name !== undefined) {
         updateValues.name = input.name;
@@ -550,10 +622,14 @@ export const patternsRouter = router({
         updateValues.defaultSeverity = input.defaultSeverity;
       }
 
-      const [updatedCategory] = await db.update(patternCategories)
+      await db.update(patternCategories)
         .set(updateValues)
+        .where(eq(patternCategories.id, input.id));
+
+      const [updatedCategory] = await db.select()
+        .from(patternCategories)
         .where(eq(patternCategories.id, input.id))
-        .returning();
+        .limit(1);
 
       return updatedCategory;
     }),
@@ -562,6 +638,12 @@ export const patternsRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
+      if (!db) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Database not available'
+        });
+      }
 
       const patternCount = await db.select({ count: count() })
         .from(behavioralPatterns)

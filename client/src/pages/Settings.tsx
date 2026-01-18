@@ -588,7 +588,7 @@ export default function Settings() {
                     <Label htmlFor="colab-sa">Service account JSON (optional)</Label>
                     <Input
                       id="colab-sa"
-                      placeholder="{ \"type\": \"service_account\", ... }"
+                      placeholder='{ "type": "service_account", ... }'
                       value={colabConfig.serviceAccountJson}
                       onChange={(e) => setColabConfig({ ...colabConfig, serviceAccountJson: e.target.value })}
                     />

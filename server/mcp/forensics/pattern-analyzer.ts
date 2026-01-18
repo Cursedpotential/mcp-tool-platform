@@ -9,7 +9,7 @@
  * Tracking positive statements allows detection of contradictions and reversals.
  */
 
-import { getDb } from '../../db';
+import { getDb } from '../../core/db';
 import { behavioralPatterns, patternCategories, forensicResults, mclFactors } from '../../../drizzle/schema';
 import { eq, and, inArray } from 'drizzle-orm';
 

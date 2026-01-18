@@ -7,7 +7,7 @@
  * Source: https://github.com/valeriobasile/hurtlex
  */
 
-import { getDb } from '../../db';
+import { getDb } from '../../core/db';
 import { hurtlexTerms, hurtlexSyncStatus, hurtlexCategories } from '../../../drizzle/schema';
 import { eq, and } from 'drizzle-orm';
 

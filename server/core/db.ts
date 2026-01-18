@@ -1,7 +1,7 @@
 // File: server/core/db.ts | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../drizzle/schema";
+import { InsertUser, users } from "../../drizzle/schema";
 import { ENV } from './env';
 
 

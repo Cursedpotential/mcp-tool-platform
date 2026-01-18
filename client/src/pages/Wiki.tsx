@@ -49,7 +49,7 @@ export default function Wiki() {
                     Search Results ({searchResults.length})
                   </h3>
                   <div className="space-y-1">
-                    {searchResults.map((page) => (
+                    {searchResults.map((page: any) => (
                       <Button
                         key={page.slug}
                         variant={selectedSlug === page.slug ? "secondary" : "ghost"}
@@ -71,14 +71,14 @@ export default function Wiki() {
                   </div>
                 </div>
               ) : (
-                categories?.map((category) => (
+                categories?.map((category: any) => (
                   <div key={category.name}>
                     <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
                       <Book className="h-4 w-4" />
                       {category.name}
                     </h3>
                     <div className="space-y-1 ml-6">
-                      {category.pages.map((slug) => (
+                      {category.pages.map((slug: any) => (
                         <Button
                           key={slug}
                           variant={selectedSlug === slug ? "secondary" : "ghost"}
@@ -87,7 +87,7 @@ export default function Wiki() {
                           onClick={() => setSelectedSlug(slug)}
                         >
                           <ChevronRight className="h-3 w-3 mr-1" />
-                          {slug.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                          {slug.replace(/-/g, " ").replace(/\b\w/g, (l: any) => l.toUpperCase())}
                         </Button>
                       ))}
                     </div>
@@ -120,7 +120,7 @@ export default function Wiki() {
 
               {/* Tags */}
               <div className="flex gap-2 mb-4">
-                {currentPage.tags.map((tag) => (
+                {currentPage.tags.map((tag: any) => (
                   <Badge key={tag} variant="secondary">
                     {tag}
                   </Badge>

@@ -21,7 +21,7 @@ import {
   rotateApiKey,
   logApiKeyUsage,
   type ApiKeyPermission,
-} from "./mcp/auth/api-keys";
+} from "../mcp/auth/api-keys";
 import {
   createPrompt,
   listPrompts,
@@ -35,16 +35,16 @@ import {
   updateWorkflow,
   deleteWorkflow,
   getDefaultPrompt,
-} from "./mcp/prompts/prompt-manager";
+} from "../mcp/prompts/prompt-manager";
 import {
   getWikiCategories,
   getWikiPage,
   getPagesByCategory,
   searchWiki,
   getAllWikiPages,
-} from "./mcp/wiki/wiki-content";
-import { getMCPConfigGenerator, type Platform } from "./mcp/config/mcp-generator";
-import { forensicsRouter } from "./mcp/forensics/forensics-router";
+} from "../mcp/wiki/wiki-content";
+import { getMCPConfigGenerator, type Platform } from "../mcp/config/mcp-generator";
+import { forensicsRouter } from "../mcp/forensics/forensics-router";
 
 // ============================================================================
 // Config Router - Manage definitions, patterns, dictionaries

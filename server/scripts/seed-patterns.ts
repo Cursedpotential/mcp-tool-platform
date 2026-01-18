@@ -5,7 +5,7 @@
  * MCL linking and detailed analysis happens in meta-analysis phase.
  */
 
-import { getDb } from '../db';
+import { getDb } from '../core/db';
 import { behavioralPatterns } from '../../drizzle/schema';
 
 interface PatternSeed {

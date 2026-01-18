@@ -11,7 +11,7 @@
  * - Conflict resolution: Handle duplicate patterns across lexicons
  */
 
-import { getDb } from '../../db';
+import { getDb } from '../../core/db';
 import { behavioralPatterns } from '../../../drizzle/schema';
 
 export interface LexiconConfig {
