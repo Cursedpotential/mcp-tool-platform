@@ -1,95 +1,89 @@
-// File: server/core/db.ts | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
-import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
-import { InsertUser, users } from "../../drizzle/schema";
-import { ENV } from './env';
+// File: server/core/db.ts | Date: 2026-01-18 | SQL.js for local development
+import initSqlJs, { Database } from 'sql.js';
+import { resolve, dirname } from 'path';
+import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 
+const DB_PATH = resolve(process.env.DATA_ROOT || './data', 'salem.db');
 
-let _db: ReturnType<typeof drizzle> | null = null;
+let _db: Database | null = null;
+let _SQL: any = null;
 
-// Lazily create the drizzle instance so local tooling can run without a DB.
+// Lazily create the database instance
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  if (!_db) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      // Ensure data directory exists
+      const dataDir = dirname(DB_PATH);
+      if (!existsSync(dataDir)) {
+        mkdirSync(dataDir, { recursive: true });
+      }
+
+      // Initialize sql.js
+      if (!_SQL) {
+        _SQL = await initSqlJs();
+      }
+
+      // Load existing database or create new one
+      if (existsSync(DB_PATH)) {
+        const fileBuffer = readFileSync(DB_PATH);
+        _db = new _SQL.Database(fileBuffer);
+        console.log(`[Database] Loaded existing SQLite: ${DB_PATH}`);
+      } else {
+        _db = new _SQL.Database();
+        console.log(`[Database] Created new SQLite: ${DB_PATH}`);
+      }
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.warn('[Database] Failed to connect:', error);
       _db = null;
     }
   }
   return _db;
 }
 
-export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
-
-  try {
-    const values: InsertUser = {
-      openId: user.openId,
-    };
-    const updateSet: Record<string, unknown> = {};
-
-    const textFields = ["name", "email", "loginMethod"] as const;
-    type TextField = (typeof textFields)[number];
-
-    const assignNullable = (field: TextField) => {
-      const value = user[field];
-      if (value === undefined) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-
-    textFields.forEach(assignNullable);
-
-    if (user.lastSignedIn !== undefined) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== undefined) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = 'admin';
-      updateSet.role = 'admin';
-    }
-
-    const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = nowStr;
-    }
-
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = nowStr;
-    }
-
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
-      set: updateSet,
-    });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
+// Save database to file
+export async function saveDb() {
+  if (_db) {
+    const data = _db.export();
+    const buffer = Buffer.from(data);
+    writeFileSync(DB_PATH, buffer);
+    console.log(`[Database] Saved to ${DB_PATH}`);
   }
 }
 
-export async function getUserByOpenId(openId: string) {
+// Execute a query and return results
+export async function query(sql: string, params: any[] = []): Promise<any[]> {
   const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return undefined;
+  if (!db) throw new Error('Database not available');
+
+  const stmt = db.prepare(sql);
+  if (params.length > 0) {
+    stmt.bind(params);
   }
 
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-
-  return result.length > 0 ? result[0] : undefined;
+  const results: any[] = [];
+  while (stmt.step()) {
+    results.push(stmt.getAsObject());
+  }
+  stmt.free();
+  return results;
 }
 
-// TODO: add feature queries here as your schema grows.
+// Execute without returning results
+export async function run(sql: string, params: any[] = []): Promise<void> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  db.run(sql, params);
+  await saveDb();
+}
+
+// Insert and return last rowid
+export async function insert(sql: string, params: any[] = []): Promise<number> {
+  const db = await getDb();
+  if (!db) throw new Error('Database not available');
+  db.run(sql, params);
+  await saveDb();
+  
+  // Get last insert id
+  const result = await query('SELECT last_insert_rowid() as id');
+  return result[0]?.id || 0;
+}

@@ -176,6 +176,56 @@ export const BUILT_IN_MODULES: AnalysisModule[] = [
     weight: 75,
     mclFactors: ['j', 'l']
   },
+  {
+    id: 'darvo',
+    name: 'DARVO (Deny, Attack, Reverse Victim/Offender)',
+    description: 'Detects the three-stage pattern of denying wrongdoing, attacking the accuser, and reversing victim/offender roles',
+    category: 'negative',
+    subcategory: 'manipulation',
+    enabled: true,
+    weight: 95,
+    mclFactors: ['j', 'l']
+  },
+  {
+    id: 'overelaboration',
+    name: 'Overelaboration',
+    description: 'Detects excessive detail about location, timing, and justifications that may indicate deception',
+    category: 'negative',
+    subcategory: 'deception',
+    enabled: true,
+    weight: 70,
+    mclFactors: ['l']
+  },
+  {
+    id: 'medical_abuse',
+    name: 'Medical Abuse',
+    description: 'Identifies weaponization of medication, diagnoses, and mental health status for control',
+    category: 'negative',
+    subcategory: 'control',
+    enabled: true,
+    weight: 95,
+    mclFactors: ['f', 'j']
+  },
+  {
+    id: 'reproductive_coercion',
+    name: 'Reproductive Coercion',
+    description: 'Detects attempts to control reproductive choices, pregnancy as trap, contraception interference',
+    category: 'negative',
+    subcategory: 'control',
+    enabled: true,
+    weight: 100,
+    mclFactors: ['j', 'l']
+  },
+  {
+    id: 'power_asymmetry',
+    name: 'Power Asymmetry',
+    description: 'Tracks power dynamics through victim deference vs abuser directives',
+    category: 'neutral',
+    subcategory: 'dynamics',
+    enabled: true,
+    weight: 60,
+    mclFactors: ['j', 'l']
+  },
 
   // POSITIVE PATTERNS - Love Bombing & Affection
   {
@@ -517,6 +567,152 @@ export const BUILT_IN_PATTERNS: Record<string, { patterns: string[]; examples: s
       'You\'re so controlling, you never let me do anything.',
       'You\'re the narcissist here, not me.'
     ]
+  },
+  darvo: {
+    patterns: [
+      // Deny
+      'i never',
+      'i didn\'t',
+      'that never happened',
+      'that\'s not true',
+      'you\'re making that up',
+      'i would never',
+      'that\'s a lie',
+      // Attack
+      'you\'re crazy',
+      'you\'re lying',
+      'you\'re the abusive one',
+      'you\'re manipulating',
+      'you\'re gaslighting me',
+      'you\'re toxic',
+      'you\'re the problem',
+      'you\'re unstable',
+      'you\'re delusional',
+      // Reverse
+      'i\'m the victim here',
+      'you\'re attacking me',
+      'you\'re abusing me',
+      'i\'m the one being hurt',
+      'you\'re hurting me',
+      'i\'m scared of you',
+      'you\'re the aggressor',
+      'i need protection from you'
+    ],
+    examples: [
+      'I never said that, you\'re crazy for thinking I did.',
+      'That\'s not true, you\'re the one who\'s abusive here.',
+      'I\'m the victim, you\'re attacking me right now.'
+    ]
+  },
+  overelaboration: {
+    patterns: [
+      // Location reporting
+      'i\'m at',
+      'i\'m still at',
+      'i\'m heading to',
+      'i\'ll be at',
+      'i\'m on my way to',
+      'i just left',
+      'i just arrived at',
+      'i left at',
+      'i\'ll be back by',
+      'i\'ve been here since',
+      'i\'ll be done in',
+      // Justification
+      'i\'m doing this because',
+      'i had to',
+      'i needed to',
+      'the reason is',
+      'i\'m just',
+      'i was just',
+      // Pre-emptive
+      'before you ask',
+      'i know you\'re wondering',
+      'just so you know',
+      'for the record',
+      'to be clear'
+    ],
+    examples: [
+      'I\'m at the store, I left at 2:15pm and I\'ll be back by 3:30pm.',
+      'Before you ask, I\'m doing this because I needed to pick up groceries.',
+      'Just so you know, I\'ve been here since noon, for the record.'
+    ]
+  },
+  medical_abuse: {
+    patterns: [
+      'you need your meds',
+      'did you take your pills',
+      'you\'re not thinking clearly',
+      'it\'s the medication talking',
+      'you can\'t make decisions',
+      'you\'re not well enough',
+      'i\'m holding your meds',
+      'you can\'t be trusted with',
+      'you\'re bipolar',
+      'you\'re borderline',
+      'you\'re schizophrenic',
+      'that\'s your condition talking',
+      'you\'re having an episode',
+      'you need to be hospitalized',
+      'you\'re unstable'
+    ],
+    examples: [
+      'Did you take your pills? You\'re not thinking clearly.',
+      'I\'m holding your meds because you can\'t be trusted.',
+      'You\'re having an episode, you need to be hospitalized.'
+    ]
+  },
+  reproductive_coercion: {
+    patterns: [
+      'i want you pregnant',
+      'you should get pregnant',
+      'stop taking birth control',
+      'i\'ll get you pregnant',
+      'you can\'t leave if you\'re pregnant',
+      'a baby will fix us',
+      'you owe me a child',
+      'i sabotaged your birth control',
+      'i\'ll take the baby',
+      'you\'ll never see the baby',
+      'i\'ll prove you\'re unfit',
+      'you\'re a bad mother',
+      'the baby doesn\'t need you'
+    ],
+    examples: [
+      'You should get pregnant, a baby will fix our relationship.',
+      'You can\'t leave if you\'re pregnant.',
+      'I\'ll prove you\'re an unfit mother and take the baby.'
+    ]
+  },
+  power_asymmetry: {
+    patterns: [
+      // Victim deference
+      'if that\'s okay',
+      'if you don\'t mind',
+      'is that alright',
+      'sorry',
+      'my bad',
+      'i didn\'t mean to',
+      'i apologize',
+      'i hope that\'s fine',
+      'let me know if',
+      // Abuser directives
+      'where are you',
+      'what are you doing',
+      'who are you with',
+      'come here',
+      'go there',
+      'do this',
+      'stop that',
+      'tell me',
+      'show me',
+      'prove it'
+    ],
+    examples: [
+      'Sorry, is that alright? I didn\'t mean to upset you.',
+      'Where are you? Who are you with? Tell me now.',
+      'Come here. Show me your phone. Prove it.'
+    ]
   }
 };
 
@@ -817,6 +1013,111 @@ export class CommunicationPatternAnalyzer {
       hash = hash & hash;
     }
     return `doc_${Math.abs(hash).toString(16)}_${Date.now().toString(36)}`;
+  }
+
+  /**
+   * Analyze pronoun usage patterns (I vs You counts)
+   * Higher "you" counts may indicate blame-shifting or accusatory patterns
+   */
+  analyzePronounRatio(text: string): { iCount: number; youCount: number; ratio: number } {
+    const textLower = text.toLowerCase();
+    const words = textLower.split(/\s+/);
+    
+    const iCount = words.filter(w => w === 'i' || w === 'i\'m' || w === 'i\'ll' || w === 'i\'ve').length;
+    const youCount = words.filter(w => w === 'you' || w === 'you\'re' || w === 'you\'ll' || w === 'you\'ve').length;
+    
+    const ratio = youCount > 0 ? iCount / youCount : iCount;
+    
+    return { iCount, youCount, ratio };
+  }
+
+  /**
+   * Analyze hedge words vs certainty markers
+   * Abusers often use certainty absolutes; victims may use more hedge words
+   */
+  analyzeHedgeVsCertainty(text: string): { hedgeCount: number; certaintyCount: number; ratio: number } {
+    const textLower = text.toLowerCase();
+    
+    const hedgeWords = ['maybe', 'perhaps', 'possibly', 'might', 'could', 'i think', 'i guess', 'sort of', 'kind of', 'probably'];
+    const certaintyWords = ['always', 'never', 'nothing', 'everything', 'everyone', 'nobody', 'fact', 'obviously', 'clearly', 'literally'];
+    
+    let hedgeCount = 0;
+    let certaintyCount = 0;
+    
+    for (const word of hedgeWords) {
+      const regex = new RegExp(`\\b${word}\\b`, 'gi');
+      const matches = textLower.match(regex);
+      hedgeCount += matches ? matches.length : 0;
+    }
+    
+    for (const word of certaintyWords) {
+      const regex = new RegExp(`\\b${word}\\b`, 'gi');
+      const matches = textLower.match(regex);
+      certaintyCount += matches ? matches.length : 0;
+    }
+    
+    const ratio = certaintyCount > 0 ? hedgeCount / certaintyCount : hedgeCount;
+    
+    return { hedgeCount, certaintyCount, ratio };
+  }
+
+  /**
+   * Analyze sentence length patterns
+   * Overelaboration often results in longer, more detailed sentences
+   */
+  analyzeSentenceLengths(text: string): { 
+    avgLength: number; 
+    maxLength: number; 
+    longSentenceCount: number;
+    sentences: number;
+  } {
+    // Split on sentence boundaries
+    const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    
+    if (sentences.length === 0) {
+      return { avgLength: 0, maxLength: 0, longSentenceCount: 0, sentences: 0 };
+    }
+    
+    const lengths = sentences.map(s => s.trim().split(/\s+/).length);
+    const avgLength = lengths.reduce((sum, len) => sum + len, 0) / lengths.length;
+    const maxLength = Math.max(...lengths);
+    const longSentenceCount = lengths.filter(len => len > 30).length; // >30 words = potentially overelaborating
+    
+    return {
+      avgLength: Math.round(avgLength * 10) / 10,
+      maxLength,
+      longSentenceCount,
+      sentences: sentences.length
+    };
+  }
+
+  /**
+   * Enhanced analysis with linguistic markers
+   */
+  async analyzeWithLinguistics(
+    text: string,
+    options: {
+      moduleIds?: string[];
+      includeContext?: boolean;
+      contextChars?: number;
+    } = {}
+  ): Promise<AnalysisResult & {
+    linguistics: {
+      pronouns: ReturnType<typeof this.analyzePronounRatio>;
+      hedgeVsCertainty: ReturnType<typeof this.analyzeHedgeVsCertainty>;
+      sentenceLengths: ReturnType<typeof this.analyzeSentenceLengths>;
+    };
+  }> {
+    const baseResult = await this.analyze(text, options);
+    
+    return {
+      ...baseResult,
+      linguistics: {
+        pronouns: this.analyzePronounRatio(text),
+        hedgeVsCertainty: this.analyzeHedgeVsCertainty(text),
+        sentenceLengths: this.analyzeSentenceLengths(text)
+      }
+    };
   }
 
   /**

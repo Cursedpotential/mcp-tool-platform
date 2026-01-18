@@ -1,12 +1,22 @@
 /**
- * Seed Script: Import Expanded Pattern Library
+ * Seed Script: Import Expanded Pattern Library (SQL.js version)
  * 
  * Surface-level pattern matching for preliminary analysis.
  * MCL linking and detailed analysis happens in meta-analysis phase.
  */
 
-import { getDb } from '../core/db';
-import { behavioralPatterns } from '../../drizzle/schema';
+import * as dotenv from 'dotenv';
+import { resolve, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { getDb, run, query } from '../core/db';
+
+// ES module __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Load environment variables
+dotenv.config({ path: resolve(__dirname, '../../.env') });
+dotenv.config({ path: resolve(__dirname, '../../.env.local') });
 
 interface PatternSeed {
   name: string;
@@ -200,11 +210,6 @@ const patterns: PatternSeed[] = [
   { name: 'Adderall: Holding For You', category: 'adderall_control', pattern: "i'm holding onto them for you", description: 'Medication control', severity: 9 },
   { name: 'Adderall: Can\'t Control', category: 'adderall_control', pattern: "you can't control yourself", description: 'Control justification', severity: 9 },
 
-  // Infidelity - Places
-  { name: 'Infidelity Place: Huckleberry', category: 'infidelity_places', pattern: 'huckleberry junction', description: 'Specific location', severity: 0 },
-  { name: 'Infidelity Place: Hucks', category: 'infidelity_places', pattern: "huck's", description: 'Specific location', severity: 0 },
-  { name: 'Infidelity Place: Hucks2', category: 'infidelity_places', pattern: 'hucks', description: 'Specific location', severity: 0 },
-
   // Infidelity - General
   { name: 'Infidelity: Cheating', category: 'infidelity', pattern: 'cheating', description: 'Infidelity mention', severity: 8 },
   { name: 'Infidelity: Cheated', category: 'infidelity', pattern: 'cheated', description: 'Infidelity past', severity: 8 },
@@ -328,49 +333,73 @@ const patterns: PatternSeed[] = [
   { name: 'Hedge: Probably', category: 'hedge_words', pattern: 'probably', description: 'Uncertainty marker', severity: 0 },
 ];
 
-export async function seedPatterns() {
+async function seedPatterns() {
   console.log('🌱 Seeding behavioral patterns...');
   console.log(`📝 Total patterns to import: ${patterns.length}`);
-  
+
   try {
-    const batchSize = 50;
-    let totalInserted = 0;
-    
-    for (let i = 0; i < patterns.length; i += batchSize) {
-      const batch = patterns.slice(i, i + batchSize);
-      const db = await getDb();
-      if (!db) throw new Error('Database not available');
-      
-      await db.insert(behavioralPatterns).values(
-        batch.map(p => ({
-          userId: OWNER_USER_ID,
-          name: p.name,
-          category: p.category,
-          pattern: p.pattern,
-          description: p.description,
-          severity: p.severity,
-          mclFactors: JSON.stringify([]), // Empty for now, meta-analysis will populate
-          examples: JSON.stringify([]), // Empty for now
-          isActive: 'true' as const,
-          isCustom: 'true' as const,
-          matchCount: 0,
-        }))
-      );
-      
-      totalInserted += batch.length;
-      console.log(`  ✓ Batch ${Math.floor(i / batchSize) + 1}: ${batch.length} patterns (${totalInserted}/${patterns.length})`);
+    // Initialize database
+    await getDb();
+    console.log('✅ Database initialized');
+
+    // Create table if not exists
+    await run(`
+      CREATE TABLE IF NOT EXISTS behavioralPatterns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        userId INTEGER NOT NULL,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL,
+        pattern TEXT NOT NULL,
+        description TEXT,
+        severity INTEGER DEFAULT 5,
+        mclFactors TEXT DEFAULT '[]',
+        examples TEXT DEFAULT '[]',
+        isActive INTEGER DEFAULT 1,
+        isCustom INTEGER DEFAULT 0,
+        matchCount INTEGER DEFAULT 0,
+        createdAt TEXT DEFAULT CURRENT_TIMESTAMP,
+        updatedAt TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('✅ Table created');
+
+    // Check existing patterns
+    const existing = await query('SELECT COUNT(*) as count FROM behavioralPatterns');
+    const existingCount = existing[0]?.count || 0;
+    console.log(`📊 Existing patterns: ${existingCount}`);
+
+    if (existingCount > 0) {
+      console.log('⚠️  Patterns already exist. Skipping seed.');
+      console.log('To re-seed, delete the database file and run again.');
+      return;
     }
-    
+
+    // Insert patterns
+    let totalInserted = 0;
+    for (const p of patterns) {
+      await run(
+        `INSERT INTO behavioralPatterns (userId, name, category, pattern, description, severity, mclFactors, examples, isActive, isCustom, matchCount)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 0)`,
+        [OWNER_USER_ID, p.name, p.category, p.pattern, p.description, p.severity, '[]', '[]']
+      );
+      totalInserted++;
+      console.log(`  ✓ ${p.name}`);
+    }
+
     console.log(`\n✅ Successfully seeded ${totalInserted} patterns`);
-    
+
     // Summary by category
-    const categories = new Set(patterns.map(p => p.category));
+    const categories = new Map();
+    for (const p of patterns) {
+      const count = categories.get(p.category) || 0;
+      categories.set(p.category, count + 1);
+    }
+
     console.log('\n📊 Pattern Summary by Category:');
-    for (const category of Array.from(categories)) {
-      const count = patterns.filter(p => p.category === category).length;
+    for (const [category, count] of categories) {
       console.log(`  ${category}: ${count} patterns`);
     }
-    
+
   } catch (error) {
     console.error('❌ Error seeding patterns:', error);
     throw error;
