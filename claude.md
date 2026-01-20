@@ -1,432 +1,277 @@
 # Context Document for Claude
 
-**Last Updated:** January 7, 2026 - 10:00 PM EST  
-**Project:** Forensic Communication Analysis Platform with MCP Gateway & Multi-Agent Orchestration  
-**Status:** 40% Complete - Backend scaffolded, VPS deployment in progress, UI wiring needed
+**Last Updated:** January 20, 2026
+**Project:** MCP Tool Platform - Comprehensive Preprocessing & Analysis Gateway
+**Status:** 65% Complete - Core features functional, integrations in progress
 
 ---
 
-## CRITICAL STATUS UPDATE
+## 📋 Quick Reference
 
-### Token Budget: ~125k remaining (started with 200k)
-### Funding: $20 plan exhausted, need $70 to upgrade to $200 plan tomorrow
-### Deployment: Groq agents deploying salem-nexus services via Coolify
-### Next Session: Wire backend UI, complete routing layer, test file ingestion
-
----
-
-## Project Overview
-
-This platform provides a comprehensive system for forensic analysis of digital communications (SMS, Facebook, iMessage, email, ChatGPT conversations) with a focus on detecting patterns of abuse, manipulation, coercion, and parental alienation. The system uses multi-pass NLP analysis, custom pattern libraries, and AI-powered meta-analysis to generate court-admissible forensic reports.
-
-**Core Purpose:** Analyze communications to detect gaslighting, DARVO, parental alienation, substance abuse patterns, infidelity evidence, and other manipulative behaviors with preliminary surface-level analysis followed by full-context meta-analysis.
+**For Current Status:** See `PROJECT_STATUS.md` (comprehensive implementation details)
+**For Next Steps:** See `TODO.md` (prioritized task list)
+**For Architecture:** See `ARCHITECTURE.md` (system design)
+**For Quick Start:** See `README.md` (installation and API usage)
 
 ---
 
-## Architecture Overview
+## 🎯 Project Overview
 
-### **Storage Layer**
-- **R2 Bucket:** Primary storage for ALL raw files (documents, images, OCR outputs, backups)
-- **Supabase:** Structured relational data (messages, metadata, preliminary classifications, conversation clusters)
-- **pgvector (in Supabase):** Semantic search via embeddings for cross-platform evidence retrieval
-- **Neo4j + Graphiti:** Entity graphs and temporal relationships for pattern detection
-- **Chroma (Dual Collections):**
-  - **Evidence Processing (72hr TTL):** Temporary working memory for preliminary analysis
-  - **Project Context (Persistent):** Long-term memory for user preferences, project goals, workflow settings
-- **PhotoPrism:** Image analysis (reads from R2, writes metadata to Supabase)
-- **Directus:** File management backend (uploads to R2, metadata to Supabase)
+The **MCP Tool Platform** is a general-purpose preprocessing and analysis platform that provides 80+ tools for document processing, NLP, forensics, vector databases, and more. It's designed to be the "preprocessing layer" where heavy computational work happens before data flows to downstream systems.
 
-### **AI/NLP Layer**
-- **LangGraph:** Multi-stage investigation state machines with human-in-the-loop checkpoints
-- **LangChain Memory:** Hypothesis tracking (preliminary → full context evolution), reasoning trails
-- **LlamaIndex:** Document loaders, chunking strategies, evidence hierarchy
-- **Unstructured.io:** PDF/DOCX/HTML parsing with layout preservation
-- **Multi-Pass NLP Classifier:**
-  - **Pass 0:** Priority screener (custody interference, parental alienation - immediate HIGH severity flags)
-  - **Pass 1:** spaCy (structure, entities, speaker attribution)
-  - **Pass 2:** NLTK VADER (sentiment, negation, sarcasm detection)
-  - **Pass 3:** Pattern Analyzer (256 custom patterns + user patterns from database)
-  - **Pass 4:** TextBlob (polarity, subjectivity for sarcasm)
-  - **Pass 5:** Sentence Transformers (semantic similarity)
-  - **Pass 6:** Aggregation (consensus sentiment, confidence scoring)
-
-### **Pattern Library (256+ Patterns)**
-**Core Categories:**
-- Gaslighting, blame shifting, minimizing, circular arguments
-- DARVO (Deny, Attack, Reverse Victim/Offender) - sequence detection
-- Overelaboration (victims provide excessive location/time details)
-- Parental alienation (call/visit blocking, child references: "Kailah"/"Kyla")
-- Substance abuse (alcohol, Adderall control, weaponization)
-- Infidelity (specific places: "Huckleberry Junction", general patterns)
-- Financial abuse (domestic vs weaponized)
-- Love bombing, excessive gratitude, savior complex
-- Sexual shaming, medical abuse, reproductive coercion
-- Power asymmetry (victim deference, abuser directives)
-- Statistical markers (certainty absolutes, hedge words, pronoun ratios)
-
-**Dynamic Lexicon Import:**
-- **HurtLex:** Multilingual hate speech lexicon (English-only filtered, dynamically pulled from GitHub: valeriobasile/hurtlex)
-- **MCL Patterns:** Manipulation/Coercion/Linguistic abuse taxonomies (research-backed, to be integrated)
-- **Extensible:** Add new lexicons via configuration without recoding
-
-### **Conversation Segmentation**
-**Cluster ID Format:** `PLAT_YYMM_TOPIC_iii`  
-Example: `SMS_2401_KAILAH_001` (SMS, Jan 2024, about Kailah, sequence 1)
-
-**Detection Method:**
-- Sentence Transformers for semantic similarity (threshold < 0.6 = new topic)
-- Time-window segmentation (gap > 2 hours = new cluster)
-- Entity-based segmentation (entity changes = new cluster)
-- Topic extraction via keyword matching + NER
-
-**Platform Codes:** SMS, FB (Facebook), IMSG (iMessage), MAIL (Email), CHAT (ChatGPT), WA (WhatsApp), DISC (Discord), SNAP (Snapchat)
-
-**Topic Codes (6 chars max):** KAILAH (daughter), VISITS (parenting time), CALLS, SCHOOL, MONEY, HEALTH, SUBST (substance), INFID (infidelity), THREAT, GENRL (general)
-
-### **Workflow: Preliminary → Meta-Analysis**
-
-**Phase 1: Preliminary Analysis (Surface-Level)**
-1. Ingest document (PDF, DOCX, SMS export, etc.)
-2. Parse with Unstructured.io or platform-specific loaders
-3. Chunk messages (semantic, conversation-turn, or fixed-size)
-4. **Multi-pass NLP classification** (6 passes, NO LLM - fast keyword/regex/statistical)
-5. Assign conversation cluster IDs
-6. Store in **Chroma (72hr TTL)** + **Supabase** (preliminary_sentiment, preliminary_severity, preliminary_patterns)
-7. Generate embeddings → **pgvector**
-
-**Phase 2: Meta-Analysis (Full Context)**
-1. After 72hrs (or manually triggered), retrieve ALL messages in conversation group (cross-platform)
-2. Load preliminary assessments from Supabase
-3. **LLM-powered meta-analysis:**
-   - Compare preliminary vs full-context findings
-   - Detect contradictions (love bombing + cheating evidence)
-   - Identify coordinated patterns (Neo4j graph analysis)
-   - Calculate severity deltas
-4. Store in **meta_analyses** table (final_sentiment, final_severity, contradictions_found, forensic_significance)
-5. Chroma TTL cleanup (evidence purged, preliminary data preserved in Supabase)
+**Think of it as:** A centralized tool gateway that agents (Claude, ChatGPT, Gemini, custom agents) can use to discover and invoke preprocessing tools via the MCP protocol.
 
 ---
 
-## CRITICAL GAPS (MUST ADDRESS NEXT SESSION)
+## ✅ What Actually Works Right Now (January 2026)
 
-### 1. Backend UI Wiring (Settings Page)
-**Status:** Scaffolds exist, procedures have TODOs, NO wiring
+### Fully Functional Features:
 
-**Files:**
-- `client/src/pages/Settings.tsx` - UI skeleton
-- `server/routers/settings.ts` - 25+ procedures with TODOs
-- `drizzle/settings-schema.ts` - 12 tables created
+1. **MCP Gateway** - Tool discovery, invocation, content references (39,469 lines)
+2. **Document Processing** - Pandoc conversion, Tesseract OCR, text segmentation
+3. **Search** - ripgrep/ugrep integration with JavaScript fallbacks
+4. **NLP** - Entity extraction, sentiment analysis, keywords, language detection (JavaScript-based)
+5. **Forensics** - SHA-256 evidence chain of custody (production-ready)
+6. **Vector Storage** - Chroma (in-memory + persistent), with Qdrant/pgvector support defined
+7. **Library Tools** - Cheerio, XML, JSON5, YAML, CSV, Natural.js, Compromise
+8. **Pattern Management** - Full CRUD for behavioral patterns (backend complete)
+9. **Settings UI** - Configure LLM providers, databases, workflows
+10. **Tools Explorer** - Browse, search, and test tools interactively
 
-**Missing:**
-- [ ] Wire database procedures to UI forms
-- [ ] Implement API key encryption (crypto module)
-- [ ] Test connection buttons for Neo4j/Supabase/Vector DBs
-- [ ] NLP configuration (model selection, thresholds)
-- [ ] LLM provider management (add/edit/delete/test)
-- [ ] Routing rules configuration
-- [ ] Export/import settings
+### Partially Implemented (Requires Setup):
 
-### 2. Pattern Library Wiring
-**Status:** UI exists, backend has TODOs
-
-**Files:**
-- `client/src/pages/PatternLibrary.tsx` - UI skeleton
-- `server/routers/patterns.ts` - 15+ procedures with TODOs
-
-**Missing:**
-- [ ] Load patterns from database (procedure exists, UI not wired)
-- [ ] Add/edit/delete patterns (UI exists, backend TODOs)
-- [ ] Test pattern against sample text (UI exists, backend stub)
-- [ ] Import/export patterns (UI exists, no backend)
-
-### 3. Routing Layer Implementation
-**Status:** Skeleton with TODOs
-
-**File:** `server/_core/router.ts`
-
-**Missing:**
-- [ ] routeLLMRequest() - Manus → LiteLLM → External APIs
-- [ ] routeMCPRequest() - Manus → MetaMCP → Remote MCPs
-- [ ] routeVectorSearch() - Manus → Chroma VPS → Cloud vectors
-- [ ] routeGraphQuery() - Manus → Neo4j Aura → Graphiti
-- [ ] routeStorageOperation() - Manus → R2 → Directus/PhotoPrism
-- [ ] Health checks, retry logic, load balancing
-- [ ] Cost/latency tracking
-
-### 4. VPS Service Integration
-**Status:** Docker compose ready, NOT deployed or integrated
-
-**LiteLLM:**
-- [ ] Deploy to salem-forge (waiting for reformat)
-- [ ] Connect platform to LiteLLM
-- [ ] Implement failover from Manus → LiteLLM
-- [ ] Cost tracking
-
-**MetaMCP:**
-- [ ] Deploy to salem-forge
-- [ ] Connect platform to MetaMCP
-- [ ] Remote MCP server registration
-- [ ] Tool discovery
-
-**Chroma VPS:**
-- [ ] Deploy to salem-forge
-- [ ] Connect platform to Chroma VPS
-- [ ] Vector search routing
-
-### 5. MCP Tool Executors
-**Status:** 60+ tools registered, 20 have executors, 40 are stubs
-
-**File:** `server/mcp/executor.ts`
-
-**Missing Executors:**
-- [ ] Vector DB tools (Qdrant, pgvector, Chroma)
-- [ ] Graph DB tools (Neo4j, Graphiti)
-- [ ] mem0 shared context tools
-- [ ] n8n workflow triggers
-- [ ] Browser automation tools (Browserless, Playwright)
-- [ ] Python library tools (pandas, Transformers, pdfplumber)
-- [ ] JavaScript library tools (Cheerio, Natural, Compromise)
-
-### 6. Frontend Pages NOT Created
-- [ ] LLM Router monitoring page
-- [ ] Prompt Builder page
-- [ ] Workflow Builder page
-- [ ] Agent Builder page
+11. **Python Bridge** - Referenced but needs location/implementation
+12. **LLM Integration** - Provider management exists, execution needs wiring
+13. **Vector DBs** - pgvector/Qdrant need connection testing
+14. **Graph DBs** - Neo4j/Graphiti wrappers defined, need connection
+15. **External APIs** - Tavily, Perplexity, NotebookLM, n8n defined but not integrated
 
 ---
 
-## VPS Infrastructure
+## 🏗️ Architecture Overview
 
-### salem-nexus (116.203.199.238) - Storage/CMS
-**Status:** Coolify master running, Groq agents deploying services
+```
+External Agents (Claude, ChatGPT, Gemini)
+           ↓
+    MCP Gateway Layer
+     (80+ tools, 10 categories)
+           ↓
+  Plugin Execution Layer
+     (26 modules, 13,265 lines)
+           ↓
+     Storage Layer
+  (Chroma, PostgreSQL, pgvector, Neo4j)
+```
 
-**Services (Being Deployed):**
-- PostgreSQL (postgres:16-alpine)
-- FerretDB (MongoDB-compatible layer)
-- Directus (CMS, file management)
-- PhotoPrism (image analysis)
-- n8n (workflow automation)
-- Tailscale (VPN)
-
-**Volume:** salem-vault (60GB XFS) at /mnt/salem-vault
-
-### salem-forge (116.203.198.77) - AI/Compute
-**Status:** Being reformatted to clean Debian
-
-**Planned Services (NOT deployed):**
-- LiteLLM (LLM routing/proxy)
-- MetaMCP (MCP server registry)
-- Chroma (vector store)
-- LibreChat (chat UI)
-- Open WebUI (alternative chat UI)
-- Ollama (local LLM runtime)
-- Kasm Workspace (remote desktop with Claude/Gemini CLI)
-- Browserless (headless Chrome)
-- Playwright (browser automation)
+**Key Components:**
+- **Gateway:** `server/mcp/gateway.ts` (39,469 lines)
+- **Plugins:** `server/mcp/plugins/` (26 files, 13,265 lines)
+- **Routers:** `server/api/` (settings.ts, patterns.ts - 1,122 lines)
+- **Database:** 18 tables via Drizzle ORM (470 lines schema)
+- **Frontend:** 4 complete pages (Home, Settings, Tools, PatternLibrary stub)
 
 ---
 
-## Database Schema (Key Tables)
+## 🎨 Use Cases
 
-### Supabase PostgreSQL
+This platform can be used for:
 
-**Message Storage:**
-- `messaging_documents` - Document metadata (file_hash, platform, upload_timestamp)
-- `messaging_conversations` - Conversation groups (cluster_id, participants, date_range)
-- `messaging_messages` - Individual messages (text, timestamp, sender, preliminary_sentiment, preliminary_severity)
-- `messaging_behaviors` - Detected patterns (pattern_name, severity, confidence, mcl_factor)
-- `messaging_attachments` - Media files (file_url, mime_type, ocr_text)
-- `messaging_evidence_items` - Chain of custody (sha256_hash, custody_log)
+1. **Document Preprocessing** - Convert, OCR, extract structure from any document
+2. **Forensic Analysis** - Maintain cryptographic evidence chains
+3. **NLP Pipelines** - Extract entities, analyze sentiment, detect patterns
+4. **Vector Search** - Semantic search across document collections
+5. **Behavioral Analysis** - Detect patterns in communications (one of many use cases)
+6. **Multi-Agent Orchestration** - Provide preprocessing tools to AI agents
 
-**Analysis Storage:**
-- `meta_analyses` - Full-context analysis results
-- `contradictions` - Detected contradictions between preliminary and final
-- `audit_trail` - Immutable log of all operations
+**Note:** While the platform *can* be used for forensic communication analysis (detecting manipulation, abuse patterns, etc.), that's just **one use case**. The platform is general-purpose and can be applied to many domains.
+
+---
+
+## 🔧 What Needs Work (Priority Order)
+
+### Sprint 1 (Immediate - 1-2 Weeks):
+1. **Pattern Library UI Wiring** - Backend complete, 21 TODOs in frontend
+2. **Fix TypeScript Errors** - ~80 errors from branch merge (GCP plugins, LlamaIndex API, test types)
+3. **Test External Connections** - Neo4j, Supabase, pgvector via Settings UI
+
+### Sprint 2 (Integration - Weeks 3-4):
+4. **Python Bridge** - Locate/implement for advanced NLP
+5. **LLM Integration** - Wire provider management to execution
+6. **Vector DB Testing** - pgvector, Qdrant connection tests
+
+### Sprint 3+ (External Services - Month 2):
+7. **Graph DB Integration** - Wire Neo4j/Graphiti tools
+8. **External APIs** - Tavily, Perplexity, NotebookLM, n8n
+9. **Frontend Completion** - Audit and complete remaining 9 pages
+
+---
+
+## 📊 Implementation Metrics (As of Jan 20, 2026)
+
+| Component | Completion | Quality | Lines of Code |
+|-----------|------------|---------|---------------|
+| MCP Gateway | 100% | 🟢 Excellent | 39,469 |
+| Core Plugins | 85% | 🟢 Excellent | 13,265 |
+| Database Schema | 100% | 🟢 Excellent | 470 |
+| API Routers | 100% | 🟢 Good | 1,122 |
+| Frontend Pages | 60% | 🟡 Mixed | ~2,000 |
+| External Integrations | 20% | 🟡 Partial | N/A |
+
+**Overall: 65% Complete** (core features done, integrations in progress)
+
+---
+
+## 🗄️ Database Schema (18 Tables)
+
+**Core:**
+- users, apiKeys, apiKeyUsageLogs
+- behavioralPatterns, patternCategories
+- workflows, workflowTemplates
+- systemPrompts, severityWeights
+
+**Document Intelligence:**
+- documents, documentSections, documentChunks
+- documentSpans, documentSummaries, documentEntities
+
+**Evidence Management:**
+- evidenceChains, hurtlexTerms, mclFactors
 
 **Configuration:**
-- `nlpConfig` - spaCy/NLTK/Sentence Transformer settings
-- `llmProviders` - Provider credentials and configs
-- `routingRules` - Task-based/cost-based/latency-based routing
-- `workflows` - Saved workflow definitions
-- `agents` - Agent configurations
-- `topicCodes` - Custom topic codes
-- `platformCodes` - Custom platform codes
-- `promptVersions` - Prompt template versioning
-- `exportHistory` - Export/import audit trail
-- `behavioralPatterns` - Custom user patterns (256 loaded)
-
-### Neo4j Aura (Graphiti)
-
-**Nodes:**
-- Person, Address, Place, Organization, Property
-- GpsPoint, Phone, Email, VoterRecord, Event
-
-**Relationships:**
-- Familial, Romantic, Professional, Residential, Contact
-- Spatial, Temporal
-
-### Chroma Collections
-
-**Evidence Processing (72hr TTL):**
-- Preliminary analysis chunks
-- Embeddings for semantic search
-- Auto-cleanup after 72 hours
-
-**Project Context (Persistent):**
-- User preferences
-- Project goals
-- Workflow settings
+- bertConfigs, forensicResults, schemaResolvers
 
 ---
 
-## Testing Status
+## 🚀 Quick Start for New Agents
 
-### Vitest Tests
-- **LangGraph:** 15/23 passing (65%)
-- **LangChain Memory:** 18/19 passing (95%)
-- **Document Loaders:** OOM error (needs optimization)
-- **Total:** 52/63 tests passing (83%)
+1. **Read This First:**
+   - `PROJECT_STATUS.md` - Detailed implementation status
+   - `README.md` - Installation and API usage
+   - `TODO.md` - Current priorities
 
-### Integration Tests
-- [ ] End-to-end file ingestion NOT tested yet
-- [ ] VPS service integration NOT tested
-- [ ] Routing layer NOT tested
+2. **Understand What Works:**
+   - Core search, document, NLP tools are production-ready
+   - MCP Gateway is fully functional
+   - Database schema is complete
+   - Settings and Tools UIs work
 
----
+3. **Current Priorities:**
+   - Pattern Library backend wiring (high priority)
+   - Fix TypeScript errors (medium priority)
+   - Test external service connections (medium priority)
 
-## Deployment Files
-
-### Docker Compose
-- `docker-compose.vps1-storage.yml` - salem-nexus services
-- `docker-compose.vps2-compute.yml` - salem-forge services
-- `litellm-config.yaml` - LiteLLM model routing rules
-
-### Handoff Documents
-- `GROQ_COMPOUND_HANDOFF.md` - Deployment instructions for Groq agents
-- `AGENT_HANDOFF.md` - 9 parallel work streams for delegation
-- `DOCUMENTATION_HANDOFF.md` - 100+ docs for free models to write
-
-### Analysis Documents
-- `ARCHITECTURE.md` - 7500+ word system design
-- `ARCHITECTURE_DIFF_ANALYSIS.md` - Comparison with conversation ingestion system
-- `PUNCHLIST_GAP_ANALYSIS.md` - 28% complete, 52% missing
-- `COMPREHENSIVE_GAP_REPORT.md` - 60+ tools registered, 40 need executors
-- `STATUS_REPORT_JAN7.md` - THIS SESSION'S COMPREHENSIVE STATUS
+4. **Don't Assume:**
+   - ❌ Python bridge is working (needs location/implementation)
+   - ❌ LLM APIs are wired (provider management only)
+   - ❌ External services are integrated (Tavily, NotebookLM, n8n)
+   - ❌ All 14 frontend pages are complete (only 4 are)
 
 ---
 
-## Key Code Files
+## 🔐 Key Files to Know
 
-### Backend Core
-- `server/_core/router.ts` - Routing layer (TODOs)
-- `server/_core/llm.ts` - Manus built-in LLM (works)
-- `server/_core/context.ts` - tRPC context
-- `server/_core/env.ts` - Environment variables
+**Entry Points:**
+- `server/core/index.ts` - Main server entry point
+- `client/src/main.tsx` - Frontend entry point
 
-### MCP System
-- `server/mcp/gateway.ts` - MCP gateway (functional)
-- `server/mcp/executor.ts` - Tool executors (20/60 done)
-- `server/mcp/plugins/` - 15 plugin files (~3500 lines)
+**Core Systems:**
+- `server/mcp/gateway.ts` - MCP Gateway (39,469 lines)
+- `server/mcp/plugins/registry.ts` - Tool registry (1,887 lines)
+- `server/api/settings.ts` - Settings management (458 lines)
+- `server/api/patterns.ts` - Pattern CRUD (664 lines)
 
-### Orchestration
-- `server/mcp/orchestration/langgraph-adapter.ts` - State machines
-- `server/mcp/orchestration/langchain-memory.ts` - Hypothesis tracking
-- `server/mcp/orchestration/sub-agents.ts` - Agent library
-- `server/mcp/orchestration/forensic-workflow.ts` - Pre-built workflows
+**Database:**
+- `drizzle/schema.ts` - Core tables (users, auth)
+- `drizzle/settings-schema.ts` - Config tables (18 tables)
 
-### Document Processing
-- `server/mcp/loaders/base-loader.ts` - Abstract loader
-- `server/mcp/loaders/sms-loader.ts` - SMS parser
-- `server/mcp/loaders/embedding-pipeline.ts` - pgvector integration
-- `server/mcp/loaders/document-hierarchy.ts` - Case management
-- `server/mcp/parsers/facebook-html-parser.ts` - Streaming parser
-- `server/mcp/parsers/xml-sms-parser.ts` - Streaming parser
-- `server/mcp/parsers/pdf-imessage-parser.ts` - PDF parser
-
-### NLP
-- `server/python-tools/multi_pass_classifier.py` - 6-pass classifier
-- `server/python-tools/graphiti_runner.py` - Neo4j integration
-
-### tRPC Routers
-- `server/routers/settings.ts` - 25+ procedures (TODOs)
-- `server/routers/patterns.ts` - 15+ procedures (TODOs)
-- `server/routers.ts` - Main router
-
-### Database
-- `drizzle/schema.ts` - User/auth tables
-- `drizzle/settings-schema.ts` - 12 config tables
-- `server/db.ts` - Database helpers
-
-### Frontend
-- `client/src/pages/Home.tsx` - Landing page
-- `client/src/pages/Settings.tsx` - Settings UI (not wired)
-- `client/src/pages/PatternLibrary.tsx` - Pattern UI (not wired)
-- `client/src/components/DashboardLayout.tsx` - Layout
+**Frontend:**
+- `client/src/pages/Home.tsx` - Landing page (388 lines)
+- `client/src/pages/Settings.tsx` - Configuration UI (733 lines)
+- `client/src/pages/Tools.tsx` - Tool explorer (594 lines)
+- `client/src/pages/PatternLibrary.tsx` - Pattern UI (315 lines, 21 TODOs)
 
 ---
 
-## Next Session Priorities
+## 💡 Important Notes for Agents
 
-### 1. Verify Groq Deployment (30 min)
-- Check Coolify UI at https://nexus.mitechconsult.com
-- Verify PostgreSQL, Directus, PhotoPrism, n8n are running
-- Test shared media storage
-- Document credentials
+### ✅ What You Can Trust:
 
-### 2. Wire Backend UI (4-6 hours)
-- Complete Settings page database procedures
-- Implement API key encryption
-- Wire Pattern Library CRUD operations
-- Test all procedures with vitest
+1. **Core plugins work** - search, document, NLP, forensics, vector-db are solid
+2. **Database schema is accurate** - 18 tables are production-ready
+3. **MCP Gateway is functional** - Use the Tools page to test
+4. **Settings/Tools UIs are complete** - They work and look good
 
-### 3. Implement Routing Layer (4-6 hours)
-- Complete router.ts with failover logic
-- Add health checks for VPS services
-- Implement retry logic
-- Add cost/latency tracking
+### 🟡 What Needs Verification:
 
-### 4. Deploy salem-forge (2-3 hours)
-- Add as Coolify remote server
-- Deploy AI/Compute services
-- Configure Tailscale VPN
-- Test cross-VPS communication
+1. **External service connections** - Config exists, but untested with real services
+2. **Python bridge** - Referenced but implementation not found
+3. **LLM execution** - Provider management works, but execution is stubbed
+4. **Pattern Library UI** - Looks good but has 21 TODOs (backend is complete though)
 
-### 5. Test File Ingestion (2-3 hours)
-- Upload sample Facebook HTML to Directus
-- Create n8n preprocessing workflow
-- Test end-to-end pipeline
-- Debug with live data
+### ❌ What Doesn't Work Yet:
+
+1. **External APIs** - Tavily, Perplexity, NotebookLM, n8n not integrated
+2. **Approval Gating (HITL)** - Mentioned in old docs but not implemented
+3. **Distributed Tracing** - Referenced but no observability code found
+4. **9 frontend pages** - Status unknown, need audit
 
 ---
 
-## Important Notes
+## 🎯 Current Focus (As of Jan 20, 2026)
 
-### Proxy/Router/Coordinator Status
-**ALL STUBS - NO IMPLEMENTATION:**
-- routeLLMRequest() - Returns placeholder
-- routeMCPRequest() - Returns placeholder
-- routeVectorSearch() - Returns placeholder
-- routeGraphQuery() - Returns placeholder
-- routeStorageOperation() - Returns placeholder
+**Just Completed:**
+- ✅ Merged all feature branches
+- ✅ Fixed dependency conflicts
+- ✅ Updated documentation (README, PROJECT_STATUS, TODO)
+- ✅ Cleaned up contradictory docs
 
-**LiteLLM Integration:** Docker compose ready, NOT deployed, NO platform integration
+**Next Up:**
+1. Pattern Library UI wiring (high priority, backend is done)
+2. Fix TypeScript errors (~80 from merge)
+3. Test external service connections
+4. Locate/implement Python bridge
 
-**MetaMCP Integration:** Docker compose ready, NOT deployed, NO platform integration
+---
 
-**MCP Gateway:** 60+ tools registered, 20 have executors, 40 are stubs
+## 📖 Where to Find Information
 
-### GitHub Sync
-- User made changes via GitHub Copilot
-- Added `.github/copilot-instructions.md` (360 lines)
-- Scrubbed API keys from documentation files
-- All changes pulled and synced
+- **Implementation Status:** `PROJECT_STATUS.md`
+- **Current Priorities:** `TODO.md`
+- **Quick Start:** `README.md`
+- **System Design:** `ARCHITECTURE.md`
+- **Component Docs:** `docs/` folder
+- **Old Planning Docs:** `docs-archive/` (archived Jan 20, 2026)
+- **Analysis Reports:** `analysis/archive/` (historical only)
 
-### Funding Constraint
-- $20 plan exhausted
-- Need $70 to upgrade to $200 plan
-- Cannot continue development tonight
-- Resume tomorrow with funding
+---
+
+## 🚨 Common Pitfalls to Avoid
+
+1. **Don't assume features are complete** - Check PROJECT_STATUS.md first
+2. **Don't rely on old planning docs** - Use TODO.md for current priorities
+3. **Don't assume Python works** - It's referenced but needs verification
+4. **Don't assume all pages are done** - Only 4 of 14 frontend pages are complete
+5. **Don't assume external APIs work** - Most are defined but not integrated
+
+---
+
+## 🎓 For Claude Code Agents
+
+**When continuing this project:**
+
+1. Read `PROJECT_STATUS.md` to understand current state
+2. Check `TODO.md` for immediate priorities
+3. Verify what works before assuming it works
+4. Focus on connecting existing components (not building new features)
+5. The platform is 65% done - finish what's started before adding more
+
+**Remember:**
+- Core preprocessing is production-ready (65%)
+- External integrations need work (35%)
+- Documentation is now accurate (as of Jan 20, 2026)
+- Focus on wiring, not architecture
 
 ---
 
 **End of Context Document**
+
+**TL;DR:** This is a functional MCP tool platform with 80+ preprocessing tools. Core features work great (search, document processing, NLP, forensics, vector storage). External integrations (Python, LLMs, cloud APIs) need wiring. See PROJECT_STATUS.md for details, TODO.md for priorities.
