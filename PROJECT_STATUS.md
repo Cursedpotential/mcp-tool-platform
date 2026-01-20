@@ -9,6 +9,8 @@
 
 The **MCP Tool Platform** is a functional preprocessing and analysis platform with **26 plugin modules** (13,265 lines) providing 80+ tools. The core architecture is solid, with full implementations of document processing, NLP, forensics, and vector storage. External service integrations (Python bridge, cloud APIs) are partially complete.
 
+**Storage Architecture:** We are building a **Zep AI clone** using the open-source **Graphiti library** for temporal knowledge graphs. See **STORAGE_ARCHITECTURE.md** for the definitive 4-tier storage design (Chroma → MySQL → Qdrant → Neo4j+Graphiti).
+
 **What Works Today:**
 - ✅ MCP Gateway with tool discovery and invocation
 - ✅ Document processing (Pandoc, Tesseract OCR)
@@ -21,10 +23,13 @@ The **MCP Tool Platform** is a functional preprocessing and analysis platform wi
 
 **In Progress:**
 - 🟡 Python bridge for advanced NLP
-- 🟡 Neo4j/Graphiti integration
+- 🟡 Neo4j/Graphiti integration (Zep AI clone - see STORAGE_ARCHITECTURE.md)
 - 🟡 External API integrations (Tavily, NotebookLM, n8n)
 - 🟡 LLM-powered summarization
 - 🟡 Pattern Library UI backend wiring
+
+**NOT Using:**
+- ❌ mem0 - Removed from project. Using Graphiti for temporal knowledge graphs instead.
 
 ---
 
@@ -61,7 +66,7 @@ The **MCP Tool Platform** is a functional preprocessing and analysis platform wi
 | **format-converter.ts** | ✅ Complete | 198 | 6 | Format transformations |
 | **schema-resolver.ts** | ✅ Complete | 156 | 4 | JSON schema resolution |
 | **ml.ts** | 🟡 Partial | 420 | 12 | Framework exists, needs model integration |
-| **mem0.ts** | 🟡 Partial | 310 | 8 | Interface defined, needs storage backend |
+| **mem0.ts** | ❌ Removed | N/A | N/A | NOT PART OF PROJECT - Using Graphiti instead |
 | **graph-db.ts** | 🟡 Partial | 485 | 10 | Wrappers defined, needs Neo4j connection |
 | **browser-search.ts** | 🟡 Partial | 275 | 6 | Tools defined, needs API integration |
 | **n8n.ts** | 🟡 Partial | 180 | 4 | Workflow triggers defined, needs n8n instance |

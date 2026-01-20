@@ -72,7 +72,7 @@ export interface ToolExample {
   output: Record<string, unknown>;
 }
 
-export type ToolPermission = 
+export type ToolPermission =
   | 'read:filesystem'
   | 'write:filesystem'
   | 'read:network'
@@ -81,7 +81,6 @@ export type ToolPermission =
   | 'access:llm'
   | 'access:vectordb'
   | 'access:graphdb'
-  | 'access:mem0'
   | 'access:n8n'
   | 'access:notebooklm'
   | 'fs_read'
