@@ -8,13 +8,13 @@
 
 ## Executive Summary
 
-| Category | Registered | Implemented | Gap |
-|----------|------------|-------------|-----|
-| Core Plugins | 9 | 9 | 0% |
-| Database Plugins | 4 | 0 | **100%** |
-| Integration Plugins | 4 | 0 | **100%** |
-| Library Tools | 25+ | 0 | **100%** |
-| Infrastructure | 10 | 4 | **60%** |
+| Category            | Registered | Implemented | Gap      |
+| ------------------- | ---------- | ----------- | -------- |
+| Core Plugins        | 9          | 9           | 0%       |
+| Database Plugins    | 4          | 0           | **100%** |
+| Integration Plugins | 4          | 0           | **100%** |
+| Library Tools       | 25+        | 0           | **100%** |
+| Infrastructure      | 10         | 4           | **60%**  |
 
 **Overall: ~40% implemented, 60% registered but not functional**
 
@@ -24,12 +24,12 @@
 
 ### 1. Database Plugins - REGISTERED BUT NOT IMPLEMENTED
 
-| Tool | File Exists | Has Functions | Actually Works |
-|------|-------------|---------------|----------------|
-| `vector-db.ts` | ✅ | ✅ 17 functions | ❌ **No actual DB connection** |
-| `graph-db.ts` | ✅ | ✅ 15 functions | ❌ **No actual Neo4j/Graphiti connection** |
-| `mem0.ts` | ✅ | ✅ 12 functions | ❌ **No actual mem0 connection** |
-| `n8n.ts` | ✅ | ✅ 15 functions | ❌ **No actual n8n connection** |
+| Tool           | File Exists | Has Functions   | Actually Works                             |
+| -------------- | ----------- | --------------- | ------------------------------------------ |
+| `vector-db.ts` | ✅          | ✅ 17 functions | ❌ **No actual DB connection**             |
+| `graph-db.ts`  | ✅          | ✅ 15 functions | ❌ **No actual Neo4j/Graphiti connection** |
+| `mem0.ts`      | ✅          | ✅ 12 functions | ❌ **No actual mem0 connection**           |
+| `n8n.ts`       | ✅          | ✅ 15 functions | ❌ **No actual n8n connection**            |
 
 **Issue:** These files have function signatures but call placeholder endpoints or return mock data. They need actual service connections.
 
@@ -38,14 +38,17 @@
 All 25+ library tools in registry.ts are **registration only** - no executor mapping:
 
 **JavaScript Libraries (not connected):**
+
 - `js.cheerio`, `js.xml_parse`, `js.json5`, `js.yaml`, `js.csv`
 - `js.natural`, `js.compromise`, `js.franc`, `js.string_similarity`
 
 **Python Libraries (not connected):**
+
 - `py.spacy`, `py.nltk`, `py.transformers`, `py.beautifulsoup`
 - `py.pdfplumber`, `py.pandas`
 
 **Document Processing (not connected):**
+
 - `pandoc.convert`, `tesseract.ocr`, `stirlingpdf.process`
 - `unstructured.partition`
 
@@ -53,17 +56,18 @@ All 25+ library tools in registry.ts are **registration only** - no executor map
 
 ### 3. Human-in-the-Loop - PARTIALLY IMPLEMENTED
 
-| Component | Status |
-|-----------|--------|
-| `approval-system.ts` | ✅ File exists with logic |
-| Approval database table | ❌ **MISSING** |
-| Integration with invoke_tool | ❌ **NOT WIRED** |
-| CLI review UI | ❌ **MISSING** |
-| Audit trail persistence | ❌ **MISSING** |
+| Component                    | Status                    |
+| ---------------------------- | ------------------------- |
+| `approval-system.ts`         | ✅ File exists with logic |
+| Approval database table      | ❌ **MISSING**            |
+| Integration with invoke_tool | ❌ **NOT WIRED**          |
+| CLI review UI                | ❌ **MISSING**            |
+| Audit trail persistence      | ❌ **MISSING**            |
 
 ### 4. Document Intelligence Schema - MISSING
 
 Required tables not in `drizzle/schema.ts`:
+
 - `sections` - Document sections
 - `chunks` - Text chunks with embeddings
 - `spans` - Supporting spans for retrieval
@@ -79,21 +83,21 @@ Required tables not in `drizzle/schema.ts`:
 
 ### 5. Search Plugin - INCOMPLETE
 
-| Feature | Status |
-|---------|--------|
-| `search.ripgrep` | ✅ Works |
-| `search.ugrep` | ❌ **NOT IMPLEMENTED** |
+| Feature                      | Status                 |
+| ---------------------------- | ---------------------- |
+| `search.ripgrep`             | ✅ Works               |
+| `search.ugrep`               | ❌ **NOT IMPLEMENTED** |
 | `search.smart` (auto-select) | ❌ **NOT IMPLEMENTED** |
-| Fallback to JS search | ❌ **NOT IMPLEMENTED** |
+| Fallback to JS search        | ❌ **NOT IMPLEMENTED** |
 
 ### 6. Large File Processing - NOT IMPLEMENTED
 
-| Feature | Status |
-|---------|--------|
-| Streaming XML parser | ❌ **MISSING** |
-| Streaming HTML parser | ❌ **MISSING** |
-| Chroma working memory | ❌ **MISSING** |
-| Sub-agent orchestration | ❌ **MISSING** |
+| Feature                   | Status         |
+| ------------------------- | -------------- |
+| Streaming XML parser      | ❌ **MISSING** |
+| Streaming HTML parser     | ❌ **MISSING** |
+| Chroma working memory     | ❌ **MISSING** |
+| Sub-agent orchestration   | ❌ **MISSING** |
 | Map-reduce for large docs | ❌ **MISSING** |
 
 ### 7. NotebookLM Integration - STUB ONLY
@@ -103,6 +107,7 @@ Required tables not in `drizzle/schema.ts`:
 ### 8. Browser/Search Tools - NOT CONNECTED
 
 `browser-search.ts` has 12 functions but:
+
 - No Playwright/Puppeteer installed
 - No Tavily/Perplexity API connection
 - No SerpAPI connection
@@ -113,34 +118,34 @@ Required tables not in `drizzle/schema.ts`:
 
 ### 9. Documentation - INCOMPLETE
 
-| Document | Status |
-|----------|--------|
-| README.md | ✅ Exists |
-| CHANGELOG.md | ❌ **MISSING** |
-| DEPLOYMENT.md | ❌ **MISSING** |
-| API documentation | ⚠️ Basic only |
+| Document          | Status         |
+| ----------------- | -------------- |
+| README.md         | ✅ Exists      |
+| CHANGELOG.md      | ❌ **MISSING** |
+| DEPLOYMENT.md     | ❌ **MISSING** |
+| API documentation | ⚠️ Basic only  |
 
 ### 10. Observability - PARTIAL
 
-| Feature | Status |
-|---------|--------|
-| Trace IDs | ✅ Implemented |
-| Metrics | ✅ Implemented |
+| Feature                  | Status         |
+| ------------------------ | -------------- |
+| Trace IDs                | ✅ Implemented |
+| Metrics                  | ✅ Implemented |
 | JSONL structured logging | ❌ **MISSING** |
-| Health checks | ❌ **MISSING** |
-| Concurrency limits | ❌ **MISSING** |
-| Circuit breakers | ❌ **MISSING** |
+| Health checks            | ❌ **MISSING** |
+| Concurrency limits       | ❌ **MISSING** |
+| Circuit breakers         | ❌ **MISSING** |
 
 ### 11. Rules Engine - INCOMPLETE
 
-| Feature | Status |
-|---------|--------|
-| YAML rule loading | ✅ Works |
-| JSON rule loading | ✅ Works |
-| Regex matching | ✅ Works |
-| Keyword matching | ✅ Works |
+| Feature                | Status           |
+| ---------------------- | ---------------- |
+| YAML rule loading      | ✅ Works         |
+| JSON rule loading      | ✅ Works         |
+| Regex matching         | ✅ Works         |
+| Keyword matching       | ✅ Works         |
 | Approval-gated actions | ❌ **NOT WIRED** |
-| Rule editor UI | ❌ **MISSING** |
+| Rule editor UI         | ❌ **MISSING**   |
 
 ---
 
@@ -149,6 +154,7 @@ Required tables not in `drizzle/schema.ts`:
 The registry has 60+ tools registered but `gateway.ts` only has executors for:
 
 **Working Executors:**
+
 1. `search.ripgrep`
 2. `doc.convert_to_markdown`
 3. `doc.ocr_image_or_pdf`
@@ -171,6 +177,7 @@ The registry has 60+ tools registered but `gateway.ts` only has executors for:
 20. `retrieval.supporting_spans`
 
 **NOT WIRED (50+ tools):**
+
 - All `vector.*` tools
 - All `graph.*` tools
 - All `mem0.*` tools
@@ -192,6 +199,7 @@ The registry has 60+ tools registered but `gateway.ts` only has executors for:
 ## RECOMMENDED IMPLEMENTATION ORDER
 
 ### Phase 1: Wire Existing Plugins (2-4 hours)
+
 1. Add executor mappings in `gateway.ts` for all registered tools
 2. Connect `forensics.*` tools to `pattern-analyzer.ts`
 3. Connect `text.*` tools to `text-miner.ts`
@@ -200,22 +208,26 @@ The registry has 60+ tools registered but `gateway.ts` only has executors for:
 6. Connect `evidence.*` tools to `evidence-hasher.ts`
 
 ### Phase 2: Database Connections (4-6 hours)
+
 1. Add actual Qdrant/pgvector connection to `vector-db.ts`
 2. Add actual Neo4j connection to `graph-db.ts`
 3. Add actual mem0 connection to `mem0.ts`
 4. Add actual n8n webhook connection to `n8n.ts`
 
 ### Phase 3: Document Intelligence Schema (2-3 hours)
+
 1. Add missing tables to `drizzle/schema.ts`
 2. Run migrations
 3. Update plugins to use new tables
 
 ### Phase 4: Human-in-the-Loop (3-4 hours)
+
 1. Add approvals table to schema
 2. Wire approval-system.ts to invoke_tool
 3. Add audit trail persistence
 
 ### Phase 5: Large File Processing (4-6 hours)
+
 1. Implement streaming XML/HTML parsers
 2. Add Chroma working memory integration
 3. Implement map-reduce for large documents
@@ -225,6 +237,7 @@ The registry has 60+ tools registered but `gateway.ts` only has executors for:
 ## SUMMARY
 
 **What Works:**
+
 - Core MCP Gateway (search_tools, describe_tool, invoke_tool, get_ref)
 - Content store with refs and paging
 - 20 core tools (search, document, NLP, ML, rules, diff, fs, summarize, retrieval)
@@ -233,6 +246,7 @@ The registry has 60+ tools registered but `gateway.ts` only has executors for:
 - Basic observability
 
 **What's Registered But Not Working:**
+
 - 40+ additional tools (databases, integrations, libraries)
 - Human-in-the-loop approval flow
 - Large file streaming
@@ -241,6 +255,7 @@ The registry has 60+ tools registered but `gateway.ts` only has executors for:
 - n8n workflows
 
 **What's Missing Entirely:**
+
 - Document intelligence database tables
 - CHANGELOG.md, DEPLOYMENT.md
 - Chroma working memory

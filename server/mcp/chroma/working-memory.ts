@@ -1,6 +1,6 @@
 /**
  * Chroma Working Memory Store
- * 
+ *
  * Handles large file processing (5GB+ XML) by:
  * 1. Streaming chunks into Chroma collections
  * 2. Storing embeddings for semantic search during processing
@@ -8,7 +8,7 @@
  * 4. Supporting resume from interrupted processing
  */
 
-import { createHash } from 'crypto';
+import { createHash } from "crypto";
 
 // ============================================================================
 // Types
@@ -27,7 +27,7 @@ export interface ProcessingJob {
   sourceFile: string;
   sourceSize: number;
   collectionName: string;
-  status: 'pending' | 'processing' | 'paused' | 'completed' | 'failed';
+  status: "pending" | "processing" | "paused" | "completed" | "failed";
   progress: {
     bytesProcessed: number;
     chunksCreated: number;
@@ -81,10 +81,10 @@ export interface SearchResult {
 }
 
 export interface ChunkingOptions {
-  chunkSize: number;       // Target chunk size in characters
-  overlapSize: number;     // Overlap between chunks
+  chunkSize: number; // Target chunk size in characters
+  overlapSize: number; // Overlap between chunks
   preserveElements: boolean; // For XML: try to keep elements intact
-  maxChunkSize: number;    // Hard limit on chunk size
+  maxChunkSize: number; // Hard limit on chunk size
 }
 
 // ============================================================================
@@ -109,10 +109,13 @@ class ChromaClient {
     }
   }
 
-  async createCollection(name: string, metadata?: Record<string, unknown>): Promise<void> {
+  async createCollection(
+    name: string,
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
     const response = await fetch(`${this.baseUrl}/api/v1/collections`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name,
         metadata: metadata || {},
@@ -126,7 +129,7 @@ class ChromaClient {
 
   async deleteCollection(name: string): Promise<void> {
     const response = await fetch(`${this.baseUrl}/api/v1/collections/${name}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
     if (!response.ok && response.status !== 404) {
       throw new Error(`Failed to delete collection: ${response.statusText}`);
@@ -142,9 +145,13 @@ class ChromaClient {
     return data.map((c: { name: string }) => c.name);
   }
 
-  async getCollection(name: string): Promise<{ name: string; metadata: Record<string, unknown> } | null> {
+  async getCollection(
+    name: string
+  ): Promise<{ name: string; metadata: Record<string, unknown> } | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/api/v1/collections/${name}`);
+      const response = await fetch(
+        `${this.baseUrl}/api/v1/collections/${name}`
+      );
       if (!response.ok) return null;
       return await response.json();
     } catch {
@@ -166,11 +173,14 @@ class ChromaClient {
     if (embeddings) body.embeddings = embeddings;
     if (metadatas) body.metadatas = metadatas;
 
-    const response = await fetch(`${this.baseUrl}/api/v1/collections/${collectionName}/add`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/collections/${collectionName}/add`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }
+    );
     if (!response.ok) {
       throw new Error(`Failed to add documents: ${response.statusText}`);
     }
@@ -193,11 +203,14 @@ class ChromaClient {
     };
     if (where) body.where = where;
 
-    const response = await fetch(`${this.baseUrl}/api/v1/collections/${collectionName}/query`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/collections/${collectionName}/query`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }
+    );
     if (!response.ok) {
       throw new Error(`Failed to query collection: ${response.statusText}`);
     }
@@ -221,11 +234,14 @@ class ChromaClient {
     if (limit) body.limit = limit;
     if (offset) body.offset = offset;
 
-    const response = await fetch(`${this.baseUrl}/api/v1/collections/${collectionName}/get`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/collections/${collectionName}/get`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      }
+    );
     if (!response.ok) {
       throw new Error(`Failed to get documents: ${response.statusText}`);
     }
@@ -233,7 +249,9 @@ class ChromaClient {
   }
 
   async countDocuments(collectionName: string): Promise<number> {
-    const response = await fetch(`${this.baseUrl}/api/v1/collections/${collectionName}/count`);
+    const response = await fetch(
+      `${this.baseUrl}/api/v1/collections/${collectionName}/count`
+    );
     if (!response.ok) {
       throw new Error(`Failed to count documents: ${response.statusText}`);
     }
@@ -248,11 +266,11 @@ class ChromaClient {
 class WorkingMemoryStore {
   private client: ChromaClient;
   private jobs: Map<string, ProcessingJob> = new Map();
-  private embeddingProvider: 'ollama' | 'openai' | 'local' = 'local';
-  private embeddingModel: string = 'nomic-embed-text';
+  private embeddingProvider: "ollama" | "openai" | "local" = "local";
+  private embeddingModel: string = "nomic-embed-text";
   private embeddingDimensions: number = 768;
 
-  constructor(config: ChromaConfig = { host: 'localhost', port: 8000 }) {
+  constructor(config: ChromaConfig = { host: "localhost", port: 8000 }) {
     this.client = new ChromaClient(config);
   }
 
@@ -260,17 +278,20 @@ class WorkingMemoryStore {
   // Configuration
   // ---------------------------------------------------------------------------
 
-  setEmbeddingProvider(provider: 'ollama' | 'openai' | 'local', model?: string): void {
+  setEmbeddingProvider(
+    provider: "ollama" | "openai" | "local",
+    model?: string
+  ): void {
     this.embeddingProvider = provider;
     if (model) this.embeddingModel = model;
-    
+
     // Set dimensions based on model
     const dimensionMap: Record<string, number> = {
-      'nomic-embed-text': 768,
-      'all-minilm': 384,
-      'text-embedding-3-small': 1536,
-      'text-embedding-3-large': 3072,
-      'text-embedding-ada-002': 1536,
+      "nomic-embed-text": 768,
+      "all-minilm": 384,
+      "text-embedding-3-small": 1536,
+      "text-embedding-3-large": 3072,
+      "text-embedding-ada-002": 1536,
     };
     this.embeddingDimensions = dimensionMap[this.embeddingModel] || 768;
   }
@@ -298,7 +319,7 @@ class WorkingMemoryStore {
       sourceFile,
       sourceSize,
       collectionName,
-      status: 'pending',
+      status: "pending",
       progress: {
         bytesProcessed: 0,
         chunksCreated: 0,
@@ -307,7 +328,7 @@ class WorkingMemoryStore {
       },
       metadata: {
         fileType: this.detectFileType(sourceFile),
-        encoding: 'utf-8',
+        encoding: "utf-8",
         chunkSize: options.chunkSize || 4000,
         overlapSize: options.overlapSize || 200,
       },
@@ -330,7 +351,7 @@ class WorkingMemoryStore {
     return this.jobs.get(jobId);
   }
 
-  listJobs(status?: ProcessingJob['status']): ProcessingJob[] {
+  listJobs(status?: ProcessingJob["status"]): ProcessingJob[] {
     const jobs = Array.from(this.jobs.values());
     if (status) {
       return jobs.filter(j => j.status === status);
@@ -340,7 +361,7 @@ class WorkingMemoryStore {
 
   async updateJobProgress(
     jobId: string,
-    progress: Partial<ProcessingJob['progress']>
+    progress: Partial<ProcessingJob["progress"]>
   ): Promise<void> {
     const job = this.jobs.get(jobId);
     if (!job) throw new Error(`Job not found: ${jobId}`);
@@ -352,7 +373,7 @@ class WorkingMemoryStore {
 
   async setJobStatus(
     jobId: string,
-    status: ProcessingJob['status'],
+    status: ProcessingJob["status"],
     error?: string
   ): Promise<void> {
     const job = this.jobs.get(jobId);
@@ -360,7 +381,7 @@ class WorkingMemoryStore {
 
     job.status = status;
     job.updatedAt = Date.now();
-    if (status === 'completed') job.completedAt = Date.now();
+    if (status === "completed") job.completedAt = Date.now();
     if (error) job.error = error;
     this.jobs.set(jobId, job);
   }
@@ -422,7 +443,9 @@ class WorkingMemoryStore {
 
     await this.updateJobProgress(jobId, {
       chunksCreated: job.progress.chunksCreated + chunks.length,
-      embeddingsGenerated: job.progress.embeddingsGenerated + (generateEmbeddings ? chunks.length : 0),
+      embeddingsGenerated:
+        job.progress.embeddingsGenerated +
+        (generateEmbeddings ? chunks.length : 0),
       lastOffset: chunks[chunks.length - 1]?.offset || job.progress.lastOffset,
     });
   }
@@ -435,7 +458,9 @@ class WorkingMemoryStore {
       limit?: number;
       where?: Record<string, unknown>;
     } = {}
-  ): Promise<Array<{ id: string; content: string; metadata: Record<string, unknown> }>> {
+  ): Promise<
+    Array<{ id: string; content: string; metadata: Record<string, unknown> }>
+  > {
     const job = this.jobs.get(jobId);
     if (!job) throw new Error(`Job not found: ${jobId}`);
 
@@ -494,13 +519,13 @@ class WorkingMemoryStore {
     const collections: Collection[] = [];
 
     for (const name of names) {
-      if (!name.startsWith('wm_')) continue; // Only working memory collections
+      if (!name.startsWith("wm_")) continue; // Only working memory collections
 
       const info = await this.client.getCollection(name);
       if (!info) continue;
 
       const count = await this.client.countDocuments(name);
-      const jobId = (info.metadata?.jobId as string) || '';
+      const jobId = (info.metadata?.jobId as string) || "";
 
       collections.push({
         name,
@@ -518,27 +543,27 @@ class WorkingMemoryStore {
 
   async exportCollection(
     jobId: string,
-    format: 'json' | 'jsonl' | 'csv' = 'jsonl'
+    format: "json" | "jsonl" | "csv" = "jsonl"
   ): Promise<string> {
     const job = this.jobs.get(jobId);
     if (!job) throw new Error(`Job not found: ${jobId}`);
 
     const chunks = await this.getChunks(jobId, { limit: 100000 });
 
-    if (format === 'json') {
+    if (format === "json") {
       return JSON.stringify(chunks, null, 2);
-    } else if (format === 'jsonl') {
-      return chunks.map(c => JSON.stringify(c)).join('\n');
+    } else if (format === "jsonl") {
+      return chunks.map(c => JSON.stringify(c)).join("\n");
     } else {
       // CSV
-      const headers = ['id', 'content', 'offset', 'length'];
+      const headers = ["id", "content", "offset", "length"];
       const rows = chunks.map(c => [
         c.id,
         `"${c.content.replace(/"/g, '""')}"`,
         c.metadata.offset,
         c.metadata.length,
       ]);
-      return [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+      return [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
     }
   }
 
@@ -547,17 +572,17 @@ class WorkingMemoryStore {
   // ---------------------------------------------------------------------------
 
   private async generateEmbedding(text: string): Promise<number[]> {
-    if (this.embeddingProvider === 'local') {
+    if (this.embeddingProvider === "local") {
       // Simple local embedding using hash-based approach
       // In production, this would call Ollama or another local model
       return this.simpleHashEmbedding(text, this.embeddingDimensions);
     }
 
-    if (this.embeddingProvider === 'ollama') {
+    if (this.embeddingProvider === "ollama") {
       try {
-        const response = await fetch('http://localhost:11434/api/embeddings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("http://localhost:11434/api/embeddings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             model: this.embeddingModel,
             prompt: text,
@@ -580,15 +605,15 @@ class WorkingMemoryStore {
   private simpleHashEmbedding(text: string, dimensions: number): number[] {
     // Simple deterministic embedding based on text hash
     // This is a fallback when no embedding model is available
-    const hash = createHash('sha256').update(text).digest();
+    const hash = createHash("sha256").update(text).digest();
     const embedding: number[] = [];
-    
+
     for (let i = 0; i < dimensions; i++) {
       const byteIndex = i % hash.length;
       const value = (hash[byteIndex] / 255) * 2 - 1; // Normalize to [-1, 1]
       embedding.push(value);
     }
-    
+
     // Normalize the vector
     const magnitude = Math.sqrt(embedding.reduce((sum, v) => sum + v * v, 0));
     return embedding.map(v => v / magnitude);
@@ -599,17 +624,17 @@ class WorkingMemoryStore {
   // ---------------------------------------------------------------------------
 
   private detectFileType(filename: string): string {
-    const ext = filename.split('.').pop()?.toLowerCase() || '';
+    const ext = filename.split(".").pop()?.toLowerCase() || "";
     const typeMap: Record<string, string> = {
-      xml: 'xml',
-      json: 'json',
-      txt: 'text',
-      md: 'markdown',
-      csv: 'csv',
-      html: 'html',
-      pdf: 'pdf',
+      xml: "xml",
+      json: "json",
+      txt: "text",
+      md: "markdown",
+      csv: "csv",
+      html: "html",
+      pdf: "pdf",
     };
-    return typeMap[ext] || 'unknown';
+    return typeMap[ext] || "unknown";
   }
 }
 

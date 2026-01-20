@@ -1,15 +1,20 @@
 /**
  * Content-Addressed Object Store
- * 
+ *
  * Manages large artifacts (OCR text, markdown, chunks, search results) using
  * SHA-256 content hashes. Supports paging and reference-based retrieval for
  * maximum token efficiency.
  */
 
-import { createHash } from 'crypto';
-import { promises as fs } from 'fs';
-import path from 'path';
-import type { ContentRef, StoredRef, PagedContent, PageRequest } from '../../../shared/mcp-types';
+import { createHash } from "crypto";
+import { promises as fs } from "fs";
+import path from "path";
+import type {
+  ContentRef,
+  StoredRef,
+  PagedContent,
+  PageRequest,
+} from "../../../shared/mcp-types";
 
 const DEFAULT_PAGE_SIZE = 4096; // 4KB pages for token efficiency
 const PREVIEW_LENGTH = 200;
@@ -29,7 +34,7 @@ export class ContentStore {
   constructor(config: ContentStoreConfig) {
     this.basePath = config.basePath;
     this.maxFileSize = config.maxFileSize ?? 100 * 1024 * 1024; // 100MB default
-    this.indexPath = path.join(this.basePath, 'index.json');
+    this.indexPath = path.join(this.basePath, "index.json");
   }
 
   /**
@@ -37,7 +42,7 @@ export class ContentStore {
    */
   async init(): Promise<void> {
     await fs.mkdir(this.basePath, { recursive: true });
-    await fs.mkdir(path.join(this.basePath, 'objects'), { recursive: true });
+    await fs.mkdir(path.join(this.basePath, "objects"), { recursive: true });
     await this.loadIndex();
   }
 
@@ -45,10 +50,13 @@ export class ContentStore {
    * Store content and return a content-addressed reference
    */
   async put(content: string | Buffer, mime: string): Promise<StoredRef> {
-    const buffer = typeof content === 'string' ? Buffer.from(content, 'utf-8') : content;
-    
+    const buffer =
+      typeof content === "string" ? Buffer.from(content, "utf-8") : content;
+
     if (buffer.length > this.maxFileSize) {
-      throw new Error(`Content exceeds maximum file size of ${this.maxFileSize} bytes`);
+      throw new Error(
+        `Content exceeds maximum file size of ${this.maxFileSize} bytes`
+      );
     }
 
     const hash = this.computeHash(buffer);
@@ -67,11 +75,11 @@ export class ContentStore {
 
     // Create preview for text content
     let preview: string | undefined;
-    if (mime.startsWith('text/') || mime === 'application/json') {
-      const text = buffer.toString('utf-8');
+    if (mime.startsWith("text/") || mime === "application/json") {
+      const text = buffer.toString("utf-8");
       preview = text.slice(0, PREVIEW_LENGTH);
       if (text.length > PREVIEW_LENGTH) {
-        preview += '...';
+        preview += "...";
       }
     }
 
@@ -113,7 +121,7 @@ export class ContentStore {
    */
   async getString(ref: ContentRef): Promise<string | null> {
     const buffer = await this.get(ref);
-    return buffer ? buffer.toString('utf-8') : null;
+    return buffer ? buffer.toString("utf-8") : null;
   }
 
   /**
@@ -137,7 +145,7 @@ export class ContentStore {
 
     const start = (page - 1) * pageSize;
     const end = Math.min(start + pageSize, buffer.length);
-    const content = buffer.slice(start, end).toString('utf-8');
+    const content = buffer.slice(start, end).toString("utf-8");
 
     return {
       ref: request.ref,
@@ -197,7 +205,7 @@ export class ContentStore {
    */
   getTotalSize(): number {
     let total = 0;
-    this.index.forEach((ref) => {
+    this.index.forEach(ref => {
       total += ref.size;
     });
     return total;
@@ -207,7 +215,8 @@ export class ContentStore {
    * Compute content hash from existing content (for dedup checking)
    */
   computeContentHash(content: string | Buffer): string {
-    const buffer = typeof content === 'string' ? Buffer.from(content, 'utf-8') : content;
+    const buffer =
+      typeof content === "string" ? Buffer.from(content, "utf-8") : content;
     return this.computeHash(buffer);
   }
 
@@ -223,11 +232,11 @@ export class ContentStore {
   // ============================================================================
 
   private computeHash(buffer: Buffer): string {
-    return createHash('sha256').update(buffer).digest('hex');
+    return createHash("sha256").update(buffer).digest("hex");
   }
 
   private parseRef(ref: ContentRef): string {
-    if (!ref.startsWith('sha256:')) {
+    if (!ref.startsWith("sha256:")) {
       throw new Error(`Invalid content reference: ${ref}`);
     }
     return ref.slice(7);
@@ -236,12 +245,12 @@ export class ContentStore {
   private getObjectPath(hash: string): string {
     // Use first 2 chars as directory prefix for better filesystem performance
     const prefix = hash.slice(0, 2);
-    return path.join(this.basePath, 'objects', prefix, hash);
+    return path.join(this.basePath, "objects", prefix, hash);
   }
 
   private async loadIndex(): Promise<void> {
     try {
-      const data = await fs.readFile(this.indexPath, 'utf-8');
+      const data = await fs.readFile(this.indexPath, "utf-8");
       const entries: [string, StoredRef][] = JSON.parse(data);
       this.index = new Map(entries);
     } catch {
@@ -261,10 +270,12 @@ export class ContentStore {
 
 let contentStoreInstance: ContentStore | null = null;
 
-export async function getContentStore(config?: ContentStoreConfig): Promise<ContentStore> {
+export async function getContentStore(
+  config?: ContentStoreConfig
+): Promise<ContentStore> {
   if (!contentStoreInstance) {
     const defaultConfig: ContentStoreConfig = {
-      basePath: process.env.CONTENT_STORE_PATH ?? './data/content-store',
+      basePath: process.env.CONTENT_STORE_PATH ?? "./data/content-store",
       maxFileSize: 100 * 1024 * 1024,
     };
     contentStoreInstance = new ContentStore(config ?? defaultConfig);

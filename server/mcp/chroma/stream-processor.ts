@@ -1,6 +1,6 @@
 /**
  * Streaming File Processor
- * 
+ *
  * Handles 5GB+ files by:
  * 1. Streaming reads (never load full file into memory)
  * 2. SAX-style XML parsing for element-aware chunking
@@ -8,10 +8,10 @@
  * 4. Backpressure handling for slow consumers
  */
 
-import { createReadStream, statSync } from 'fs';
-import { createInterface } from 'readline';
-import { Transform, Readable } from 'stream';
-import { getWorkingMemory, type ChunkingOptions } from './working-memory';
+import { createReadStream, statSync } from "fs";
+import { createInterface } from "readline";
+import { Transform, Readable } from "stream";
+import { getWorkingMemory, type ChunkingOptions } from "./working-memory";
 
 // ============================================================================
 // Types
@@ -20,7 +20,7 @@ import { getWorkingMemory, type ChunkingOptions } from './working-memory';
 export interface ProcessingOptions extends Partial<ChunkingOptions> {
   jobName: string;
   generateEmbeddings?: boolean;
-  batchSize?: number;          // Chunks per batch before storing
+  batchSize?: number; // Chunks per batch before storing
   onProgress?: (progress: ProcessingProgress) => void;
   onChunk?: (chunk: ChunkData) => void;
   resumeFromOffset?: number;
@@ -34,7 +34,7 @@ export interface ProcessingProgress {
   chunksCreated: number;
   currentOffset: number;
   estimatedTimeRemaining?: number;
-  processingRate: number;      // bytes per second
+  processingRate: number; // bytes per second
 }
 
 export interface ChunkData {
@@ -63,7 +63,7 @@ export interface ProcessingResult {
 // ============================================================================
 
 class XMLStreamChunker extends Transform {
-  private buffer: string = '';
+  private buffer: string = "";
   private currentPath: string[] = [];
   private currentOffset: number = 0;
   private lineNumber: number = 1;
@@ -71,9 +71,9 @@ class XMLStreamChunker extends Transform {
   private overlapSize: number;
   private preserveElements: boolean;
   private pendingChunks: ChunkData[] = [];
-  private elementBuffer: string = '';
+  private elementBuffer: string = "";
   private inElement: boolean = false;
-  private currentElementName: string = '';
+  private currentElementName: string = "";
   private currentAttributes: Record<string, string> = {};
 
   constructor(options: ChunkingOptions) {
@@ -84,7 +84,7 @@ class XMLStreamChunker extends Transform {
   }
 
   _transform(chunk: Buffer, encoding: string, callback: () => void): void {
-    const text = chunk.toString('utf-8');
+    const text = chunk.toString("utf-8");
     this.buffer += text;
     this.processBuffer();
     callback();
@@ -112,15 +112,15 @@ class XMLStreamChunker extends Transform {
     while (i < this.buffer.length) {
       const char = this.buffer[i];
 
-      if (char === '\n') {
+      if (char === "\n") {
         this.lineNumber++;
       }
 
-      if (char === '<') {
+      if (char === "<") {
         // Check if we have enough content to emit a chunk
         if (this.elementBuffer.length >= this.chunkSize) {
           this.emitChunk(this.elementBuffer, {
-            xpath: '/' + this.currentPath.join('/'),
+            xpath: "/" + this.currentPath.join("/"),
             lineNumber: this.lineNumber,
           });
           // Keep overlap
@@ -128,7 +128,7 @@ class XMLStreamChunker extends Transform {
         }
 
         // Find the end of this tag
-        const tagEnd = this.buffer.indexOf('>', i);
+        const tagEnd = this.buffer.indexOf(">", i);
         if (tagEnd === -1) {
           // Incomplete tag, wait for more data
           this.buffer = this.buffer.slice(i);
@@ -137,24 +137,24 @@ class XMLStreamChunker extends Transform {
 
         const tag = this.buffer.slice(i, tagEnd + 1);
         this.elementBuffer += tag;
-        
+
         // Parse tag
-        if (tag.startsWith('</')) {
+        if (tag.startsWith("</")) {
           // Closing tag
           const tagName = tag.slice(2, -1).trim();
           if (this.currentPath[this.currentPath.length - 1] === tagName) {
             this.currentPath.pop();
           }
-        } else if (!tag.startsWith('<?') && !tag.startsWith('<!')) {
+        } else if (!tag.startsWith("<?") && !tag.startsWith("<!")) {
           // Opening tag (not processing instruction or comment)
           const match = tag.match(/^<(\w+)/);
           if (match) {
             const tagName = match[1];
-            if (!tag.endsWith('/>')) {
+            if (!tag.endsWith("/>")) {
               this.currentPath.push(tagName);
             }
             this.currentElementName = tagName;
-            
+
             // Extract attributes
             this.currentAttributes = {};
             const attrRegex = /(\w+)=["']([^"']*)["']/g;
@@ -174,7 +174,7 @@ class XMLStreamChunker extends Transform {
     }
 
     // Keep unprocessed buffer
-    this.buffer = '';
+    this.buffer = "";
   }
 
   private processTextBuffer(): void {
@@ -182,11 +182,11 @@ class XMLStreamChunker extends Transform {
     while (this.buffer.length >= this.chunkSize) {
       const chunk = this.buffer.slice(0, this.chunkSize);
       this.emitChunk(chunk, { lineNumber: this.lineNumber });
-      
+
       // Move buffer forward, keeping overlap
       this.buffer = this.buffer.slice(this.chunkSize - this.overlapSize);
       this.currentOffset += this.chunkSize - this.overlapSize;
-      
+
       // Count newlines in the chunk we're removing
       const removed = chunk.slice(0, this.chunkSize - this.overlapSize);
       this.lineNumber += (removed.match(/\n/g) || []).length;
@@ -195,7 +195,7 @@ class XMLStreamChunker extends Transform {
 
   private emitChunk(content: string, metadata: Record<string, unknown>): void {
     if (content.trim().length === 0) return;
-    
+
     const chunk: ChunkData = {
       content,
       offset: this.currentOffset,
@@ -214,12 +214,12 @@ class XMLStreamChunker extends Transform {
 // ============================================================================
 
 class JSONStreamChunker extends Transform {
-  private buffer: string = '';
+  private buffer: string = "";
   private depth: number = 0;
   private currentOffset: number = 0;
   private chunkSize: number;
   private overlapSize: number;
-  private objectBuffer: string = '';
+  private objectBuffer: string = "";
   private inString: boolean = false;
   private escapeNext: boolean = false;
 
@@ -230,8 +230,8 @@ class JSONStreamChunker extends Transform {
   }
 
   _transform(chunk: Buffer, encoding: string, callback: () => void): void {
-    const text = chunk.toString('utf-8');
-    
+    const text = chunk.toString("utf-8");
+
     for (let i = 0; i < text.length; i++) {
       const char = text[i];
       this.objectBuffer += char;
@@ -241,7 +241,7 @@ class JSONStreamChunker extends Transform {
         continue;
       }
 
-      if (char === '\\') {
+      if (char === "\\") {
         this.escapeNext = true;
         continue;
       }
@@ -253,15 +253,15 @@ class JSONStreamChunker extends Transform {
 
       if (this.inString) continue;
 
-      if (char === '{' || char === '[') {
+      if (char === "{" || char === "[") {
         this.depth++;
-      } else if (char === '}' || char === ']') {
+      } else if (char === "}" || char === "]") {
         this.depth--;
-        
+
         // If we're back to depth 1 (inside root array) or 0, we have a complete object
         if (this.depth <= 1 && this.objectBuffer.length >= this.chunkSize) {
           this.emitChunk(this.objectBuffer);
-          this.objectBuffer = '';
+          this.objectBuffer = "";
           this.currentOffset += this.objectBuffer.length;
         }
       }
@@ -294,7 +294,7 @@ class JSONStreamChunker extends Transform {
 // ============================================================================
 
 class TextStreamChunker extends Transform {
-  private buffer: string = '';
+  private buffer: string = "";
   private currentOffset: number = 0;
   private lineNumber: number = 1;
   private chunkSize: number;
@@ -307,19 +307,19 @@ class TextStreamChunker extends Transform {
   }
 
   _transform(chunk: Buffer, encoding: string, callback: () => void): void {
-    this.buffer += chunk.toString('utf-8');
-    
+    this.buffer += chunk.toString("utf-8");
+
     while (this.buffer.length >= this.chunkSize) {
       // Try to break at sentence or paragraph boundary
       let breakPoint = this.chunkSize;
-      
+
       // Look for paragraph break
-      const paragraphBreak = this.buffer.lastIndexOf('\n\n', this.chunkSize);
+      const paragraphBreak = this.buffer.lastIndexOf("\n\n", this.chunkSize);
       if (paragraphBreak > this.chunkSize * 0.5) {
         breakPoint = paragraphBreak + 2;
       } else {
         // Look for sentence break
-        const sentenceBreak = this.buffer.lastIndexOf('. ', this.chunkSize);
+        const sentenceBreak = this.buffer.lastIndexOf(". ", this.chunkSize);
         if (sentenceBreak > this.chunkSize * 0.5) {
           breakPoint = sentenceBreak + 2;
         }
@@ -327,10 +327,10 @@ class TextStreamChunker extends Transform {
 
       const content = this.buffer.slice(0, breakPoint);
       this.emitChunk(content);
-      
+
       // Count newlines
       this.lineNumber += (content.match(/\n/g) || []).length;
-      
+
       // Keep overlap
       const overlapStart = Math.max(0, breakPoint - this.overlapSize);
       this.buffer = this.buffer.slice(overlapStart);
@@ -392,7 +392,7 @@ export class StreamProcessor {
         }
       );
 
-      await this.workingMemory.setJobStatus(job.id, 'processing');
+      await this.workingMemory.setJobStatus(job.id, "processing");
 
       // Determine file type and create appropriate chunker
       const fileType = this.detectFileType(filePath);
@@ -418,7 +418,7 @@ export class StreamProcessor {
       await new Promise<void>((resolve, reject) => {
         readStream
           .pipe(chunker)
-          .on('data', async (chunk: ChunkData) => {
+          .on("data", async (chunk: ChunkData) => {
             batch.push(chunk);
             chunksCreated++;
             bytesProcessed += chunk.content.length;
@@ -430,7 +430,7 @@ export class StreamProcessor {
             // Store batch when full
             if (batch.length >= batchSize) {
               chunker.pause();
-              
+
               await this.workingMemory.storeChunks(
                 job.id,
                 batch.map(c => ({
@@ -440,7 +440,7 @@ export class StreamProcessor {
                 })),
                 options.generateEmbeddings ?? true
               );
-              
+
               batch = [];
               chunker.resume();
             }
@@ -465,7 +465,7 @@ export class StreamProcessor {
               lastProgressUpdate = Date.now();
             }
           })
-          .on('end', async () => {
+          .on("end", async () => {
             // Store remaining batch
             if (batch.length > 0) {
               await this.workingMemory.storeChunks(
@@ -480,10 +480,10 @@ export class StreamProcessor {
             }
             resolve();
           })
-          .on('error', reject);
+          .on("error", reject);
       });
 
-      await this.workingMemory.setJobStatus(job.id, 'completed');
+      await this.workingMemory.setJobStatus(job.id, "completed");
 
       return {
         jobId: job.id,
@@ -494,38 +494,41 @@ export class StreamProcessor {
       };
     } catch (error) {
       return {
-        jobId: '',
+        jobId: "",
         success: false,
         chunksCreated,
         bytesProcessed,
         duration: Date.now() - startTime,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
 
-  private detectFileType(filePath: string): 'xml' | 'json' | 'text' {
-    const ext = filePath.split('.').pop()?.toLowerCase() || '';
-    if (ext === 'xml') return 'xml';
-    if (ext === 'json' || ext === 'jsonl') return 'json';
-    return 'text';
+  private detectFileType(filePath: string): "xml" | "json" | "text" {
+    const ext = filePath.split(".").pop()?.toLowerCase() || "";
+    if (ext === "xml") return "xml";
+    if (ext === "json" || ext === "jsonl") return "json";
+    return "text";
   }
 
   private createChunker(
-    fileType: 'xml' | 'json' | 'text',
+    fileType: "xml" | "json" | "text",
     options: ChunkingOptions
   ): Transform {
     switch (fileType) {
-      case 'xml':
+      case "xml":
         return new XMLStreamChunker(options);
-      case 'json':
+      case "json":
         return new JSONStreamChunker(options);
       default:
         return new TextStreamChunker(options);
     }
   }
 
-  async resumeJob(jobId: string, options: Omit<ProcessingOptions, 'jobName'>): Promise<ProcessingResult> {
+  async resumeJob(
+    jobId: string,
+    options: Omit<ProcessingOptions, "jobName">
+  ): Promise<ProcessingResult> {
     const job = this.workingMemory.getJob(jobId);
     if (!job) {
       return {
@@ -534,7 +537,7 @@ export class StreamProcessor {
         chunksCreated: 0,
         bytesProcessed: 0,
         duration: 0,
-        error: 'Job not found',
+        error: "Job not found",
       };
     }
 

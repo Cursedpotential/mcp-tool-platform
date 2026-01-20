@@ -1,18 +1,18 @@
 # Task Executor
 
 **NAME**
-    task-executor - Forensic analysis task execution engine with checkpoint/resume capabilities
+task-executor - Forensic analysis task execution engine with checkpoint/resume capabilities
 
 **SYNOPSIS**
-    The Task Executor manages tool invocation with content-addressed deduplication, checkpoint/resume functionality, and backpressure handling for the 78+ forensic analysis tools.
+The Task Executor manages tool invocation with content-addressed deduplication, checkpoint/resume functionality, and backpressure handling for the 78+ forensic analysis tools.
 
 **DESCRIPTION**
-    The Task Executor is the core execution engine for the MCP Tool Platform. It handles task lifecycle management, result caching, checkpointing, and provides a unified interface for executing forensic analysis tools.
+The Task Executor is the core execution engine for the MCP Tool Platform. It handles task lifecycle management, result caching, checkpointing, and provides a unified interface for executing forensic analysis tools.
 
 **CORE FEATURES**
 
 **Content-Addressed Deduplication**
-    Prevents redundant computation through SHA-256 input hashing.
+Prevents redundant computation through SHA-256 input hashing.
 
     **Mechanism:**
     - Computes hash of tool name + arguments
@@ -21,7 +21,7 @@
     - Stores new results with content hash
 
 **Checkpoint/Resume**
-    Long-running tasks can be paused and resumed from interruption.
+Long-running tasks can be paused and resumed from interruption.
 
     **Checkpoint Data:**
     ```typescript
@@ -35,7 +35,7 @@
     ```
 
 **Backpressure Handling**
-    Manages concurrent execution to prevent resource exhaustion.
+Manages concurrent execution to prevent resource exhaustion.
 
     **Configuration:**
     - **Concurrency Limit**: Default 10 simultaneous tasks
@@ -43,7 +43,7 @@
     - **Resource Monitoring**: Active task counting
 
 **Task Lifecycle**
-    Complete task state management from creation to completion.
+Complete task state management from creation to completion.
 
     **States:**
     - `pending` - Queued for execution
@@ -56,7 +56,7 @@
 **DATA STRUCTURES**
 
 **ExecuteRequest**
-    Task execution specification.
+Task execution specification.
 
     ```typescript
     interface ExecuteRequest {
@@ -74,7 +74,7 @@
     ```
 
 **InvokeResult**
-    Task execution result.
+Task execution result.
 
     ```typescript
     interface InvokeResult {
@@ -95,7 +95,7 @@
     ```
 
 **Task**
-    Internal task representation.
+Internal task representation.
 
     ```typescript
     interface Task {
@@ -117,7 +117,7 @@
 **API METHODS**
 
 **execute(request: ExecuteRequest): Promise<InvokeResult>**
-    Executes a tool with full lifecycle management.
+Executes a tool with full lifecycle management.
 
     **Process Flow:**
     1. **Input Validation**: Validate request parameters
@@ -135,14 +135,14 @@
     - `InvokeResult` with success/error status
 
 **registerHandler(toolName: string, handler: ToolHandler): void**
-    Registers a tool execution handler.
+Registers a tool execution handler.
 
     **Parameters:**
     - `toolName`: Tool identifier
     - `handler`: Execution function
 
 **getTaskStatus(taskId: string): Task | undefined**
-    Retrieves current task status.
+Retrieves current task status.
 
     **Parameters:**
     - `taskId`: Task identifier
@@ -151,7 +151,7 @@
     - Task object or undefined if not found
 
 **pauseTask(taskId: string): boolean**
-    Pauses a running task with checkpoint.
+Pauses a running task with checkpoint.
 
     **Parameters:**
     - `taskId`: Task to pause
@@ -160,7 +160,7 @@
     - Success status
 
 **resumeTask(taskId: string): boolean**
-    Resumes a paused task from checkpoint.
+Resumes a paused task from checkpoint.
 
     **Parameters:**
     - `taskId`: Task to resume
@@ -169,7 +169,7 @@
     - Success status
 
 **cancelTask(taskId: string): boolean**
-    Cancels a pending or running task.
+Cancels a pending or running task.
 
     **Parameters:**
     - `taskId`: Task to cancel
@@ -180,7 +180,7 @@
 **EXECUTION ENGINE**
 
 **Concurrency Control**
-    Manages simultaneous task execution.
+Manages simultaneous task execution.
 
     **Algorithm:**
     ```typescript
@@ -204,7 +204,7 @@
     ```
 
 **Deduplication Logic**
-    Prevents redundant computation.
+Prevents redundant computation.
 
     ```typescript
     private computeInputHash(toolName: string, args: Record<string, unknown>): string {
@@ -225,7 +225,7 @@
     ```
 
 **Timeout Handling**
-    Prevents runaway task execution.
+Prevents runaway task execution.
 
     ```typescript
     private async runWithTimeout<T>(
@@ -242,7 +242,7 @@
     ```
 
 **Result Storage**
-    Manages output persistence.
+Manages output persistence.
 
     **Strategy:**
     - **Small Outputs** (<4KB): Return inline
@@ -252,71 +252,38 @@
 
 **ERROR HANDLING**
 
-**Execution Errors**
-    - **Timeout**: Task exceeded time limit
-    - **Resource Exhaustion**: Memory/disk limits reached
-    - **Tool Errors**: Tool-specific execution failures
-    - **Network Errors**: External service failures
+**Execution Errors** - **Timeout**: Task exceeded time limit - **Resource Exhaustion**: Memory/disk limits reached - **Tool Errors**: Tool-specific execution failures - **Network Errors**: External service failures
 
-**Recovery Mechanisms**
-    - **Retry Logic**: Automatic retry with exponential backoff
-    - **Checkpoint Recovery**: Resume from saved state
-    - **Graceful Degradation**: Fallback to simpler execution paths
+**Recovery Mechanisms** - **Retry Logic**: Automatic retry with exponential backoff - **Checkpoint Recovery**: Resume from saved state - **Graceful Degradation**: Fallback to simpler execution paths
 
-**Monitoring**
-    - **Execution Metrics**: Time, memory, CPU usage
-    - **Error Rates**: Per-tool failure statistics
-    - **Queue Depth**: Pending task backlog
-    - **Cache Hit Rate**: Deduplication effectiveness
+**Monitoring** - **Execution Metrics**: Time, memory, CPU usage - **Error Rates**: Per-tool failure statistics - **Queue Depth**: Pending task backlog - **Cache Hit Rate**: Deduplication effectiveness
 
 **INTEGRATION POINTS**
 
-**Content Store**
-    - Stores large outputs with SHA-256 addressing
-    - Provides paging for large artifact retrieval
-    - Maintains reference integrity
+**Content Store** - Stores large outputs with SHA-256 addressing - Provides paging for large artifact retrieval - Maintains reference integrity
 
-**Tool Registry**
-    - Provides tool specifications and handlers
-    - Validates permissions before execution
-    - Supplies execution metadata
+**Tool Registry** - Provides tool specifications and handlers - Validates permissions before execution - Supplies execution metadata
 
-**MCP Gateway**
-    - Receives execution requests via tRPC
-    - Returns results with appropriate formatting
-    - Handles reference-based returns
+**MCP Gateway** - Receives execution requests via tRPC - Returns results with appropriate formatting - Handles reference-based returns
 
-**Smart Router**
-    - Routes tool execution to optimal providers
-    - Manages cost and latency tradeoffs
-    - Handles provider failover
+**Smart Router** - Routes tool execution to optimal providers - Manages cost and latency tradeoffs - Handles provider failover
 
 **PERFORMANCE CHARACTERISTICS**
 
-**Throughput**
-    - **Concurrent Tasks**: Up to 10 simultaneous executions
-    - **Queue Processing**: FIFO with priority support
-    - **Memory Usage**: ~50MB baseline + per-task overhead
+**Throughput** - **Concurrent Tasks**: Up to 10 simultaneous executions - **Queue Processing**: FIFO with priority support - **Memory Usage**: ~50MB baseline + per-task overhead
 
-**Latency**
-    - **Cache Hit**: <1ms (deduplication)
-    - **Simple Tool**: 10-100ms
-    - **Complex Analysis**: 1-30 seconds
-    - **Large Document**: 30-300 seconds
+**Latency** - **Cache Hit**: <1ms (deduplication) - **Simple Tool**: 10-100ms - **Complex Analysis**: 1-30 seconds - **Large Document**: 30-300 seconds
 
-**Scalability**
-    - **Horizontal**: Multiple executor instances
-    - **Vertical**: Increased concurrency limits
-    - **Distributed**: Cross-instance task distribution
+**Scalability** - **Horizontal**: Multiple executor instances - **Vertical**: Increased concurrency limits - **Distributed**: Cross-instance task distribution
 
 **SEE ALSO**
-    mcp-gateway(7), tool-registry(7), content-store(7), smart-router(7)
+mcp-gateway(7), tool-registry(7), content-store(7), smart-router(7)
 
 **AUTHOR**
-    Claude Code - Opus 4.1
+Claude Code - Opus 4.1
 
 **VERSION**
-    1.0.0
+1.0.0
 
 **DATE**
-    January 11, 2026
+January 11, 2026

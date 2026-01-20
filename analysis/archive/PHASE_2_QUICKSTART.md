@@ -194,11 +194,13 @@ pnpm test -- database-connections.test.ts
 ## 🧪 Testing Strategy
 
 ### Unit Tests (database-connections.test.ts)
+
 ```bash
 pnpm test -- database-connections.test.ts --reporter=verbose
 ```
 
 **Expected Results:**
+
 - ✓ Vector DB health check (latency 5-50ms)
 - ✓ Vector store/search operations
 - ✓ Graph DB health check (latency 10-100ms)
@@ -206,12 +208,14 @@ pnpm test -- database-connections.test.ts --reporter=verbose
 - ✓ Relationship creation & queries
 
 ### Integration Tests
+
 ```bash
 # Test with actual external services
 pnpm test -- --include='**/integration/**'
 ```
 
 ### Manual Testing
+
 ```bash
 # Test Qdrant directly
 curl -X POST http://localhost:6333/collections/test/points \
@@ -229,6 +233,7 @@ curl -u neo4j:password -X POST http://localhost:7474/db/neo4j/tx \
 ## 🔍 Debugging
 
 ### Check Service Status
+
 ```bash
 # View logs
 docker-compose logs qdrant
@@ -241,6 +246,7 @@ telnet localhost 7474  # Neo4j HTTP
 ```
 
 ### Enable Debug Logging
+
 ```bash
 # Set in .env
 LOG_LEVEL=debug
@@ -252,6 +258,7 @@ DEBUG=* pnpm test
 ### Common Issues
 
 **Neo4j connection timeout:**
+
 ```bash
 # Wait for Neo4j to fully start (20-30 seconds)
 sleep 30
@@ -261,6 +268,7 @@ curl -s http://localhost:7474/db/neo4j/summary | jq .
 ```
 
 **Qdrant API key rejected:**
+
 ```bash
 # Check .env has correct key
 grep QDRANT_API_KEY .env
@@ -270,6 +278,7 @@ QDRANT_API_KEY=
 ```
 
 **Neo4j authentication failed:**
+
 ```bash
 # Default credentials are neo4j / password
 # If changed, update docker-compose.yml and .env
@@ -286,6 +295,7 @@ sleep 30
 ## 📊 Monitoring
 
 ### Health Check Endpoint
+
 ```bash
 # Check all services
 curl http://localhost:3000/api/health
@@ -300,7 +310,9 @@ curl http://localhost:3000/api/health
 ```
 
 ### Settings UI
+
 Navigate to `/settings/databases`:
+
 - See connection status for each service
 - View configuration URLs
 - Test connections manually
@@ -309,11 +321,13 @@ Navigate to `/settings/databases`:
 ### Monitoring Queries
 
 **Qdrant - Collection stats:**
+
 ```bash
 curl http://localhost:6333/collections/mcp_default
 ```
 
 **Neo4j - Entity count:**
+
 ```bash
 curl -u neo4j:password -X POST http://localhost:7474/db/neo4j/tx \
   -d '{"statements": [{"statement": "MATCH (n) RETURN count(n)"}]}'
@@ -324,6 +338,7 @@ curl -u neo4j:password -X POST http://localhost:7474/db/neo4j/tx \
 ## 🚀 Production Deployment
 
 ### Environment Variables
+
 ```bash
 # Update .env for production
 QDRANT_URL=https://YOUR_CLUSTER.qdrant.io
@@ -343,6 +358,7 @@ N8N_ENABLED=true
 ```
 
 ### Docker Compose Override
+
 ```bash
 # Create docker-compose.prod.yml with production services
 # Or use environment variable substitution
@@ -350,19 +366,20 @@ docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 ```
 
 ### Health Check Integration
+
 ```typescript
 // Add to your startup sequence
-import * as vectorDb from './plugins/vector-db-real';
-import * as graphDb from './plugins/graph-db-real';
+import * as vectorDb from "./plugins/vector-db-real";
+import * as graphDb from "./plugins/graph-db-real";
 
-app.get('/health', async (req, res) => {
+app.get("/health", async (req, res) => {
   const [vdb, gdb] = await Promise.all([
     vectorDb.vectorDBHealthCheck(),
     graphDb.graphDBHealthCheck(),
   ]);
-  
+
   res.json({
-    status: vdb.healthy && gdb.healthy ? 'healthy' : 'degraded',
+    status: vdb.healthy && gdb.healthy ? "healthy" : "degraded",
     services: { vectorDb: vdb, graphDb: gdb },
   });
 });

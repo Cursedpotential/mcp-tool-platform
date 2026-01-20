@@ -1,6 +1,6 @@
 /**
  * MCP Server Proxy/Aggregator
- * 
+ *
  * Consolidates multiple MCP servers into a single unified interface.
  * - Register remote MCP servers
  * - Proxy requests to appropriate servers
@@ -8,16 +8,20 @@
  * - Health monitoring and load balancing
  */
 
-import { nanoid } from 'nanoid';
-import { logger } from '../realtime/log-stream';
-import type { ToolSpec, ToolCard } from '../../../shared/mcp-types';
+import { nanoid } from "nanoid";
+import { logger } from "../realtime/log-stream";
+import type { ToolSpec, ToolCard } from "../../../shared/mcp-types";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type ServerTransport = 'stdio' | 'http' | 'websocket';
-export type ServerStatus = 'connected' | 'disconnected' | 'error' | 'connecting';
+export type ServerTransport = "stdio" | "http" | "websocket";
+export type ServerStatus =
+  | "connected"
+  | "disconnected"
+  | "error"
+  | "connecting";
 
 export interface MCPServerConfig {
   id: string;
@@ -102,7 +106,7 @@ async function httpRequest<T>(
     const response = await fetch(endpoint, {
       method,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...headers,
       },
       body: body ? JSON.stringify(body) : undefined,
@@ -113,7 +117,7 @@ async function httpRequest<T>(
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
-    return await response.json() as T;
+    return (await response.json()) as T;
   } finally {
     clearTimeout(timeoutId);
   }
@@ -144,13 +148,15 @@ class MCPProxyManager {
   // Server Management
   // -------------------------------------------------------------------------
 
-  async registerServer(config: Omit<MCPServerConfig, 'id'>): Promise<MCPServerState> {
+  async registerServer(
+    config: Omit<MCPServerConfig, "id">
+  ): Promise<MCPServerState> {
     const id = `server_${nanoid()}`;
     const fullConfig: MCPServerConfig = { ...config, id };
 
     const state: MCPServerState = {
       config: fullConfig,
-      status: 'connecting',
+      status: "connecting",
       lastHealthCheck: 0,
       tools: [],
     };
@@ -162,7 +168,10 @@ class MCPProxyManager {
       await this.connectServer(id);
     }
 
-    logger.info('proxy', `Registered MCP server: ${config.name}`, { serverId: id, endpoint: config.endpoint });
+    logger.info("proxy", `Registered MCP server: ${config.name}`, {
+      serverId: id,
+      endpoint: config.endpoint,
+    });
     return state;
   }
 
@@ -184,11 +193,16 @@ class MCPProxyManager {
     }
 
     this.servers.delete(serverId);
-    logger.info('proxy', `Unregistered MCP server: ${state.config.name}`, { serverId });
+    logger.info("proxy", `Unregistered MCP server: ${state.config.name}`, {
+      serverId,
+    });
     return true;
   }
 
-  async updateServer(serverId: string, updates: Partial<MCPServerConfig>): Promise<MCPServerState | null> {
+  async updateServer(
+    serverId: string,
+    updates: Partial<MCPServerConfig>
+  ): Promise<MCPServerState | null> {
     const state = this.servers.get(serverId);
     if (!state) return null;
 
@@ -224,23 +238,23 @@ class MCPProxyManager {
     const state = this.servers.get(serverId);
     if (!state) return;
 
-    state.status = 'connecting';
+    state.status = "connecting";
     const startTime = Date.now();
 
     try {
       // Discover tools based on transport
       let tools: ToolCard[] = [];
 
-      if (state.config.transport === 'http') {
+      if (state.config.transport === "http") {
         tools = await this.discoverHttpTools(state.config);
-      } else if (state.config.transport === 'websocket') {
+      } else if (state.config.transport === "websocket") {
         tools = await this.discoverWebSocketTools(state.config);
-      } else if (state.config.transport === 'stdio') {
+      } else if (state.config.transport === "stdio") {
         tools = await this.discoverStdioTools(state.config);
       }
 
       state.tools = tools;
-      state.status = 'connected';
+      state.status = "connected";
       state.latencyMs = Date.now() - startTime;
       state.lastHealthCheck = Date.now();
       state.lastError = undefined;
@@ -254,43 +268,50 @@ class MCPProxyManager {
         }
       }
 
-      logger.info('proxy', `Connected to MCP server: ${state.config.name}`, {
+      logger.info("proxy", `Connected to MCP server: ${state.config.name}`, {
         serverId,
         toolCount: tools.length,
         latencyMs: state.latencyMs,
       });
     } catch (error) {
-      state.status = 'error';
-      state.lastError = error instanceof Error ? error.message : 'Unknown error';
+      state.status = "error";
+      state.lastError =
+        error instanceof Error ? error.message : "Unknown error";
       state.latencyMs = Date.now() - startTime;
 
-      logger.error('proxy', `Failed to connect to MCP server: ${state.config.name}`, {
-        serverId,
-        error: state.lastError,
-      });
+      logger.error(
+        "proxy",
+        `Failed to connect to MCP server: ${state.config.name}`,
+        {
+          serverId,
+          error: state.lastError,
+        }
+      );
     }
   }
 
-  private async discoverHttpTools(config: MCPServerConfig): Promise<ToolCard[]> {
+  private async discoverHttpTools(
+    config: MCPServerConfig
+  ): Promise<ToolCard[]> {
     const headers: Record<string, string> = { ...config.headers };
     if (config.apiKey) {
-      headers['Authorization'] = `Bearer ${config.apiKey}`;
+      headers["Authorization"] = `Bearer ${config.apiKey}`;
     }
 
     // Try MCP-style list_tools endpoint
     try {
       const response = await httpRequest<MCPListToolsResponse>(
         `${config.endpoint}/tools/list`,
-        'POST',
-        { method: 'tools/list' },
+        "POST",
+        { method: "tools/list" },
         headers,
         config.timeout || 10000
       );
 
       return response.tools.map(t => ({
         name: t.name,
-        description: t.description || '',
-        category: 'remote',
+        description: t.description || "",
+        category: "remote",
         tags: [],
       }));
     } catch {
@@ -298,14 +319,14 @@ class MCPProxyManager {
       try {
         const response = await httpRequest<{ tools: ToolCard[] }>(
           `${config.endpoint}/api/tools`,
-          'GET',
+          "GET",
           undefined,
           headers,
           config.timeout || 10000
         );
         return response.tools.map(t => ({
           ...t,
-          category: t.category || 'remote',
+          category: t.category || "remote",
           tags: t.tags || [],
         }));
       } catch {
@@ -314,17 +335,21 @@ class MCPProxyManager {
     }
   }
 
-  private async discoverWebSocketTools(_config: MCPServerConfig): Promise<ToolCard[]> {
+  private async discoverWebSocketTools(
+    _config: MCPServerConfig
+  ): Promise<ToolCard[]> {
     // WebSocket discovery would require maintaining a connection
     // For now, return empty and let tools be discovered on first use
-    logger.warn('proxy', 'WebSocket tool discovery not yet implemented');
+    logger.warn("proxy", "WebSocket tool discovery not yet implemented");
     return [];
   }
 
-  private async discoverStdioTools(_config: MCPServerConfig): Promise<ToolCard[]> {
+  private async discoverStdioTools(
+    _config: MCPServerConfig
+  ): Promise<ToolCard[]> {
     // Stdio discovery requires spawning the process
     // This would be implemented with child_process
-    logger.warn('proxy', 'Stdio tool discovery not yet implemented');
+    logger.warn("proxy", "Stdio tool discovery not yet implemented");
     return [];
   }
 
@@ -343,7 +368,7 @@ class MCPProxyManager {
       if (!servers || servers.length === 0) {
         return {
           success: false,
-          serverId: '',
+          serverId: "",
           error: `No server found for tool: ${request.toolName}`,
           latencyMs: Date.now() - startTime,
         };
@@ -357,13 +382,13 @@ class MCPProxyManager {
     if (!state) {
       return {
         success: false,
-        serverId: serverId || '',
+        serverId: serverId || "",
         error: `Server not found: ${serverId}`,
         latencyMs: Date.now() - startTime,
       };
     }
 
-    if (state.status !== 'connected') {
+    if (state.status !== "connected") {
       return {
         success: false,
         serverId,
@@ -376,17 +401,24 @@ class MCPProxyManager {
       let result: unknown;
 
       // Extract the actual tool name (remove server prefix if present)
-      const actualToolName = request.toolName.includes('.')
-        ? request.toolName.split('.').slice(1).join('.')
+      const actualToolName = request.toolName.includes(".")
+        ? request.toolName.split(".").slice(1).join(".")
         : request.toolName;
 
-      if (state.config.transport === 'http') {
-        result = await this.invokeHttpTool(state.config, actualToolName, request.args, request.timeout);
+      if (state.config.transport === "http") {
+        result = await this.invokeHttpTool(
+          state.config,
+          actualToolName,
+          request.args,
+          request.timeout
+        );
       } else {
-        throw new Error(`Transport not supported for invocation: ${state.config.transport}`);
+        throw new Error(
+          `Transport not supported for invocation: ${state.config.transport}`
+        );
       }
 
-      logger.info('proxy', `Tool invoked via proxy: ${request.toolName}`, {
+      logger.info("proxy", `Tool invoked via proxy: ${request.toolName}`, {
         serverId,
         serverName: state.config.name,
         latencyMs: Date.now() - startTime,
@@ -399,9 +431,9 @@ class MCPProxyManager {
         latencyMs: Date.now() - startTime,
       };
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
 
-      logger.error('proxy', `Tool invocation failed: ${request.toolName}`, {
+      logger.error("proxy", `Tool invocation failed: ${request.toolName}`, {
         serverId,
         serverName: state.config.name,
         error: errorMsg,
@@ -424,16 +456,16 @@ class MCPProxyManager {
   ): Promise<unknown> {
     const headers: Record<string, string> = { ...config.headers };
     if (config.apiKey) {
-      headers['Authorization'] = `Bearer ${config.apiKey}`;
+      headers["Authorization"] = `Bearer ${config.apiKey}`;
     }
 
     // Try MCP-style call_tool endpoint
     try {
       const response = await httpRequest<MCPCallToolResponse>(
         `${config.endpoint}/tools/call`,
-        'POST',
+        "POST",
         {
-          method: 'tools/call',
+          method: "tools/call",
           params: { name: toolName, arguments: args },
         },
         headers,
@@ -441,22 +473,26 @@ class MCPProxyManager {
       );
 
       if (response.isError) {
-        throw new Error(response.content[0]?.text || 'Tool returned error');
+        throw new Error(response.content[0]?.text || "Tool returned error");
       }
 
       return response.content;
     } catch {
       // Try alternative endpoint
-      const response = await httpRequest<{ success: boolean; data?: unknown; error?: string }>(
+      const response = await httpRequest<{
+        success: boolean;
+        data?: unknown;
+        error?: string;
+      }>(
         `${config.endpoint}/api/tools/${toolName}/invoke`,
-        'POST',
+        "POST",
         args,
         headers,
         timeout || config.timeout || 30000
       );
 
       if (!response.success) {
-        throw new Error(response.error || 'Tool invocation failed');
+        throw new Error(response.error || "Tool invocation failed");
       }
 
       return response.data;
@@ -469,7 +505,7 @@ class MCPProxyManager {
 
     for (const serverId of serverIds) {
       const state = this.servers.get(serverId);
-      if (!state || state.status !== 'connected') continue;
+      if (!state || state.status !== "connected") continue;
 
       // Score based on latency and priority
       const latencyScore = state.latencyMs || 1000;
@@ -493,15 +529,15 @@ class MCPProxyManager {
     const tools: ToolCard[] = [];
 
     for (const state of Array.from(this.servers.values())) {
-      if (state.status !== 'connected') continue;
+      if (state.status !== "connected") continue;
 
       for (const tool of state.tools) {
-      tools.push({
-        name: `${state.config.name}.${tool.name}`,
-        description: `[${state.config.name}] ${tool.description}`,
-        category: tool.category || 'remote',
-        tags: [...(tool.tags || []), state.config.name],
-      });
+        tools.push({
+          name: `${state.config.name}.${tool.name}`,
+          description: `[${state.config.name}] ${tool.description}`,
+          category: tool.category || "remote",
+          tags: [...(tool.tags || []), state.config.name],
+        });
       }
     }
 
@@ -515,8 +551,8 @@ class MCPProxyManager {
     const state = this.servers.get(serverIds[0]);
     if (!state) return null;
 
-    const actualToolName = toolName.includes('.')
-      ? toolName.split('.').slice(1).join('.')
+    const actualToolName = toolName.includes(".")
+      ? toolName.split(".").slice(1).join(".")
       : toolName;
 
     const tool = state.tools.find(t => t.name === actualToolName);
@@ -524,20 +560,20 @@ class MCPProxyManager {
 
     return {
       name: toolName,
-      category: tool.category || 'remote',
+      category: tool.category || "remote",
       description: tool.description,
-      version: '1.0.0',
+      version: "1.0.0",
       tags: [...(tool.tags || []), ...(state.config.tags || [])],
       inputSchema: {
-        type: 'object',
+        type: "object",
         properties: {},
         required: [],
       },
       outputSchema: {
-        type: 'object',
+        type: "object",
         properties: {},
       },
-      permissions: ['read:network' as const],
+      permissions: ["read:network" as const],
     };
   }
 
@@ -551,7 +587,8 @@ class MCPProxyManager {
         if (!state.config.enabled) continue;
 
         const timeSinceLastCheck = Date.now() - state.lastHealthCheck;
-        if (timeSinceLastCheck > 60000) { // Check every minute
+        if (timeSinceLastCheck > 60000) {
+          // Check every minute
           await this.checkServerHealth(serverId);
         }
       }
@@ -565,28 +602,29 @@ class MCPProxyManager {
     const startTime = Date.now();
 
     try {
-      if (state.config.transport === 'http') {
+      if (state.config.transport === "http") {
         const headers: Record<string, string> = { ...state.config.headers };
         if (state.config.apiKey) {
-          headers['Authorization'] = `Bearer ${state.config.apiKey}`;
+          headers["Authorization"] = `Bearer ${state.config.apiKey}`;
         }
 
         await httpRequest<unknown>(
           `${state.config.endpoint}/health`,
-          'GET',
+          "GET",
           undefined,
           headers,
           5000
         );
       }
 
-      state.status = 'connected';
+      state.status = "connected";
       state.latencyMs = Date.now() - startTime;
       state.lastHealthCheck = Date.now();
       state.lastError = undefined;
     } catch (error) {
-      state.status = 'error';
-      state.lastError = error instanceof Error ? error.message : 'Health check failed';
+      state.status = "error";
+      state.lastError =
+        error instanceof Error ? error.message : "Health check failed";
       state.lastHealthCheck = Date.now();
     }
   }
@@ -608,17 +646,18 @@ class MCPProxyManager {
     if (!state) return null;
 
     const envVars: Record<string, string> = {
-      [`MCP_${state.config.name.toUpperCase()}_ENDPOINT`]: state.config.endpoint,
+      [`MCP_${state.config.name.toUpperCase()}_ENDPOINT`]:
+        state.config.endpoint,
     };
 
     if (state.config.apiKey) {
-      envVars[`MCP_${state.config.name.toUpperCase()}_API_KEY`] = '${SECRET}';
+      envVars[`MCP_${state.config.name.toUpperCase()}_API_KEY`] = "${SECRET}";
     }
 
     const dockerCompose = `
 # Docker Compose configuration for ${state.config.name}
 services:
-  ${state.config.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}:
+  ${state.config.name.toLowerCase().replace(/[^a-z0-9]/g, "-")}:
     image: your-mcp-server-image
     environment:
       - PORT=8080

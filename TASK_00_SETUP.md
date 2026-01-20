@@ -15,6 +15,7 @@ pnpm install
 ```
 
 This will:
+
 - Install all dependencies from `package.json`
 - Enable TypeScript checking (`pnpm check`)
 - Enable all dev tools
@@ -177,11 +178,13 @@ cp .env.example .env
 ```
 
 **REQUIRED VALUES TO SET:**
+
 1. `ENCRYPTION_KEY` - Generate with: `openssl rand -hex 32`
 2. `DATABASE_URL` - Your MySQL/PostgreSQL connection string
 3. `JWT_SECRET` - Generate with: `openssl rand -hex 32`
 
 **OPTIONAL BUT RECOMMENDED:**
+
 - `CHROMA_URL` - If using vector search
 - `NEO4J_URL`, `NEO4J_PASSWORD` - If using graph database
 - `OPENAI_API_KEY` or `GOOGLE_API_KEY` - For LLM features
@@ -220,6 +223,7 @@ pnpm db:push
 ```
 
 This will:
+
 - Generate Drizzle migration files
 - Apply schema to database
 - Create all tables
@@ -254,6 +258,7 @@ mkdir -p /tmp/mcp-sandbox
 ## Troubleshooting
 
 ### If `pnpm install` fails:
+
 ```bash
 # Clear cache and reinstall
 rm -rf node_modules pnpm-lock.yaml
@@ -261,6 +266,7 @@ pnpm install
 ```
 
 ### If database migration fails:
+
 ```bash
 # Check database connection
 # Ensure DATABASE_URL is correct
@@ -268,6 +274,7 @@ pnpm install
 ```
 
 ### If Python installation fails:
+
 ```bash
 # Use lighter dependencies (remove torch)
 # Or use Docker image with pre-installed dependencies
@@ -278,6 +285,7 @@ pnpm install
 ## Output
 
 After completion, verify:
+
 - [ ] `node_modules` directory exists
 - [ ] `.env` file created with required values
 - [ ] `pnpm check` runs without errors

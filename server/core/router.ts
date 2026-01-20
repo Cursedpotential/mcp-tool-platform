@@ -1,7 +1,7 @@
 // File: server/core/router.ts | Date: 2026-01-11 | Agent: Groq Llama 3.3 70B | Model: Opus 4.1
 /**
  * Intelligent Routing Layer
- * 
+ *
  * Routes requests to the optimal service based on availability and requirements:
  * 1. Manus built-in APIs (fastest, free)
  * 2. Docker VPS services (LiteLLM, Neo4j, Chroma, etc.)
@@ -9,8 +9,8 @@
  * 4. Databases (Supabase, Neo4j Aura)
  */
 
-import { getPluginRegistry } from '../mcp/plugins/registry';
-import { getMCPProxy } from '../mcp/proxy/mcp-proxy';
+import { getPluginRegistry } from "../mcp/plugins/registry";
+import { getMCPProxy } from "../mcp/proxy/mcp-proxy";
 
 // ============================================================================
 // Type Definitions
@@ -25,13 +25,13 @@ interface LLMRequest {
 }
 
 interface LLMProvider {
-  type: 'built-in' | string;
+  type: "built-in" | string;
   endpoint: string;
   apiKey?: string;
 }
 
 interface MCPEndpoint {
-  type: 'local' | 'remote';
+  type: "local" | "remote";
   handler?: Function;
   serverId?: string;
   endpoint?: string;
@@ -44,7 +44,7 @@ interface VectorSearchRequest {
 }
 
 interface VectorDBEndpoint {
-  type: 'chroma' | 'qdrant';
+  type: "chroma" | "qdrant";
   url: string;
   apiKey?: string;
   collection: string;
@@ -57,7 +57,7 @@ interface StorageRequest {
 }
 
 interface StorageEndpoint {
-  type: 's3' | 'r2';
+  type: "s3" | "r2";
   endpoint: string;
   apiKey?: string;
   bucket: string;
@@ -66,7 +66,7 @@ interface StorageEndpoint {
 interface HealthStatus {
   services: Array<{
     name: string;
-    status: 'healthy' | 'unhealthy' | 'unreachable' | 'disabled';
+    status: "healthy" | "unhealthy" | "unreachable" | "disabled";
     latency: number;
     error?: string;
   }>;
@@ -101,7 +101,7 @@ export async function routeLLM(request: LLMRequest): Promise<LLMProvider> {
   try {
     if (process.env.BUILT_IN_FORGE_API_URL) {
       return {
-        type: 'built-in',
+        type: "built-in",
         endpoint: process.env.BUILT_IN_FORGE_API_URL,
         apiKey: process.env.BUILT_IN_FORGE_API_KEY,
       };
@@ -109,16 +109,16 @@ export async function routeLLM(request: LLMRequest): Promise<LLMProvider> {
 
     // Route to user provider (OpenAI, Anthropic, etc.)
     return {
-      type: request.provider || 'openai',
-      endpoint: request.endpoint,
+      type: request.provider || "openai",
+      endpoint: request.endpoint || "https://api.openai.com/v1",
       apiKey: request.apiKey,
     };
   } catch (error) {
-    console.error('Error routing LLM request:', error);
+    console.error("Error routing LLM request:", error);
     return {
-      type: 'openai',
-      endpoint: 'https://api.openai.com/v1',
-      apiKey: '',
+      type: "openai",
+      endpoint: "https://api.openai.com/v1",
+      apiKey: "",
     };
   }
 }
@@ -138,8 +138,8 @@ export async function routeMCPTool(toolName: string): Promise<MCPEndpoint> {
 
     if (localTool) {
       return {
-        type: 'local',
-        handler: localTool.handler,
+        type: "local",
+        // Handler would be looked up separately from the registry
       };
     }
 
@@ -149,22 +149,21 @@ export async function routeMCPTool(toolName: string): Promise<MCPEndpoint> {
 
     if (remoteTool) {
       return {
-        type: 'remote',
-        serverId: remoteTool.serverId,
-        endpoint: remoteTool.endpoint,
+        type: "remote",
+        // serverId and endpoint are looked up by the proxy when calling the tool
       };
     }
 
     return {
-      type: 'local',
+      type: "local",
       handler: () => {
         throw new Error(`Tool not found: ${toolName}`);
       },
     };
   } catch (error) {
-    console.error('Error routing MCP tool:', error);
+    console.error("Error routing MCP tool:", error);
     return {
-      type: 'local',
+      type: "local",
       handler: () => {
         throw new Error(`Tool not found: ${toolName}`);
       },
@@ -180,30 +179,32 @@ export async function routeMCPTool(toolName: string): Promise<MCPEndpoint> {
  * Route vector search to optimal database
  * Priority: Chroma (in-process) for TTL > Chroma (VPS) for persistent > Supabase pgvector
  */
-export async function routeVectorSearch(query: VectorSearchRequest): Promise<VectorDBEndpoint> {
+export async function routeVectorSearch(
+  query: VectorSearchRequest
+): Promise<VectorDBEndpoint> {
   try {
     // If QDRANT_URL is set and enabled, use Qdrant for persistent storage
-    if (process.env.QDRANT_URL && process.env.ENABLE_VECTOR_DB === 'true') {
+    if (process.env.QDRANT_URL && process.env.ENABLE_VECTOR_DB === "true") {
       return {
-        type: 'qdrant',
+        type: "qdrant",
         url: process.env.QDRANT_URL,
         apiKey: process.env.QDRANT_API_KEY,
-        collection: `${process.env.QDRANT_COLLECTION_PREFIX || 'mcp_'}${query.collection}`,
+        collection: `${process.env.QDRANT_COLLECTION_PREFIX || "mcp_"}${query.collection}`,
       };
     }
 
     // Otherwise use Chroma (in-process or local server)
-    const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8000';
+    const chromaUrl = process.env.CHROMA_URL || "http://localhost:8000";
     return {
-      type: 'chroma',
+      type: "chroma",
       url: chromaUrl,
       collection: query.collection,
     };
   } catch (error) {
-    console.error('Error routing vector search:', error);
+    console.error("Error routing vector search:", error);
     return {
-      type: 'chroma',
-      url: 'http://localhost:8000',
+      type: "chroma",
+      url: "http://localhost:8000",
       collection: query.collection,
     };
   }
@@ -217,43 +218,45 @@ export async function routeVectorSearch(query: VectorSearchRequest): Promise<Vec
  * Route storage upload to optimal service
  * Priority: Manus built-in > R2 (via Directus) > Direct R2
  */
-export async function routeStorage(file: StorageRequest): Promise<StorageEndpoint> {
+export async function routeStorage(
+  file: StorageRequest
+): Promise<StorageEndpoint> {
   try {
     const fileSizeMB = file.size / (1024 * 1024);
 
     // Small files (<10MB) go to Manus built-in S3
     if (fileSizeMB < 10 && process.env.BUILT_IN_FORGE_API_URL) {
       return {
-        type: 's3',
+        type: "s3",
         endpoint: `${process.env.BUILT_IN_FORGE_API_URL}/storage`,
         apiKey: process.env.BUILT_IN_FORGE_API_KEY,
-        bucket: 'manus-mcp-storage',
+        bucket: "manus-mcp-storage",
       };
     }
 
     // Large files (>10MB) go to user's Cloudflare R2
     if (process.env.SUPABASE_URL) {
       return {
-        type: 'r2',
+        type: "r2",
         endpoint: process.env.SUPABASE_URL,
         apiKey: process.env.SUPABASE_KEY,
-        bucket: 'user-storage',
+        bucket: "user-storage",
       };
     }
 
     return {
-      type: 's3',
-      endpoint: 'https://s3.amazonaws.com',
-      apiKey: '',
-      bucket: 'default-bucket',
+      type: "s3",
+      endpoint: "https://s3.amazonaws.com",
+      apiKey: "",
+      bucket: "default-bucket",
     };
   } catch (error) {
-    console.error('Error routing storage:', error);
+    console.error("Error routing storage:", error);
     return {
-      type: 's3',
-      endpoint: 'https://s3.amazonaws.com',
-      apiKey: '',
-      bucket: 'default-bucket',
+      type: "s3",
+      endpoint: "https://s3.amazonaws.com",
+      apiKey: "",
+      bucket: "default-bucket",
     };
   }
 }
@@ -268,38 +271,45 @@ export async function routeStorage(file: StorageRequest): Promise<StorageEndpoin
 export async function checkServiceHealth(): Promise<HealthStatus> {
   try {
     const services = [
-      { name: 'Neo4j', url: process.env.NEO4J_URL },
-      { name: 'Chroma', url: process.env.CHROMA_URL },
-      { name: 'Qdrant', url: process.env.QDRANT_URL },
-      { name: 'Ollama', url: process.env.OLLAMA_URL },
-      { name: 'LiteLLM', url: process.env.BUILT_IN_FORGE_API_URL },
+      { name: "Neo4j", url: process.env.NEO4J_URL },
+      { name: "Chroma", url: process.env.CHROMA_URL },
+      { name: "Qdrant", url: process.env.QDRANT_URL },
+      { name: "Ollama", url: process.env.OLLAMA_URL },
+      { name: "LiteLLM", url: process.env.BUILT_IN_FORGE_API_URL },
     ];
 
     const results = await Promise.all(
-      services.map(async (service) => {
+      services.map(async service => {
         if (!service.url) {
-          return { name: service.name, status: 'disabled', latency: 0 };
+          return {
+            name: service.name,
+            status: "disabled" as const,
+            latency: 0,
+          };
         }
 
         try {
           const start = Date.now();
           const response = await fetch(service.url, {
-            method: 'GET',
+            method: "GET",
             signal: AbortSignal.timeout(5000),
           });
           const latency = Date.now() - start;
 
+          const status: "healthy" | "unhealthy" = response.ok
+            ? "healthy"
+            : "unhealthy";
           return {
             name: service.name,
-            status: response.ok ? 'healthy' : 'unhealthy',
+            status,
             latency,
           };
         } catch (error) {
           return {
             name: service.name,
-            status: 'unreachable',
+            status: "unreachable" as const,
             latency: 0,
-            error: error.message,
+            error: error instanceof Error ? error.message : String(error),
           };
         }
       })
@@ -310,7 +320,7 @@ export async function checkServiceHealth(): Promise<HealthStatus> {
       timestamp: new Date(),
     };
   } catch (error) {
-    console.error('Error checking service health:', error);
+    console.error("Error checking service health:", error);
     return {
       services: [],
       timestamp: new Date(),
@@ -325,17 +335,20 @@ export async function checkServiceHealth(): Promise<HealthStatus> {
 /**
  * Track costs across all services
  */
-export async function trackCosts(userId: number, timeRange: TimeRange): Promise<CostMetrics> {
+export async function trackCosts(
+  userId: number,
+  timeRange: TimeRange
+): Promise<CostMetrics> {
   try {
     // If using built-in LiteLLM proxy, query its metrics endpoint
     if (process.env.BUILT_IN_FORGE_API_URL) {
       const response = await fetch(
         `${process.env.BUILT_IN_FORGE_API_URL}/metrics/costs`,
         {
-          method: 'POST',
+          method: "POST",
           headers: {
-            'Authorization': `Bearer ${process.env.BUILT_IN_FORGE_API_KEY}`,
-            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.BUILT_IN_FORGE_API_KEY}`,
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             userId,
@@ -359,7 +372,7 @@ export async function trackCosts(userId: number, timeRange: TimeRange): Promise<
       breakdown: [],
     };
   } catch (error) {
-    console.error('Error tracking costs:', error);
+    console.error("Error tracking costs:", error);
     return {
       totalCost: 0,
       totalTokens: 0,

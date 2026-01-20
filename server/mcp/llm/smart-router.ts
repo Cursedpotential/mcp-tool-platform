@@ -1,6 +1,6 @@
 /**
  * Smart LLM Provider Router
- * 
+ *
  * Routes LLM requests based on:
  * - Task type (simple/complex/creative)
  * - Cost constraints (free tier first, paid fallback)
@@ -9,7 +9,12 @@
  * - Provider health and rate limits
  */
 
-import { LLMProviderHub, type ProviderType, type LLMRequest, type LLMResponse } from './provider-hub';
+import {
+  LLMProviderHub,
+  type ProviderType,
+  type LLMRequest,
+  type LLMResponse,
+} from "./provider-hub";
 
 type LLMProvider = ProviderType;
 
@@ -17,48 +22,57 @@ type LLMProvider = ProviderType;
 // Types
 // ============================================================================
 
-export type TaskType = 'simple' | 'complex' | 'creative' | 'long-context' | 'embedding' | 'code' | 'math' | 'speed' | 'multimodal';
+export type TaskType =
+  | "simple"
+  | "complex"
+  | "creative"
+  | "long-context"
+  | "embedding"
+  | "code"
+  | "math"
+  | "speed"
+  | "multimodal";
 
-export type CostTier = 'free' | 'cheap' | 'moderate' | 'expensive';
+export type CostTier = "free" | "cheap" | "moderate" | "expensive";
 
 export interface RoutingPolicy {
   // Task-based routing
   taskTypePreferences: Record<TaskType, LLMProvider[]>;
-  
+
   // Cost-based routing
-  maxCostPerRequest?: number;        // USD
+  maxCostPerRequest?: number; // USD
   preferFreeTier: boolean;
   costTierOrder: CostTier[];
-  
+
   // Latency-based routing
-  maxLatency?: number;               // milliseconds
+  maxLatency?: number; // milliseconds
   preferLocal: boolean;
-  
+
   // Context window routing
-  minContextWindow?: number;         // tokens
-  
+  minContextWindow?: number; // tokens
+
   // Load balancing
   enableLoadBalancing: boolean;
   apiKeys: Record<LLMProvider, string[]>; // Multiple keys per provider
-  
+
   // Failover
   enableFailover: boolean;
   maxRetries: number;
-  retryDelay: number;                // milliseconds
-  
+  retryDelay: number; // milliseconds
+
   // Budget limits
-  dailyBudget?: number;              // USD per day
-  monthlyBudget?: number;            // USD per month
+  dailyBudget?: number; // USD per day
+  monthlyBudget?: number; // USD per month
 }
 
 export interface ProviderMetrics {
   provider: LLMProvider;
-  successRate: number;               // 0-1
-  averageLatency: number;            // milliseconds
-  currentLoad: number;               // 0-1
+  successRate: number; // 0-1
+  averageLatency: number; // milliseconds
+  currentLoad: number; // 0-1
   rateLimitRemaining: number;
-  costPerToken: number;              // USD
-  contextWindow: number;             // tokens
+  costPerToken: number; // USD
+  contextWindow: number; // tokens
   isAvailable: boolean;
   lastError?: string;
   lastErrorTime?: number;
@@ -83,39 +97,162 @@ export interface BudgetTracker {
 // Provider Cost Database
 // ============================================================================
 
-const PROVIDER_COSTS: Record<ProviderType, { inputCost: number; outputCost: number; contextWindow: number; tier: CostTier }> = {
+const PROVIDER_COSTS: Record<
+  ProviderType,
+  {
+    inputCost: number;
+    outputCost: number;
+    contextWindow: number;
+    tier: CostTier;
+  }
+> = {
   // Local providers (free)
-  'ollama': { inputCost: 0, outputCost: 0, contextWindow: 4096, tier: 'free' },
-  'lmstudio': { inputCost: 0, outputCost: 0, contextWindow: 4096, tier: 'free' },
-  'llamacpp': { inputCost: 0, outputCost: 0, contextWindow: 4096, tier: 'free' },
+  ollama: { inputCost: 0, outputCost: 0, contextWindow: 4096, tier: "free" },
+  lmstudio: { inputCost: 0, outputCost: 0, contextWindow: 4096, tier: "free" },
+  llamacpp: { inputCost: 0, outputCost: 0, contextWindow: 4096, tier: "free" },
   // Major cloud providers
-  'openai': { inputCost: 0.0015, outputCost: 0.002, contextWindow: 128000, tier: 'moderate' },
-  'anthropic': { inputCost: 0.003, outputCost: 0.015, contextWindow: 200000, tier: 'expensive' },
-  'google': { inputCost: 0.00025, outputCost: 0.0005, contextWindow: 2000000, tier: 'cheap' },
-  'groq': { inputCost: 0.0001, outputCost: 0.0001, contextWindow: 32000, tier: 'cheap' },
-  'openrouter': { inputCost: 0, outputCost: 0, contextWindow: 128000, tier: 'free' },
-  'perplexity': { inputCost: 0.001, outputCost: 0.001, contextWindow: 127000, tier: 'moderate' },
-  'together': { inputCost: 0.0002, outputCost: 0.0002, contextWindow: 32000, tier: 'cheap' },
-  'mistral': { inputCost: 0.0007, outputCost: 0.0007, contextWindow: 32000, tier: 'moderate' },
-  'cohere': { inputCost: 0.0015, outputCost: 0.0015, contextWindow: 128000, tier: 'moderate' },
+  openai: {
+    inputCost: 0.0015,
+    outputCost: 0.002,
+    contextWindow: 128000,
+    tier: "moderate",
+  },
+  anthropic: {
+    inputCost: 0.003,
+    outputCost: 0.015,
+    contextWindow: 200000,
+    tier: "expensive",
+  },
+  google: {
+    inputCost: 0.00025,
+    outputCost: 0.0005,
+    contextWindow: 2000000,
+    tier: "cheap",
+  },
+  groq: {
+    inputCost: 0.0001,
+    outputCost: 0.0001,
+    contextWindow: 32000,
+    tier: "cheap",
+  },
+  openrouter: {
+    inputCost: 0,
+    outputCost: 0,
+    contextWindow: 128000,
+    tier: "free",
+  },
+  perplexity: {
+    inputCost: 0.001,
+    outputCost: 0.001,
+    contextWindow: 127000,
+    tier: "moderate",
+  },
+  together: {
+    inputCost: 0.0002,
+    outputCost: 0.0002,
+    contextWindow: 32000,
+    tier: "cheap",
+  },
+  mistral: {
+    inputCost: 0.0007,
+    outputCost: 0.0007,
+    contextWindow: 32000,
+    tier: "moderate",
+  },
+  cohere: {
+    inputCost: 0.0015,
+    outputCost: 0.0015,
+    contextWindow: 128000,
+    tier: "moderate",
+  },
   // Additional cloud providers
-  'nvidia-nim': { inputCost: 0.0003, outputCost: 0.0003, contextWindow: 128000, tier: 'cheap' },
-  'fireworks': { inputCost: 0.0002, outputCost: 0.0002, contextWindow: 128000, tier: 'cheap' },
-  'replicate': { inputCost: 0.0005, outputCost: 0.0005, contextWindow: 8192, tier: 'moderate' },
-  'deepseek': { inputCost: 0.00014, outputCost: 0.00028, contextWindow: 128000, tier: 'cheap' },
-  'xai': { inputCost: 0.005, outputCost: 0.015, contextWindow: 131072, tier: 'expensive' },
-  'ai21': { inputCost: 0.0002, outputCost: 0.0004, contextWindow: 256000, tier: 'cheap' },
-  'cerebras': { inputCost: 0.0001, outputCost: 0.0001, contextWindow: 8192, tier: 'cheap' },
-  'sambanova': { inputCost: 0.0001, outputCost: 0.0001, contextWindow: 8192, tier: 'cheap' },
-  'lepton': { inputCost: 0.0002, outputCost: 0.0002, contextWindow: 8192, tier: 'cheap' },
+  "nvidia-nim": {
+    inputCost: 0.0003,
+    outputCost: 0.0003,
+    contextWindow: 128000,
+    tier: "cheap",
+  },
+  fireworks: {
+    inputCost: 0.0002,
+    outputCost: 0.0002,
+    contextWindow: 128000,
+    tier: "cheap",
+  },
+  replicate: {
+    inputCost: 0.0005,
+    outputCost: 0.0005,
+    contextWindow: 8192,
+    tier: "moderate",
+  },
+  deepseek: {
+    inputCost: 0.00014,
+    outputCost: 0.00028,
+    contextWindow: 128000,
+    tier: "cheap",
+  },
+  xai: {
+    inputCost: 0.005,
+    outputCost: 0.015,
+    contextWindow: 131072,
+    tier: "expensive",
+  },
+  ai21: {
+    inputCost: 0.0002,
+    outputCost: 0.0004,
+    contextWindow: 256000,
+    tier: "cheap",
+  },
+  cerebras: {
+    inputCost: 0.0001,
+    outputCost: 0.0001,
+    contextWindow: 8192,
+    tier: "cheap",
+  },
+  sambanova: {
+    inputCost: 0.0001,
+    outputCost: 0.0001,
+    contextWindow: 8192,
+    tier: "cheap",
+  },
+  lepton: {
+    inputCost: 0.0002,
+    outputCost: 0.0002,
+    contextWindow: 8192,
+    tier: "cheap",
+  },
   // CLI tools (subscription-based, effectively free per-call)
-  'gemini-cli': { inputCost: 0, outputCost: 0, contextWindow: 2000000, tier: 'free' },
-  'codex-cli': { inputCost: 0, outputCost: 0, contextWindow: 128000, tier: 'free' },
-  'qwen-cli': { inputCost: 0, outputCost: 0, contextWindow: 128000, tier: 'free' },
-  'aider': { inputCost: 0, outputCost: 0, contextWindow: 128000, tier: 'free' },
-  'claude-cli': { inputCost: 0, outputCost: 0, contextWindow: 200000, tier: 'free' }, // Last resort
+  "gemini-cli": {
+    inputCost: 0,
+    outputCost: 0,
+    contextWindow: 2000000,
+    tier: "free",
+  },
+  "codex-cli": {
+    inputCost: 0,
+    outputCost: 0,
+    contextWindow: 128000,
+    tier: "free",
+  },
+  "qwen-cli": {
+    inputCost: 0,
+    outputCost: 0,
+    contextWindow: 128000,
+    tier: "free",
+  },
+  aider: { inputCost: 0, outputCost: 0, contextWindow: 128000, tier: "free" },
+  "claude-cli": {
+    inputCost: 0,
+    outputCost: 0,
+    contextWindow: 200000,
+    tier: "free",
+  }, // Last resort
   // Remote Docker Bridge
-  'ollama-cloud': { inputCost: 0, outputCost: 0, contextWindow: 32000, tier: 'free' }, // Great for embeddings
+  "ollama-cloud": {
+    inputCost: 0,
+    outputCost: 0,
+    contextWindow: 32000,
+    tier: "free",
+  }, // Great for embeddings
 };
 
 // ============================================================================
@@ -147,32 +284,73 @@ export class SmartLLMRouter {
       // Gemini CLI and Qwen have higher limits, prioritize over Claude
       taskTypePreferences: policy.taskTypePreferences || {
         // Simple tasks: local first, then free tiers, CLI, paid APIs, Claude last
-        'simple': ['ollama', 'lmstudio', 'openrouter', 'groq', 'gemini-cli', 'deepseek', 'openai', 'anthropic'],
+        simple: [
+          "ollama",
+          "lmstudio",
+          "openrouter",
+          "groq",
+          "gemini-cli",
+          "deepseek",
+          "openai",
+          "anthropic",
+        ],
         // Complex reasoning: Gemini CLI first (high limits), then DeepSeek, paid, Claude last
-        'complex': ['gemini-cli', 'deepseek', 'google', 'openai', 'openrouter', 'anthropic'],
+        complex: [
+          "gemini-cli",
+          "deepseek",
+          "google",
+          "openai",
+          "openrouter",
+          "anthropic",
+        ],
         // Creative: Gemini/Mistral first, Claude last
-        'creative': ['gemini-cli', 'mistral', 'openrouter', 'openai', 'anthropic'],
+        creative: [
+          "gemini-cli",
+          "mistral",
+          "openrouter",
+          "openai",
+          "anthropic",
+        ],
         // Long context: Gemini (2M), then others, Claude last
-        'long-context': ['gemini-cli', 'google', 'ai21', 'deepseek', 'openai', 'anthropic'],
+        "long-context": [
+          "gemini-cli",
+          "google",
+          "ai21",
+          "deepseek",
+          "openai",
+          "anthropic",
+        ],
         // Code generation: Qwen/DeepSeek excel here
-        'code': ['ollama', 'deepseek', 'gemini-cli', 'fireworks', 'openai', 'anthropic'],
+        code: [
+          "ollama",
+          "deepseek",
+          "gemini-cli",
+          "fireworks",
+          "openai",
+          "anthropic",
+        ],
         // Math/reasoning: DeepSeek, Qwen
-        'math': ['deepseek', 'gemini-cli', 'openai', 'anthropic'],
+        math: ["deepseek", "gemini-cli", "openai", "anthropic"],
         // Speed critical: Groq (fastest inference)
-        'speed': ['groq', 'cerebras', 'sambanova', 'gemini-cli', 'openai'],
+        speed: ["groq", "cerebras", "sambanova", "gemini-cli", "openai"],
         // Embeddings: local first
-        'embedding': ['ollama', 'openai', 'cohere', 'google'],
+        embedding: ["ollama", "openai", "cohere", "google"],
         // Multimodal: Gemini excels
-        'multimodal': ['gemini-cli', 'google', 'openai', 'anthropic'],
+        multimodal: ["gemini-cli", "google", "openai", "anthropic"],
       },
       maxCostPerRequest: policy.maxCostPerRequest,
       preferFreeTier: policy.preferFreeTier ?? true,
-      costTierOrder: policy.costTierOrder || ['free', 'cheap', 'moderate', 'expensive'],
+      costTierOrder: policy.costTierOrder || [
+        "free",
+        "cheap",
+        "moderate",
+        "expensive",
+      ],
       maxLatency: policy.maxLatency,
       preferLocal: policy.preferLocal ?? true,
       minContextWindow: policy.minContextWindow,
       enableLoadBalancing: policy.enableLoadBalancing ?? true,
-      apiKeys: policy.apiKeys || {} as Record<LLMProvider, string[]>,
+      apiKeys: policy.apiKeys || ({} as Record<LLMProvider, string[]>),
       enableFailover: policy.enableFailover ?? true,
       maxRetries: policy.maxRetries || 3,
       retryDelay: policy.retryDelay || 1000,
@@ -187,7 +365,7 @@ export class SmartLLMRouter {
       this.metrics.set(provider, {
         provider,
         successRate: 1.0,
-        averageLatency: provider === 'ollama' ? 100 : 500,
+        averageLatency: provider === "ollama" ? 100 : 500,
         currentLoad: 0,
         rateLimitRemaining: 1000,
         costPerToken: (cost.inputCost + cost.outputCost) / 2,
@@ -202,11 +380,16 @@ export class SmartLLMRouter {
   // Main Routing Logic
   // ---------------------------------------------------------------------------
 
-  async route(request: LLMRequest, taskType: TaskType = 'simple'): Promise<LLMResponse> {
+  async route(
+    request: LLMRequest,
+    taskType: TaskType = "simple"
+  ): Promise<LLMResponse> {
     this.resetBudgetIfNeeded();
 
     const decision = this.makeRoutingDecision(request, taskType);
-    console.log(`[SmartRouter] Routing to ${decision.provider}: ${decision.reason}`);
+    console.log(
+      `[SmartRouter] Routing to ${decision.provider}: ${decision.reason}`
+    );
 
     // Try primary provider
     try {
@@ -216,7 +399,12 @@ export class SmartLLMRouter {
       return response;
     } catch (error) {
       console.error(`[SmartRouter] ${decision.provider} failed:`, error);
-      this.updateMetrics(decision.provider, false, 0, error instanceof Error ? error.message : 'Unknown error');
+      this.updateMetrics(
+        decision.provider,
+        false,
+        0,
+        error instanceof Error ? error.message : "Unknown error"
+      );
 
       // Try fallback chain
       if (this.policy.enableFailover) {
@@ -226,20 +414,38 @@ export class SmartLLMRouter {
             await this.sleep(this.policy.retryDelay);
             const response = await this.callProvider(fallbackProvider, request);
             this.updateMetrics(fallbackProvider, true, response.latencyMs || 0);
-            this.trackCost(fallbackProvider, this.estimateCost(fallbackProvider, request));
+            this.trackCost(
+              fallbackProvider,
+              this.estimateCost(fallbackProvider, request)
+            );
             return response;
           } catch (fallbackError) {
-            console.error(`[SmartRouter] Fallback ${fallbackProvider} failed:`, fallbackError);
-            this.updateMetrics(fallbackProvider, false, 0, fallbackError instanceof Error ? fallbackError.message : 'Unknown error');
+            console.error(
+              `[SmartRouter] Fallback ${fallbackProvider} failed:`,
+              fallbackError
+            );
+            this.updateMetrics(
+              fallbackProvider,
+              false,
+              0,
+              fallbackError instanceof Error
+                ? fallbackError.message
+                : "Unknown error"
+            );
           }
         }
       }
 
-      throw new Error(`All providers failed. Last error: ${error instanceof Error ? error.message : 'Unknown'}`);
+      throw new Error(
+        `All providers failed. Last error: ${error instanceof Error ? error.message : "Unknown"}`
+      );
     }
   }
 
-  makeRoutingDecision(request: LLMRequest, taskType: TaskType): RoutingDecision {
+  makeRoutingDecision(
+    request: LLMRequest,
+    taskType: TaskType
+  ): RoutingDecision {
     // Get candidate providers for this task type
     let candidates = this.policy.taskTypePreferences[taskType] || [];
 
@@ -247,7 +453,10 @@ export class SmartLLMRouter {
     if (this.policy.minContextWindow) {
       candidates = candidates.filter(p => {
         const metrics = this.metrics.get(p);
-        return metrics && metrics.contextWindow >= (this.policy.minContextWindow || 0);
+        return (
+          metrics &&
+          metrics.contextWindow >= (this.policy.minContextWindow || 0)
+        );
       });
     }
 
@@ -269,15 +478,15 @@ export class SmartLLMRouter {
     });
 
     // Prefer local if policy says so
-    if (this.policy.preferLocal && candidates.includes('ollama')) {
-      const ollamaMetrics = this.metrics.get('ollama');
+    if (this.policy.preferLocal && candidates.includes("ollama")) {
+      const ollamaMetrics = this.metrics.get("ollama");
       if (ollamaMetrics && ollamaMetrics.isAvailable) {
         return {
-          provider: 'ollama',
-          reason: 'Local provider preferred',
+          provider: "ollama",
+          reason: "Local provider preferred",
           estimatedCost: 0,
           estimatedLatency: ollamaMetrics.averageLatency,
-          fallbackChain: candidates.filter(p => p !== 'ollama'),
+          fallbackChain: candidates.filter(p => p !== "ollama"),
         };
       }
     }
@@ -301,7 +510,7 @@ export class SmartLLMRouter {
     }
 
     if (candidates.length === 0) {
-      throw new Error('No suitable provider found for request');
+      throw new Error("No suitable provider found for request");
     }
 
     const selectedProvider = candidates[0];
@@ -320,10 +529,13 @@ export class SmartLLMRouter {
   // Provider Interaction
   // ---------------------------------------------------------------------------
 
-  private async callProvider(provider: LLMProvider, request: LLMRequest): Promise<LLMResponse> {
+  private async callProvider(
+    provider: LLMProvider,
+    request: LLMRequest
+  ): Promise<LLMResponse> {
     // Get API key (with rotation if multiple keys available)
     const apiKey = this.getNextApiKey(provider);
-    
+
     // If we have a rotated API key, temporarily update the provider config
     if (apiKey) {
       const config = this.hub.getConfig(provider);
@@ -331,12 +543,12 @@ export class SmartLLMRouter {
         // Store original key and set rotated key
         const originalKey = config.apiKey;
         config.apiKey = apiKey;
-        
+
         try {
           // Call the hub's chat method which handles provider-specific logic
           const response = await this.hub.chat({
             ...request,
-            task: 'general', // Use the task from request or default
+            task: "general", // Use the task from request or default
           });
           return response;
         } finally {
@@ -345,13 +557,13 @@ export class SmartLLMRouter {
         }
       }
     }
-    
+
     // Call the hub's chat method which handles provider-specific logic
     const response = await this.hub.chat({
       ...request,
-      task: 'general',
+      task: "general",
     });
-    
+
     return response;
   }
 
@@ -361,10 +573,10 @@ export class SmartLLMRouter {
 
     const currentIndex = this.keyRotation.get(provider) || 0;
     const key = keys[currentIndex];
-    
+
     // Rotate to next key
     this.keyRotation.set(provider, (currentIndex + 1) % keys.length);
-    
+
     return key;
   }
 
@@ -383,11 +595,13 @@ export class SmartLLMRouter {
 
     // Update success rate (exponential moving average)
     const alpha = 0.1;
-    metrics.successRate = alpha * (success ? 1 : 0) + (1 - alpha) * metrics.successRate;
+    metrics.successRate =
+      alpha * (success ? 1 : 0) + (1 - alpha) * metrics.successRate;
 
     // Update average latency
     if (success && latency > 0) {
-      metrics.averageLatency = alpha * latency + (1 - alpha) * metrics.averageLatency;
+      metrics.averageLatency =
+        alpha * latency + (1 - alpha) * metrics.averageLatency;
     }
 
     // Update availability
@@ -404,7 +618,8 @@ export class SmartLLMRouter {
   private trackCost(provider: LLMProvider, cost: number): void {
     this.budget.dailySpent += cost;
     this.budget.monthlySpent += cost;
-    this.budget.perProviderSpent[provider] = (this.budget.perProviderSpent[provider] || 0) + cost;
+    this.budget.perProviderSpent[provider] =
+      (this.budget.perProviderSpent[provider] || 0) + cost;
   }
 
   private estimateCost(provider: LLMProvider, request: LLMRequest): number {
@@ -413,19 +628,27 @@ export class SmartLLMRouter {
 
     // Estimate token count (rough: 4 chars per token)
     const inputTokens = JSON.stringify(request.messages).length / 4;
-    const outputTokens = (request.maxTokens || 1000);
+    const outputTokens = request.maxTokens || 1000;
 
-    return (inputTokens * costs.inputCost + outputTokens * costs.outputCost) / 1000;
+    return (
+      (inputTokens * costs.inputCost + outputTokens * costs.outputCost) / 1000
+    );
   }
 
   private canAfford(cost: number): boolean {
     if (this.policy.maxCostPerRequest && cost > this.policy.maxCostPerRequest) {
       return false;
     }
-    if (this.policy.dailyBudget && this.budget.dailySpent + cost > this.policy.dailyBudget) {
+    if (
+      this.policy.dailyBudget &&
+      this.budget.dailySpent + cost > this.policy.dailyBudget
+    ) {
       return false;
     }
-    if (this.policy.monthlyBudget && this.budget.monthlySpent + cost > this.policy.monthlyBudget) {
+    if (
+      this.policy.monthlyBudget &&
+      this.budget.monthlySpent + cost > this.policy.monthlyBudget
+    ) {
       return false;
     }
     return true;
@@ -452,8 +675,8 @@ export class SmartLLMRouter {
   private sortByCostTier(providers: LLMProvider[]): LLMProvider[] {
     const tierOrder = this.policy.costTierOrder;
     return providers.sort((a, b) => {
-      const aTier = PROVIDER_COSTS[a]?.tier || 'expensive';
-      const bTier = PROVIDER_COSTS[b]?.tier || 'expensive';
+      const aTier = PROVIDER_COSTS[a]?.tier || "expensive";
+      const bTier = PROVIDER_COSTS[b]?.tier || "expensive";
       return tierOrder.indexOf(aTier) - tierOrder.indexOf(bTier);
     });
   }
@@ -461,16 +684,16 @@ export class SmartLLMRouter {
   private buildReason(provider: LLMProvider, taskType: TaskType): string {
     const metrics = this.metrics.get(provider);
     const cost = PROVIDER_COSTS[provider];
-    
+
     const reasons: string[] = [];
     reasons.push(`Task type: ${taskType}`);
-    reasons.push(`Cost tier: ${cost?.tier || 'unknown'}`);
+    reasons.push(`Cost tier: ${cost?.tier || "unknown"}`);
     if (metrics) {
       reasons.push(`Success rate: ${(metrics.successRate * 100).toFixed(1)}%`);
       reasons.push(`Avg latency: ${metrics.averageLatency.toFixed(0)}ms`);
     }
-    
-    return reasons.join(', ');
+
+    return reasons.join(", ");
   }
 
   private sleep(ms: number): Promise<void> {

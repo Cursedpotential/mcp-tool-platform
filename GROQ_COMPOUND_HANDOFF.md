@@ -3,7 +3,7 @@
 **Date:** January 7, 2026  
 **Task:** Deploy infrastructure services via Coolify on salem-nexus (master node)  
 **Priority:** HIGH  
-**Estimated Time:** 2-4 hours  
+**Estimated Time:** 2-4 hours
 
 ---
 
@@ -18,23 +18,27 @@ Deploy PostgreSQL, FerretDB, Directus, PhotoPrism, n8n, and Tailscale to **salem
 ## Credentials & Access
 
 ### Coolify API
+
 - **URL:** https://nexus.mitechconsult.com
 - **API Key:** `1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619b`
 - **Test:** `curl -H "Authorization: Bearer <API_KEY>" https://nexus.mitechconsult.com/api/v1/servers`
 
 ### Hetzner Cloud API
+
 - **API Key:** `BpA7Tw9IkbPG57dSFVtG0q56Bz7F20Wkcdg5Gpd2vaj2pOvGWKtVd817I0n0eAUl`
 - **salem-nexus:** ID 116864004, IP 116.203.199.238 (8c/16GB)
 - **salem-forge:** ID 116864005, IP 116.203.198.77 (8c/16GB, will add as remote server later)
 - **salem-vault:** 60GB XFS volume attached to salem-nexus
 
 ### Cloudflare
+
 - **Email:** matt.salem85@gmail.com
 - **Global API Key:** `d4a987b34085205d82f58e410e38dbba99786`
 - **Zone ID:** `d543c96e4bb7fad63e5f1925dce79640`
 - **Domain:** mitechconsult.com
 
 ### SSH Access
+
 - **salem-nexus:** root@116.203.199.238
 - **salem-forge:** root@116.203.198.77
 - **Note:** Use Hetzner console if SSH key not available
@@ -110,6 +114,7 @@ dig +short postgres.mitechconsult.com     # 116.203.199.238
 ### Deployment via Coolify
 
 **IMPORTANT:** Use Coolify UI or API to deploy services. Coolify will:
+
 - Automatically configure Traefik reverse proxy
 - Issue Let's Encrypt SSL certificates
 - Manage container lifecycle
@@ -144,6 +149,7 @@ curl -X POST -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTF
 #### 1. PostgreSQL
 
 **Environment Variables:**
+
 ```env
 POSTGRES_USER=salem
 POSTGRES_PASSWORD=<GENERATE_STRONG_PASSWORD>
@@ -151,12 +157,14 @@ POSTGRES_DB=salem_forensics
 ```
 
 **Volume Mount:**
+
 ```yaml
 volumes:
   - /mnt/salem-vault/postgres:/var/lib/postgresql/data
 ```
 
 **Verification:**
+
 ```bash
 docker exec -it salem-postgres psql -U salem -d salem_forensics -c "SELECT version();"
 ```
@@ -166,6 +174,7 @@ docker exec -it salem-postgres psql -U salem -d salem_forensics -c "SELECT versi
 #### 2. FerretDB
 
 **Environment Variables:**
+
 ```env
 FERRETDB_POSTGRESQL_URL=postgres://salem:${POSTGRES_PASSWORD}@postgres:5432/salem_forensics
 ```
@@ -173,6 +182,7 @@ FERRETDB_POSTGRESQL_URL=postgres://salem:${POSTGRES_PASSWORD}@postgres:5432/sale
 **Depends On:** PostgreSQL
 
 **Verification:**
+
 ```bash
 docker logs salem-ferretdb | grep "FerretDB started"
 ```
@@ -184,6 +194,7 @@ docker logs salem-ferretdb | grep "FerretDB started"
 **Domain:** directus.mitechconsult.com
 
 **Environment Variables:**
+
 ```env
 KEY=<GENERATE_RANDOM_32_CHAR_KEY>
 SECRET=<GENERATE_RANDOM_64_CHAR_SECRET>
@@ -201,6 +212,7 @@ STORAGE_LOCAL_ROOT=/directus/uploads
 ```
 
 **Volume Mounts:**
+
 ```yaml
 volumes:
   - /mnt/salem-vault/directus:/directus/uploads
@@ -208,6 +220,7 @@ volumes:
 ```
 
 **Verification:**
+
 ```bash
 curl -I https://directus.mitechconsult.com
 # Should return 200 OK or redirect to login
@@ -220,6 +233,7 @@ curl -I https://directus.mitechconsult.com
 **Domain:** photo.mitechconsult.com
 
 **Environment Variables:**
+
 ```env
 PHOTOPRISM_ADMIN_USER=admin
 PHOTOPRISM_ADMIN_PASSWORD=<GENERATE_STRONG_PASSWORD>
@@ -237,6 +251,7 @@ PHOTOPRISM_DEFAULT_TLS=true
 ```
 
 **Volume Mounts:**
+
 ```yaml
 volumes:
   - /mnt/salem-vault/media/originals:/photoprism/originals
@@ -244,6 +259,7 @@ volumes:
 ```
 
 **Verification:**
+
 ```bash
 # Wait 60 seconds for startup
 sleep 60
@@ -258,6 +274,7 @@ curl -I https://photo.mitechconsult.com
 **Domain:** n8n.mitechconsult.com
 
 **Environment Variables:**
+
 ```env
 N8N_HOST=n8n.mitechconsult.com
 N8N_PORT=5678
@@ -273,6 +290,7 @@ N8N_ENCRYPTION_KEY=<GENERATE_RANDOM_KEY>
 ```
 
 **Volume Mounts:**
+
 ```yaml
 volumes:
   - /mnt/salem-vault/n8n:/home/node/.n8n
@@ -280,6 +298,7 @@ volumes:
 ```
 
 **Verification:**
+
 ```bash
 curl -I https://n8n.mitechconsult.com
 # Should return 200 OK or redirect
@@ -290,6 +309,7 @@ curl -I https://n8n.mitechconsult.com
 #### 6. Tailscale
 
 **Environment Variables:**
+
 ```env
 TS_AUTHKEY=<GET_FROM_TAILSCALE_ADMIN>
 TS_HOSTNAME=salem-nexus
@@ -297,6 +317,7 @@ TS_STATE_DIR=/var/lib/tailscale
 ```
 
 **Capabilities:**
+
 ```yaml
 cap_add:
   - NET_ADMIN
@@ -304,6 +325,7 @@ cap_add:
 ```
 
 **Verification:**
+
 ```bash
 docker exec -it salem-tailscale tailscale status
 # Should show connected devices
@@ -447,6 +469,7 @@ ssh -i /root/.ssh/coolify_remote root@116.203.198.77 "docker ps"
 #### 3. Add Remote Server in Coolify
 
 **Via Coolify UI:**
+
 1. Go to https://nexus.mitechconsult.com
 2. Navigate to **Servers** → **Add Server**
 3. **Name:** salem-forge
@@ -458,6 +481,7 @@ ssh -i /root/.ssh/coolify_remote root@116.203.198.77 "docker ps"
 9. **Save**
 
 **Via Coolify API (if available):**
+
 ```bash
 curl -X POST -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619b" \
   -H "Content-Type: application/json" \
@@ -486,6 +510,7 @@ Once salem-forge is added as remote server, deploy services from `docker-compose
 - Playwright (playwright.mitechconsult.com)
 
 **Deployment Process:**
+
 1. In Coolify UI, create new project: "salem-forensics-compute"
 2. Add new resource: Docker Compose
 3. **Select Server:** salem-forge (remote)
@@ -552,6 +577,7 @@ docker inspect salem-directus | grep -A 10 Labels
 ## Success Criteria
 
 ### Phase 1 (Tonight)
+
 - [ ] PostgreSQL running and accessible
 - [ ] FerretDB connected to PostgreSQL
 - [ ] Directus accessible at https://directus.mitechconsult.com
@@ -564,6 +590,7 @@ docker inspect salem-directus | grep -A 10 Labels
 - [ ] All admin credentials documented and secure
 
 ### Phase 2 (After salem-forge reformat)
+
 - [ ] salem-forge added as remote server in Coolify
 - [ ] AI/Compute services deployed to salem-forge
 - [ ] LiteLLM accessible at https://llm.mitechconsult.com
@@ -588,12 +615,14 @@ docker inspect salem-directus | grep -A 10 Labels
 ## Timeline
 
 **Tonight (Phase 1):**
+
 - Deploy salem-nexus services (2-4 hours)
 - Verify all services accessible
 - Test shared media storage
 - Ready for file ingestion testing
 
 **Tomorrow (Phase 2):**
+
 - Wait for salem-forge reformat completion
 - Add salem-forge as remote server
 - Deploy AI/Compute services

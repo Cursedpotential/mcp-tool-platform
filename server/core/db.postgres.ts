@@ -4,9 +4,9 @@
  * Replaces MySQL connection with PostgreSQL + PGVector support
  */
 
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import { ENV } from './env';
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import { ENV } from "./env";
 
 let _client: ReturnType<typeof postgres> | null = null;
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -22,12 +22,12 @@ export async function getPgClient() {
         idle_timeout: 20,
         connect_timeout: 10,
       });
-      
+
       // Test connection
       await _client`SELECT 1`;
-      console.log('[PostgreSQL] Connected successfully');
+      console.log("[PostgreSQL] Connected successfully");
     } catch (error) {
-      console.warn('[PostgreSQL] Failed to connect:', error);
+      console.warn("[PostgreSQL] Failed to connect:", error);
       _client = null;
     }
   }
@@ -43,9 +43,9 @@ export async function getDb() {
     if (client) {
       try {
         _db = drizzle(client);
-        console.log('[Drizzle] PostgreSQL instance ready');
+        console.log("[Drizzle] PostgreSQL instance ready");
       } catch (error) {
-        console.warn('[Drizzle] Failed to initialize:', error);
+        console.warn("[Drizzle] Failed to initialize:", error);
         _db = null;
       }
     }
@@ -56,22 +56,26 @@ export async function getDb() {
 /**
  * Test database connection
  */
-export async function testConnection(): Promise<{ success: boolean; latency?: number; error?: string }> {
+export async function testConnection(): Promise<{
+  success: boolean;
+  latency?: number;
+  error?: string;
+}> {
   const start = Date.now();
   try {
     const client = await getPgClient();
     if (!client) {
-      return { success: false, error: 'Database client not available' };
+      return { success: false, error: "Database client not available" };
     }
-    
+
     await client`SELECT 1`;
     const latency = Date.now() - start;
-    
+
     return { success: true, latency };
   } catch (error) {
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -83,8 +87,9 @@ export async function checkPgVector(): Promise<boolean> {
   try {
     const client = await getPgClient();
     if (!client) return false;
-    
-    const result = await client`SELECT 1 FROM pg_extension WHERE extname = 'vector'`;
+
+    const result =
+      await client`SELECT 1 FROM pg_extension WHERE extname = 'vector'`;
     return result.length > 0;
   } catch {
     return false;
@@ -98,8 +103,9 @@ export async function checkPostGIS(): Promise<boolean> {
   try {
     const client = await getPgClient();
     if (!client) return false;
-    
-    const result = await client`SELECT 1 FROM pg_extension WHERE extname = 'postgis'`;
+
+    const result =
+      await client`SELECT 1 FROM pg_extension WHERE extname = 'postgis'`;
     return result.length > 0;
   } catch {
     return false;
@@ -109,7 +115,9 @@ export async function checkPostGIS(): Promise<boolean> {
 /**
  * Check a list of required extensions and return missing ones
  */
-export async function checkExtensions(required: string[]): Promise<{ installed: string[]; missing: string[] }> {
+export async function checkExtensions(
+  required: string[]
+): Promise<{ installed: string[]; missing: string[] }> {
   const installed: string[] = [];
   const missing: string[] = [];
 
@@ -132,7 +140,7 @@ export async function checkExtensions(required: string[]): Promise<{ installed: 
 
     return { installed, missing };
   } catch (error) {
-    console.warn('[PostgreSQL] Failed to check extensions:', error);
+    console.warn("[PostgreSQL] Failed to check extensions:", error);
     return { installed, missing: required };
   }
 }
@@ -145,6 +153,6 @@ export async function closeDb() {
     await _client.end();
     _client = null;
     _db = null;
-    console.log('[PostgreSQL] Connection closed');
+    console.log("[PostgreSQL] Connection closed");
   }
 }

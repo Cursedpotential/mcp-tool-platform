@@ -1,18 +1,18 @@
 # Smart Router
 
 **NAME**
-    smart-router - Intelligent LLM provider routing with cost/latency optimization
+smart-router - Intelligent LLM provider routing with cost/latency optimization
 
 **SYNOPSIS**
-    The Smart Router selects optimal LLM providers based on cost, latency, capability, and availability for forensic analysis tasks.
+The Smart Router selects optimal LLM providers based on cost, latency, capability, and availability for forensic analysis tasks.
 
 **DESCRIPTION**
-    The Smart Router implements intelligent LLM provider selection using multi-criteria decision making. It routes requests to the most appropriate provider based on cost efficiency, response latency, model capabilities, and current availability.
+The Smart Router implements intelligent LLM provider selection using multi-criteria decision making. It routes requests to the most appropriate provider based on cost efficiency, response latency, model capabilities, and current availability.
 
 **CORE FEATURES**
 
 **Multi-Criteria Routing**
-    Routes based on cost, latency, and capability tradeoffs.
+Routes based on cost, latency, and capability tradeoffs.
 
     **Routing Factors:**
     - **Cost Efficiency**: Token cost per request
@@ -23,7 +23,7 @@
     - **Geographic Latency**: Regional response times
 
 **Cost Optimization**
-    Minimizes API costs while maintaining quality.
+Minimizes API costs while maintaining quality.
 
     **Cost Strategies:**
     - **Model Selection**: Cheapest suitable model for task
@@ -32,7 +32,7 @@
     - **Batch Processing**: Combine requests for efficiency
 
 **Latency Management**
-    Optimizes response times for user experience.
+Optimizes response times for user experience.
 
     **Latency Optimization:**
     - **Provider Selection**: Fastest available provider
@@ -41,7 +41,7 @@
     - **Failover**: Switch on timeout/high latency
 
 **Capability Matching**
-    Selects models best suited for specific forensic tasks.
+Selects models best suited for specific forensic tasks.
 
     **Task-Based Routing:**
     - **Analysis**: Claude Opus (complex reasoning)
@@ -53,7 +53,7 @@
 **DATA STRUCTURES**
 
 **RouteRequest**
-    Routing decision request specification.
+Routing decision request specification.
 
     ```typescript
     interface RouteRequest {
@@ -68,7 +68,7 @@
     ```
 
 **RouteDecision**
-    Routing decision with provider and model selection.
+Routing decision with provider and model selection.
 
     ```typescript
     interface RouteDecision {
@@ -83,7 +83,7 @@
     ```
 
 **ProviderMetrics**
-    Real-time provider performance metrics.
+Real-time provider performance metrics.
 
     ```typescript
     interface ProviderMetrics {
@@ -99,7 +99,7 @@
     ```
 
 **RoutingRules**
-    Configurable routing decision rules.
+Configurable routing decision rules.
 
     ```typescript
     interface RoutingRules {
@@ -116,7 +116,7 @@
 **ROUTING ALGORITHM**
 
 **Decision Process**
-    Multi-step routing decision with fallback options.
+Multi-step routing decision with fallback options.
 
     **Algorithm Steps:**
     1. **Task Classification**: Determine task type and complexity
@@ -127,7 +127,7 @@
     6. **Confidence Assessment**: Evaluate decision certainty
 
 **Scoring Function**
-    Weighted multi-criteria scoring for provider selection.
+Weighted multi-criteria scoring for provider selection.
 
     ```typescript
     function calculateScore(
@@ -151,7 +151,7 @@
     ```
 
 **Task Classification**
-    Automatic task type detection for optimal routing.
+Automatic task type detection for optimal routing.
 
     **Classification Rules:**
     - **analysis**: Complex reasoning → Claude Opus
@@ -164,7 +164,7 @@
 **PROVIDER MANAGEMENT**
 
 **Provider Registry**
-    Maintains list of available LLM providers and models.
+Maintains list of available LLM providers and models.
 
     **Supported Providers:**
     - **OpenAI**: GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo
@@ -175,7 +175,7 @@
     - **Azure**: Custom OpenAI deployments
 
 **Health Monitoring**
-    Continuous provider health and performance tracking.
+Continuous provider health and performance tracking.
 
     **Monitoring Metrics:**
     - **Latency**: Average response time per provider
@@ -185,7 +185,7 @@
     - **Uptime**: Provider availability percentage
 
 **Load Balancing**
-    Distributes load across multiple provider instances.
+Distributes load across multiple provider instances.
 
     **Strategies:**
     - **Round Robin**: Equal distribution
@@ -196,7 +196,7 @@
 **FAILOVER & RESILIENCE**
 
 **Automatic Failover**
-    Seamless switching when providers fail.
+Seamless switching when providers fail.
 
     **Failover Triggers:**
     - **Timeout**: Response exceeds configured limit
@@ -205,7 +205,7 @@
     - **Degradation**: Response quality below threshold
 
 **Fallback Hierarchy**
-    Ordered list of backup providers for each task type.
+Ordered list of backup providers for each task type.
 
     **Example Hierarchy:**
     ```
@@ -216,7 +216,7 @@
     ```
 
 **Circuit Breaker**
-    Prevents cascading failures by temporarily disabling failing providers.
+Prevents cascading failures by temporarily disabling failing providers.
 
     **Circuit Logic:**
     - **Closed**: Normal operation
@@ -226,7 +226,7 @@
 **COST OPTIMIZATION**
 
 **Dynamic Pricing**
-    Adapts to changing provider pricing and promotions.
+Adapts to changing provider pricing and promotions.
 
     **Optimization Strategies:**
     - **Model Selection**: Choose cheapest suitable model
@@ -235,7 +235,7 @@
     - **Caching**: Avoid redundant API calls
 
 **Cost Tracking**
-    Real-time monitoring of API usage costs.
+Real-time monitoring of API usage costs.
 
     **Tracking Features:**
     - **Per-Request Costs**: Calculate cost per API call
@@ -246,7 +246,7 @@
 **API METHODS**
 
 **route(request: RouteRequest): Promise<RouteDecision>**
-    Determines optimal provider and model for request.
+Determines optimal provider and model for request.
 
     **Parameters:**
     - `request`: Routing request specification
@@ -255,7 +255,7 @@
     - Complete routing decision with alternatives
 
 **execute(request: RouteRequest): Promise<ChatResponse>**
-    Routes and executes request, handling failover automatically.
+Routes and executes request, handling failover automatically.
 
     **Parameters:**
     - `request`: Routing request specification
@@ -264,7 +264,7 @@
     - Chat completion response
 
 **getMetrics(provider?: string): Promise<ProviderMetrics[]>**
-    Retrieves current provider performance metrics.
+Retrieves current provider performance metrics.
 
     **Parameters:**
     - `provider`: Optional provider filter
@@ -273,54 +273,33 @@
     - Array of provider metrics
 
 **updateRules(rules: Partial<RoutingRules>): Promise<void>**
-    Updates routing decision rules.
+Updates routing decision rules.
 
     **Parameters:**
     - `rules`: Updated routing configuration
 
 **PERFORMANCE CHARACTERISTICS**
 
-**Routing Latency**
-    - **Simple Routing**: <5ms
-    - **Complex Analysis**: <50ms
-    - **With Metrics Update**: <100ms
+**Routing Latency** - **Simple Routing**: <5ms - **Complex Analysis**: <50ms - **With Metrics Update**: <100ms
 
-**Provider Switching**
-    - **Detection**: <1 second
-    - **Failover**: <5 seconds
-    - **Recovery**: <30 seconds
+**Provider Switching** - **Detection**: <1 second - **Failover**: <5 seconds - **Recovery**: <30 seconds
 
-**Cost Savings**
-    - **Typical Reduction**: 20-40% vs. single provider
-    - **Peak Optimization**: 50-60% during promotions
-    - **Caching Benefits**: 30-50% reduction for repeated queries
+**Cost Savings** - **Typical Reduction**: 20-40% vs. single provider - **Peak Optimization**: 50-60% during promotions - **Caching Benefits**: 30-50% reduction for repeated queries
 
 **INTEGRATION POINTS**
 
-**LiteLLM Proxy**
-    - Receives routed requests
-    - Handles provider-specific API calls
-    - Manages authentication and rate limits
+**LiteLLM Proxy** - Receives routed requests - Handles provider-specific API calls - Manages authentication and rate limits
 
-**MCP Gateway**
-    - Routes tool execution requests
-    - Optimizes for cost and latency
-    - Provides fallback options
+**MCP Gateway** - Routes tool execution requests - Optimizes for cost and latency - Provides fallback options
 
-**Task Executor**
-    - Routes analysis task requests
-    - Manages resource allocation
-    - Handles execution prioritization
+**Task Executor** - Routes analysis task requests - Manages resource allocation - Handles execution prioritization
 
-**Frontend Settings**
-    - User preference configuration
-    - Provider priority settings
-    - Cost budget management
+**Frontend Settings** - User preference configuration - Provider priority settings - Cost budget management
 
 **CONFIGURATION EXAMPLES**
 
 **Cost-Optimized Configuration**
-    ```typescript
+`typescript
     const costOptimized: RoutingRules = {
       costWeight: 0.8,
       latencyWeight: 0.1,
@@ -332,10 +311,10 @@
         'coding': ['claude-sonnet-4', 'gpt-4o', 'llama-3.1-70b']
       }
     };
-    ```
+    `
 
 **Speed-Optimized Configuration**
-    ```typescript
+`typescript
     const speedOptimized: RoutingRules = {
       costWeight: 0.1,
       latencyWeight: 0.8,
@@ -344,10 +323,10 @@
       geographicRouting: true,
       fallbackProviders: ['groq', 'openai', 'anthropic']
     };
-    ```
+    `
 
 **Quality-Optimized Configuration**
-    ```typescript
+`typescript
     const qualityOptimized: RoutingRules = {
       costWeight: 0.0,
       latencyWeight: 0.0,
@@ -358,16 +337,16 @@
         'creative': ['claude-opus-4', 'gemini-pro', 'gpt-4o']
       }
     };
-    ```
+    `
 
 **SEE ALSO**
-    litellm-proxy(7), mcp-gateway(7), task-executor(7)
+litellm-proxy(7), mcp-gateway(7), task-executor(7)
 
 **AUTHOR**
-    Claude Code - Opus 4.1
+Claude Code - Opus 4.1
 
 **VERSION**
-    1.0.0
+1.0.0
 
 **DATE**
-    January 11, 2026
+January 11, 2026

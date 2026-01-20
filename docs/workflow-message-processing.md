@@ -1,18 +1,18 @@
 # Message Processing Pipeline
 
 **NAME**
-    message-processing-pipeline - Specialized pipeline for 8-year messaging dataset analysis
+message-processing-pipeline - Specialized pipeline for 8-year messaging dataset analysis
 
 **SYNOPSIS**
-    End-to-end processing pipeline for large messaging datasets (SMS, Facebook, iMessage) with temporal analysis, behavioral pattern detection, and court-admissible evidence generation.
+End-to-end processing pipeline for large messaging datasets (SMS, Facebook, iMessage) with temporal analysis, behavioral pattern detection, and court-admissible evidence generation.
 
 **DESCRIPTION**
-    The Message Processing Pipeline is specifically designed for forensic analysis of large messaging datasets. It handles 8 years of communication data across multiple platforms, performing temporal analysis, behavioral pattern detection, and generating court-admissible evidence packages.
+The Message Processing Pipeline is specifically designed for forensic analysis of large messaging datasets. It handles 8 years of communication data across multiple platforms, performing temporal analysis, behavioral pattern detection, and generating court-admissible evidence packages.
 
 **PIPELINE ARCHITECTURE**
 
 **Data Ingestion Layer**
-    Handles multi-platform message imports with format detection.
+Handles multi-platform message imports with format detection.
 
     **Supported Formats:**
     - **SMS Exports**: XML/CSV from Android/iOS
@@ -32,7 +32,7 @@
     ```
 
 **Message Normalization**
-    Standardizes message data across platforms.
+Standardizes message data across platforms.
 
     **Normalization Rules:**
     - **Timestamps**: Convert to UTC with timezone preservation
@@ -42,7 +42,7 @@
     - **Threading**: Reconstruct conversation threads
 
 **Deduplication Engine**
-    Identifies and merges duplicate messages.
+Identifies and merges duplicate messages.
 
     **Deduplication Logic:**
     - **Content Hashing**: SHA-256 of message content + metadata
@@ -51,7 +51,7 @@
     - **Platform Merging**: Cross-platform duplicate detection
 
 **Behavioral Analysis Engine**
-    Multi-pass analysis with 256 forensic patterns.
+Multi-pass analysis with 256 forensic patterns.
 
     **Analysis Pipeline:**
     ```
@@ -67,7 +67,7 @@
     ```
 
 **Temporal Analysis**
-    Analyzes communication patterns over time.
+Analyzes communication patterns over time.
 
     **Temporal Features:**
     - **Frequency Analysis**: Message volume over time
@@ -77,7 +77,7 @@
     - **Seasonal Patterns**: Time-of-day/week/month analysis
 
 **Entity Relationship Mapping**
-    Builds social network graphs from communication patterns.
+Builds social network graphs from communication patterns.
 
     **Graph Construction:**
     - **Nodes**: Individuals, groups, organizations
@@ -86,7 +86,7 @@
     - **Communities**: Detect social clusters and subgroups
 
 **Evidence Packaging**
-    Generates court-admissible evidence packages.
+Generates court-admissible evidence packages.
 
     **Package Components:**
     - **Message Transcripts**: Chronologically ordered
@@ -98,7 +98,7 @@
 **DATA STRUCTURES**
 
 **MessageRecord**
-    Standardized message representation.
+Standardized message representation.
 
     ```typescript
     interface MessageRecord {
@@ -116,7 +116,7 @@
     ```
 
 **ContactInfo**
-    Standardized contact information.
+Standardized contact information.
 
     ```typescript
     interface ContactInfo {
@@ -129,7 +129,7 @@
     ```
 
 **MessageContent**
-    Message body with attachment handling.
+Message body with attachment handling.
 
     ```typescript
     interface MessageContent {
@@ -143,7 +143,7 @@
     ```
 
 **BehavioralPattern**
-    Forensic pattern detection results.
+Forensic pattern detection results.
 
     ```typescript
     interface BehavioralPattern {
@@ -159,7 +159,7 @@
     ```
 
 **EvidencePackage**
-    Court-ready evidence compilation.
+Court-ready evidence compilation.
 
     ```typescript
     interface EvidencePackage {
@@ -181,7 +181,7 @@
 **PROCESSING PIPELINE**
 
 **Stage 1: Data Acquisition**
-    Import and validate message exports.
+Import and validate message exports.
 
     **Import Process:**
     1. **Format Detection**: Identify export format and platform
@@ -191,7 +191,7 @@
     5. **Initial Parsing**: Convert to standardized format
 
 **Stage 2: Message Normalization**
-    Standardize data across platforms.
+Standardize data across platforms.
 
     **Normalization Tasks:**
     - **Timestamp Conversion**: All to UTC with timezone preservation
@@ -201,16 +201,16 @@
     - **Attachment Processing**: Extract and catalog media
 
 **Stage 3: Deduplication**
-    Remove duplicate messages with intelligent merging.
+Remove duplicate messages with intelligent merging.
 
     **Deduplication Algorithm:**
     ```typescript
     function deduplicateMessages(messages: MessageRecord[]): MessageRecord[] {
       const seen = new Map<string, MessageRecord>();
-      
+
       for (const message of messages) {
         const key = generateDeduplicationKey(message);
-        
+
         if (seen.has(key)) {
           // Merge duplicate messages
           seen.set(key, mergeMessages(seen.get(key)!, message));
@@ -218,13 +218,13 @@
           seen.set(key, message);
         }
       }
-      
+
       return Array.from(seen.values());
     }
     ```
 
 **Stage 4: Content Analysis**
-    Extract insights from message content.
+Extract insights from message content.
 
     **Analysis Components:**
     - **Entity Extraction**: People, organizations, locations
@@ -234,7 +234,7 @@
     - **Attachment Analysis**: Media content processing
 
 **Stage 5: Behavioral Pattern Detection**
-    Apply forensic analysis algorithms.
+Apply forensic analysis algorithms.
 
     **Pattern Detection:**
     1. **Lexical Analysis**: Keyword and phrase matching
@@ -244,7 +244,7 @@
     5. **Severity Scoring**: Risk level assessment
 
 **Stage 6: Relationship Analysis**
-    Build communication network graphs.
+Build communication network graphs.
 
     **Graph Construction:**
     - **Contact Nodes**: Individuals and groups
@@ -253,7 +253,7 @@
     - **Community Detection**: Identify social clusters
 
 **Stage 7: Evidence Synthesis**
-    Compile court-admissible evidence packages.
+Compile court-admissible evidence packages.
 
     **Synthesis Process:**
     - **Chronological Ordering**: Sort messages by timestamp
@@ -265,7 +265,7 @@
 **SPECIALIZED FEATURES**
 
 **8-Year Dataset Handling**
-    Optimized for large historical datasets.
+Optimized for large historical datasets.
 
     **Large Dataset Features:**
     - **Streaming Processing**: Process in memory-efficient chunks
@@ -275,7 +275,7 @@
     - **Progressive Loading**: Load data as needed for analysis
 
 **Temporal Analysis**
-    Advanced time-based pattern detection.
+Advanced time-based pattern detection.
 
     **Temporal Features:**
     - **Frequency Analysis**: Messages per day/week/month
@@ -285,7 +285,7 @@
     - **Silence Analysis**: Communication gaps and their significance
 
 **Cross-Platform Correlation**
-    Link accounts across different platforms.
+Link accounts across different platforms.
 
     **Correlation Methods:**
     - **Name Matching**: Fuzzy name comparison
@@ -295,7 +295,7 @@
     - **Content Similarity**: Shared content detection
 
 **Court Admissibility Features**
-    Designed for legal evidence standards.
+Designed for legal evidence standards.
 
     **Admissibility Features:**
     - **Chain of Custody**: Complete processing audit trail
@@ -307,7 +307,7 @@
 **PERFORMANCE OPTIMIZATION**
 
 **Memory Management**
-    Handles large datasets efficiently.
+Handles large datasets efficiently.
 
     **Optimization Strategies:**
     - **Chunked Processing**: Process messages in batches
@@ -317,7 +317,7 @@
     - **Resource Pooling**: Reuse analysis resources
 
 **Parallel Processing**
-    Multi-threaded analysis for speed.
+Multi-threaded analysis for speed.
 
     **Concurrency Features:**
     - **Worker Pools**: Configurable number of analysis threads
@@ -327,7 +327,7 @@
     - **Progress Tracking**: Overall pipeline progress monitoring
 
 **Scalability Features**
-    Handles datasets from thousands to millions of messages.
+Handles datasets from thousands to millions of messages.
 
     **Scalability Measures:**
     - **Database Indexing**: Optimized query performance
@@ -339,7 +339,7 @@
 **QUALITY ASSURANCE**
 
 **Data Validation**
-    Ensures message data integrity throughout processing.
+Ensures message data integrity throughout processing.
 
     **Validation Checks:**
     - **Format Compliance**: Verify message structure
@@ -349,7 +349,7 @@
     - **Content Integrity**: Hash verification of message content
 
 **Error Recovery**
-    Robust handling of processing failures.
+Robust handling of processing failures.
 
     **Recovery Mechanisms:**
     - **Checkpoint Saving**: Resume from interruption points
@@ -359,7 +359,7 @@
     - **Manual Intervention**: Admin override capabilities
 
 **Audit Trail**
-    Complete processing history for legal compliance.
+Complete processing history for legal compliance.
 
     **Audit Features:**
     - **Processing Steps**: Detailed execution log
@@ -371,7 +371,7 @@
 **OUTPUT FORMATS**
 
 **Database Storage**
-    Structured storage for analysis and querying.
+Structured storage for analysis and querying.
 
     **Database Tables:**
     - `messages`: Raw message data with metadata
@@ -382,7 +382,7 @@
     - `evidence_packages`: Court-ready evidence compilations
 
 **Export Formats**
-    Multiple output formats for different use cases.
+Multiple output formats for different use cases.
 
     **Export Options:**
     - **JSON**: Complete structured data
@@ -393,7 +393,7 @@
     - **Statistical Reports**: Quantitative analysis summaries
 
 **API Integration**
-    Real-time processing capabilities.
+Real-time processing capabilities.
 
     **API Endpoints:**
     - `POST /api/messages/process`: Process message batch
@@ -402,13 +402,13 @@
     - `POST /api/evidence/package`: Generate evidence package
 
 **SEE ALSO**
-    workflow-document-analysis(7), tools-nlp(7), content-store(7)
+workflow-document-analysis(7), tools-nlp(7), content-store(7)
 
 **AUTHOR**
-    Claude Code - Opus 4.1
+Claude Code - Opus 4.1
 
 **VERSION**
-    1.0.0
+1.0.0
 
 **DATE**
-    January 11, 2026
+January 11, 2026

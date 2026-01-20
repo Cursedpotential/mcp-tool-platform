@@ -2,18 +2,24 @@
 import { useAuth } from "@/core/hooks/useAuth";
 
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { trpc } from "@/lib/trpc";
-import { 
-  Activity, 
-  Zap, 
-  Clock, 
-  DollarSign, 
-  TrendingUp, 
+import {
+  Activity,
+  Zap,
+  Clock,
+  DollarSign,
+  TrendingUp,
   AlertCircle,
   CheckCircle,
   XCircle,
@@ -21,7 +27,7 @@ import {
   Download,
   BarChart3,
   Cpu,
-  Layers
+  Layers,
 } from "lucide-react";
 import {
   AreaChart,
@@ -38,11 +44,24 @@ import {
   Cell,
 } from "recharts";
 
-const COLORS = ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#f97316', '#eab308'];
+const COLORS = [
+  "#6366f1",
+  "#8b5cf6",
+  "#a855f7",
+  "#d946ef",
+  "#ec4899",
+  "#f43f5e",
+  "#f97316",
+  "#eab308",
+];
 
 export default function Stats() {
   const { user, loading: authLoading } = useAuth();
-  const { data: dashboard, isLoading, refetch } = trpc.stats.dashboard.useQuery(undefined, {
+  const {
+    data: dashboard,
+    isLoading,
+    refetch,
+  } = trpc.stats.dashboard.useQuery(undefined, {
     refetchInterval: 30000, // Refresh every 30 seconds
   });
 
@@ -76,24 +95,27 @@ export default function Stats() {
     activeProviders: 0,
   };
 
-  const hourlyData = dashboard?.hourlyTrend?.map(h => ({
-    time: new Date(h.hour).toLocaleTimeString([], { hour: '2-digit' }),
-    calls: h.calls,
-    successes: h.successes,
-    failures: h.failures,
-  })) || [];
+  const hourlyData =
+    dashboard?.hourlyTrend?.map(h => ({
+      time: new Date(h.hour).toLocaleTimeString([], { hour: "2-digit" }),
+      calls: h.calls,
+      successes: h.successes,
+      failures: h.failures,
+    })) || [];
 
-  const topToolsData = dashboard?.topTools?.map(t => ({
-    name: t.name.split('.').pop() || t.name,
-    calls: t.calls,
-    avgDuration: Math.round(t.avgDuration),
-  })) || [];
+  const topToolsData =
+    dashboard?.topTools?.map(t => ({
+      name: t.name.split(".").pop() || t.name,
+      calls: t.calls,
+      avgDuration: Math.round(t.avgDuration),
+    })) || [];
 
-  const providerData = dashboard?.providerStats?.map(p => ({
-    name: p.provider,
-    value: p.totalCalls,
-    cost: p.totalCost,
-  })) || [];
+  const providerData =
+    dashboard?.providerStats?.map(p => ({
+      name: p.provider,
+      value: p.totalCalls,
+      cost: p.totalCost,
+    })) || [];
 
   return (
     <DashboardLayout>
@@ -102,7 +124,9 @@ export default function Stats() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
-            <p className="text-muted-foreground">Real-time tool usage and performance metrics</p>
+            <p className="text-muted-foreground">
+              Real-time tool usage and performance metrics
+            </p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => refetch()}>
@@ -124,7 +148,9 @@ export default function Stats() {
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{summary.totalCalls.toLocaleString()}</div>
+              <div className="text-2xl font-bold">
+                {summary.totalCalls.toLocaleString()}
+              </div>
               <p className="text-xs text-muted-foreground">
                 {summary.activeTools} active tools
               </p>
@@ -133,11 +159,15 @@ export default function Stats() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Success Rate
+              </CardTitle>
               <CheckCircle className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{(summary.successRate * 100).toFixed(1)}%</div>
+              <div className="text-2xl font-bold">
+                {(summary.successRate * 100).toFixed(1)}%
+              </div>
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <TrendingUp className="h-3 w-3 text-green-500" />
                 Healthy
@@ -151,10 +181,10 @@ export default function Stats() {
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{Math.round(summary.avgLatency)}ms</div>
-              <p className="text-xs text-muted-foreground">
-                Across all tools
-              </p>
+              <div className="text-2xl font-bold">
+                {Math.round(summary.avgLatency)}ms
+              </div>
+              <p className="text-xs text-muted-foreground">Across all tools</p>
             </CardContent>
           </Card>
 
@@ -164,7 +194,9 @@ export default function Stats() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${summary.totalCost.toFixed(4)}</div>
+              <div className="text-2xl font-bold">
+                ${summary.totalCost.toFixed(4)}
+              </div>
               <p className="text-xs text-muted-foreground">
                 {summary.totalTokens.toLocaleString()} tokens used
               </p>
@@ -187,36 +219,41 @@ export default function Stats() {
               <Card className="col-span-2">
                 <CardHeader>
                   <CardTitle>Hourly Activity</CardTitle>
-                  <CardDescription>Tool calls over the last 24 hours</CardDescription>
+                  <CardDescription>
+                    Tool calls over the last 24 hours
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={hourlyData}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          className="stroke-muted"
+                        />
                         <XAxis dataKey="time" className="text-xs" />
                         <YAxis className="text-xs" />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))', 
-                            border: '1px solid hsl(var(--border))' 
-                          }} 
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                          }}
                         />
-                        <Area 
-                          type="monotone" 
-                          dataKey="successes" 
+                        <Area
+                          type="monotone"
+                          dataKey="successes"
                           stackId="1"
-                          stroke="#22c55e" 
-                          fill="#22c55e" 
+                          stroke="#22c55e"
+                          fill="#22c55e"
                           fillOpacity={0.6}
                           name="Successes"
                         />
-                        <Area 
-                          type="monotone" 
-                          dataKey="failures" 
+                        <Area
+                          type="monotone"
+                          dataKey="failures"
                           stackId="1"
-                          stroke="#ef4444" 
-                          fill="#ef4444" 
+                          stroke="#ef4444"
+                          fill="#ef4444"
                           fillOpacity={0.6}
                           name="Failures"
                         />
@@ -236,16 +273,28 @@ export default function Stats() {
                   <div className="h-[300px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={topToolsData} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                        <XAxis type="number" className="text-xs" />
-                        <YAxis dataKey="name" type="category" width={100} className="text-xs" />
-                        <Tooltip 
-                          contentStyle={{ 
-                            backgroundColor: 'hsl(var(--card))', 
-                            border: '1px solid hsl(var(--border))' 
-                          }} 
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          className="stroke-muted"
                         />
-                        <Bar dataKey="calls" fill="#6366f1" radius={[0, 4, 4, 0]} />
+                        <XAxis type="number" className="text-xs" />
+                        <YAxis
+                          dataKey="name"
+                          type="category"
+                          width={100}
+                          className="text-xs"
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            border: "1px solid hsl(var(--border))",
+                          }}
+                        />
+                        <Bar
+                          dataKey="calls"
+                          fill="#6366f1"
+                          radius={[0, 4, 4, 0]}
+                        />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
@@ -256,7 +305,9 @@ export default function Stats() {
               <Card>
                 <CardHeader>
                   <CardTitle>Provider Usage</CardTitle>
-                  <CardDescription>Distribution across LLM providers</CardDescription>
+                  <CardDescription>
+                    Distribution across LLM providers
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="h-[300px]">
@@ -273,14 +324,17 @@ export default function Stats() {
                             dataKey="value"
                           >
                             {providerData.map((_, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={COLORS[index % COLORS.length]}
+                              />
                             ))}
                           </Pie>
-                          <Tooltip 
-                            contentStyle={{ 
-                              backgroundColor: 'hsl(var(--card))', 
-                              border: '1px solid hsl(var(--border))' 
-                            }} 
+                          <Tooltip
+                            contentStyle={{
+                              backgroundColor: "hsl(var(--card))",
+                              border: "1px solid hsl(var(--border))",
+                            }}
                           />
                         </PieChart>
                       </ResponsiveContainer>
@@ -299,20 +353,27 @@ export default function Stats() {
             <Card>
               <CardHeader>
                 <CardTitle>Tool Performance</CardTitle>
-                <CardDescription>Detailed metrics for each tool</CardDescription>
+                <CardDescription>
+                  Detailed metrics for each tool
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[400px]">
                   <div className="space-y-4">
-                    {dashboard?.toolStats?.map((tool) => (
-                      <div key={tool.toolName} className="flex items-center justify-between p-4 border rounded-lg">
+                    {dashboard?.toolStats?.map(tool => (
+                      <div
+                        key={tool.toolName}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
                         <div className="flex items-center gap-4">
                           <div className="p-2 bg-primary/10 rounded-lg">
                             <Layers className="h-5 w-5 text-primary" />
                           </div>
                           <div>
                             <p className="font-medium">{tool.toolName}</p>
-                            <p className="text-sm text-muted-foreground">{tool.category}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {tool.category}
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-6 text-sm">
@@ -322,22 +383,32 @@ export default function Stats() {
                           </div>
                           <div className="text-center">
                             <p className="font-medium text-green-500">
-                              {((tool.successfulCalls / tool.totalCalls) * 100).toFixed(1)}%
+                              {(
+                                (tool.successfulCalls / tool.totalCalls) *
+                                100
+                              ).toFixed(1)}
+                              %
                             </p>
                             <p className="text-muted-foreground">Success</p>
                           </div>
                           <div className="text-center">
-                            <p className="font-medium">{Math.round(tool.avgDuration)}ms</p>
+                            <p className="font-medium">
+                              {Math.round(tool.avgDuration)}ms
+                            </p>
                             <p className="text-muted-foreground">Avg</p>
                           </div>
                           <div className="text-center">
-                            <p className="font-medium">{Math.round(tool.p95Duration)}ms</p>
+                            <p className="font-medium">
+                              {Math.round(tool.p95Duration)}ms
+                            </p>
                             <p className="text-muted-foreground">P95</p>
                           </div>
                         </div>
                       </div>
                     )) || (
-                      <p className="text-center text-muted-foreground py-8">No tool data yet</p>
+                      <p className="text-center text-muted-foreground py-8">
+                        No tool data yet
+                      </p>
                     )}
                   </div>
                 </ScrollArea>
@@ -347,41 +418,61 @@ export default function Stats() {
 
           <TabsContent value="providers" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {dashboard?.providerStats?.map((provider) => (
+              {dashboard?.providerStats?.map(provider => (
                 <Card key={provider.provider}>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium capitalize">{provider.provider}</CardTitle>
+                    <CardTitle className="text-sm font-medium capitalize">
+                      {provider.provider}
+                    </CardTitle>
                     <Cpu className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Calls</span>
-                        <span className="font-medium">{provider.totalCalls}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Success Rate</span>
-                        <span className="font-medium text-green-500">
-                          {((provider.successfulCalls / provider.totalCalls) * 100).toFixed(1)}%
+                        <span className="font-medium">
+                          {provider.totalCalls}
                         </span>
                       </div>
                       <div className="flex justify-between">
-                        <span className="text-muted-foreground">Avg Latency</span>
-                        <span className="font-medium">{Math.round(provider.avgLatency)}ms</span>
+                        <span className="text-muted-foreground">
+                          Success Rate
+                        </span>
+                        <span className="font-medium text-green-500">
+                          {(
+                            (provider.successfulCalls / provider.totalCalls) *
+                            100
+                          ).toFixed(1)}
+                          %
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">
+                          Avg Latency
+                        </span>
+                        <span className="font-medium">
+                          {Math.round(provider.avgLatency)}ms
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Tokens</span>
-                        <span className="font-medium">{provider.totalTokens.toLocaleString()}</span>
+                        <span className="font-medium">
+                          {provider.totalTokens.toLocaleString()}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Cost</span>
-                        <span className="font-medium">${provider.totalCost.toFixed(4)}</span>
+                        <span className="font-medium">
+                          ${provider.totalCost.toFixed(4)}
+                        </span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               )) || (
-                <p className="col-span-full text-center text-muted-foreground py-8">No provider data yet</p>
+                <p className="col-span-full text-center text-muted-foreground py-8">
+                  No provider data yet
+                </p>
               )}
             </div>
           </TabsContent>
@@ -390,13 +481,18 @@ export default function Stats() {
             <Card>
               <CardHeader>
                 <CardTitle>Recent Errors</CardTitle>
-                <CardDescription>Latest tool execution failures</CardDescription>
+                <CardDescription>
+                  Latest tool execution failures
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[400px]">
                   <div className="space-y-2">
                     {dashboard?.errors?.map((error, i) => (
-                      <div key={i} className="flex items-start gap-3 p-3 border rounded-lg bg-destructive/5">
+                      <div
+                        key={i}
+                        className="flex items-start gap-3 p-3 border rounded-lg bg-destructive/5"
+                      >
                         <XCircle className="h-5 w-5 text-destructive mt-0.5" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -405,7 +501,9 @@ export default function Stats() {
                               {new Date(error.timestamp).toLocaleString()}
                             </span>
                           </div>
-                          <p className="text-sm mt-1 text-muted-foreground truncate">{error.error}</p>
+                          <p className="text-sm mt-1 text-muted-foreground truncate">
+                            {error.error}
+                          </p>
                         </div>
                       </div>
                     )) || (

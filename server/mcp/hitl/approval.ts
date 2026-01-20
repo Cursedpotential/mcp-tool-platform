@@ -1,6 +1,6 @@
 /**
  * Human-in-the-Loop Approval Gating System
- * 
+ *
  * Provides approval workflow for destructive actions:
  * - Preview generation for all changes
  * - Diff display before execution
@@ -8,16 +8,16 @@
  * - Interactive CLI review UI support
  */
 
-import { nanoid } from 'nanoid';
-import { getContentStore } from '../store/content-store';
-import type { ContentRef } from '../../../shared/mcp-types';
+import { nanoid } from "nanoid";
+import { getContentStore } from "../store/content-store";
+import type { ContentRef } from "../../../shared/mcp-types";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type ApprovalStatus = 'pending' | 'approved' | 'rejected' | 'expired';
-export type ActionType = 'write' | 'delete' | 'move' | 'merge' | 'execute';
+export type ApprovalStatus = "pending" | "approved" | "rejected" | "expired";
+export type ActionType = "write" | "delete" | "move" | "merge" | "execute";
 
 export interface ApprovalRequest {
   id: string;
@@ -77,7 +77,7 @@ export async function createApprovalRequest(params: {
     targetPath: params.targetPath,
     contentRef: params.contentRef,
     metadata: params.metadata ?? {},
-    status: 'pending',
+    status: "pending",
     createdAt: now,
     expiresAt: now + APPROVAL_TTL_MS,
   };
@@ -106,8 +106,8 @@ export function getApprovalRequest(id: string): ApprovalRequest | null {
   if (!request) return null;
 
   // Check expiration
-  if (Date.now() > request.expiresAt && request.status === 'pending') {
-    request.status = 'expired';
+  if (Date.now() > request.expiresAt && request.status === "pending") {
+    request.status = "expired";
   }
 
   return request;
@@ -120,10 +120,10 @@ export function listPendingApprovals(): ApprovalRequest[] {
   const pending: ApprovalRequest[] = [];
   const now = Date.now();
 
-  approvalStore.forEach((request) => {
-    if (request.status === 'pending') {
+  approvalStore.forEach(request => {
+    if (request.status === "pending") {
       if (now > request.expiresAt) {
-        request.status = 'expired';
+        request.status = "expired";
       } else {
         pending.push(request);
       }
@@ -146,11 +146,11 @@ export async function approveRequest(
     return {
       approved: false,
       approvalId: id,
-      message: 'Approval request not found',
+      message: "Approval request not found",
     };
   }
 
-  if (request.status !== 'pending') {
+  if (request.status !== "pending") {
     return {
       approved: false,
       approvalId: id,
@@ -159,22 +159,22 @@ export async function approveRequest(
   }
 
   if (Date.now() > request.expiresAt) {
-    request.status = 'expired';
+    request.status = "expired";
     return {
       approved: false,
       approvalId: id,
-      message: 'Approval request has expired',
+      message: "Approval request has expired",
     };
   }
 
-  request.status = 'approved';
+  request.status = "approved";
   request.reviewedAt = Date.now();
   request.reviewedBy = reviewedBy;
 
   return {
     approved: true,
     approvalId: id,
-    message: 'Request approved',
+    message: "Request approved",
   };
 }
 
@@ -192,11 +192,11 @@ export async function rejectRequest(
     return {
       approved: false,
       approvalId: id,
-      message: 'Approval request not found',
+      message: "Approval request not found",
     };
   }
 
-  if (request.status !== 'pending') {
+  if (request.status !== "pending") {
     return {
       approved: false,
       approvalId: id,
@@ -204,7 +204,7 @@ export async function rejectRequest(
     };
   }
 
-  request.status = 'rejected';
+  request.status = "rejected";
   request.reviewedAt = Date.now();
   request.reviewedBy = reviewedBy;
   request.metadata.rejectionReason = reason;
@@ -212,7 +212,7 @@ export async function rejectRequest(
   return {
     approved: false,
     approvalId: id,
-    message: reason ?? 'Request rejected',
+    message: reason ?? "Request rejected",
   };
 }
 
@@ -227,33 +227,39 @@ export async function executeApprovedAction(id: string): Promise<{
   const request = approvalStore.get(id);
 
   if (!request) {
-    return { success: false, error: 'Approval request not found' };
+    return { success: false, error: "Approval request not found" };
   }
 
-  if (request.status !== 'approved') {
-    return { success: false, error: `Request is ${request.status}, cannot execute` };
+  if (request.status !== "approved") {
+    return {
+      success: false,
+      error: `Request is ${request.status}, cannot execute`,
+    };
   }
 
   try {
     // Execute based on action type
     switch (request.type) {
-      case 'write':
+      case "write":
         return await executeWriteAction(request);
-      case 'delete':
+      case "delete":
         return await executeDeleteAction(request);
-      case 'move':
+      case "move":
         return await executeMoveAction(request);
-      case 'merge':
+      case "merge":
         return await executeMergeAction(request);
-      case 'execute':
+      case "execute":
         return await executeGenericAction(request);
       default:
-        return { success: false, error: `Unknown action type: ${request.type}` };
+        return {
+          success: false,
+          error: `Unknown action type: ${request.type}`,
+        };
     }
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }
@@ -268,11 +274,11 @@ export async function rollbackAction(id: string): Promise<{
   const request = approvalStore.get(id);
 
   if (!request) {
-    return { success: false, message: 'Approval request not found' };
+    return { success: false, message: "Approval request not found" };
   }
 
   if (!request.rollbackRef) {
-    return { success: false, message: 'No rollback data available' };
+    return { success: false, message: "No rollback data available" };
   }
 
   try {
@@ -280,16 +286,16 @@ export async function rollbackAction(id: string): Promise<{
     const originalContent = await store.getString(request.rollbackRef);
 
     if (!originalContent) {
-      return { success: false, message: 'Rollback content not found' };
+      return { success: false, message: "Rollback content not found" };
     }
 
     // In production, write the original content back to the file
     // For now, just return success
-    return { success: true, message: 'Rollback completed' };
+    return { success: true, message: "Rollback completed" };
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Rollback failed',
+      message: error instanceof Error ? error.message : "Rollback failed",
     };
   }
 }
@@ -309,27 +315,27 @@ export async function generatePreview(params: {
   const store = await getContentStore();
 
   switch (params.type) {
-    case 'write': {
+    case "write": {
       const content = params.contentRef
         ? await store.getString(params.contentRef)
-        : '';
-      const preview = `Write to ${params.targetPath}:\n\n${content?.slice(0, 500)}${(content?.length ?? 0) > 500 ? '...' : ''}`;
+        : "";
+      const preview = `Write to ${params.targetPath}:\n\n${content?.slice(0, 500)}${(content?.length ?? 0) > 500 ? "..." : ""}`;
       return { preview };
     }
 
-    case 'delete': {
+    case "delete": {
       return {
-        preview: `Delete ${params.targetPath}${params.metadata?.recursive ? ' (recursive)' : ''}`,
+        preview: `Delete ${params.targetPath}${params.metadata?.recursive ? " (recursive)" : ""}`,
       };
     }
 
-    case 'move': {
+    case "move": {
       return {
         preview: `Move ${params.metadata?.source} → ${params.metadata?.destination}`,
       };
     }
 
-    case 'merge': {
+    case "merge": {
       return {
         preview: `Merge changes into ${params.targetPath}`,
         diffRef: params.metadata?.diffRef as ContentRef | undefined,
@@ -346,15 +352,15 @@ export async function generatePreview(params: {
  */
 export function formatForCLI(request: ApprovalRequest): string {
   const lines: string[] = [
-    '╔════════════════════════════════════════════════════════════════╗',
+    "╔════════════════════════════════════════════════════════════════╗",
     `║ APPROVAL REQUEST: ${request.id.slice(0, 40).padEnd(40)}   ║`,
-    '╠════════════════════════════════════════════════════════════════╣',
+    "╠════════════════════════════════════════════════════════════════╣",
     `║ Type: ${request.type.padEnd(55)} ║`,
     `║ Status: ${request.status.padEnd(53)} ║`,
     `║ Created: ${new Date(request.createdAt).toISOString().padEnd(51)} ║`,
     `║ Expires: ${new Date(request.expiresAt).toISOString().padEnd(51)} ║`,
-    '╠════════════════════════════════════════════════════════════════╣',
-    '║ Description:                                                    ║',
+    "╠════════════════════════════════════════════════════════════════╣",
+    "║ Description:                                                    ║",
   ];
 
   // Wrap description
@@ -363,8 +369,12 @@ export function formatForCLI(request: ApprovalRequest): string {
     lines.push(`║ ${line.padEnd(62)} ║`);
   }
 
-  lines.push('╠════════════════════════════════════════════════════════════════╣');
-  lines.push('║ Preview:                                                        ║');
+  lines.push(
+    "╠════════════════════════════════════════════════════════════════╣"
+  );
+  lines.push(
+    "║ Preview:                                                        ║"
+  );
 
   // Wrap preview
   const previewLines = wrapText(request.preview, 60);
@@ -372,14 +382,22 @@ export function formatForCLI(request: ApprovalRequest): string {
     lines.push(`║ ${line.padEnd(62)} ║`);
   }
   if (previewLines.length > 10) {
-    lines.push(`║ ... (${previewLines.length - 10} more lines)                                      ║`);
+    lines.push(
+      `║ ... (${previewLines.length - 10} more lines)                                      ║`
+    );
   }
 
-  lines.push('╠════════════════════════════════════════════════════════════════╣');
-  lines.push('║ Actions: [A]pprove  [R]eject  [V]iew diff  [C]ancel            ║');
-  lines.push('╚════════════════════════════════════════════════════════════════╝');
+  lines.push(
+    "╠════════════════════════════════════════════════════════════════╣"
+  );
+  lines.push(
+    "║ Actions: [A]pprove  [R]eject  [V]iew diff  [C]ancel            ║"
+  );
+  lines.push(
+    "╚════════════════════════════════════════════════════════════════╝"
+  );
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 // ============================================================================
@@ -476,13 +494,13 @@ async function executeGenericAction(request: ApprovalRequest): Promise<{
 function wrapText(text: string, maxWidth: number): string[] {
   const lines: string[] = [];
   const words = text.split(/\s+/);
-  let currentLine = '';
+  let currentLine = "";
 
   for (const word of words) {
     if (currentLine.length + word.length + 1 > maxWidth) {
       if (currentLine) {
         lines.push(currentLine);
-        currentLine = '';
+        currentLine = "";
       }
       // Handle words longer than maxWidth
       if (word.length > maxWidth) {
@@ -492,14 +510,14 @@ function wrapText(text: string, maxWidth: number): string[] {
         continue;
       }
     }
-    currentLine += (currentLine ? ' ' : '') + word;
+    currentLine += (currentLine ? " " : "") + word;
   }
 
   if (currentLine) {
     lines.push(currentLine);
   }
 
-  return lines.length > 0 ? lines : [''];
+  return lines.length > 0 ? lines : [""];
 }
 
 /**
@@ -510,12 +528,14 @@ export function cleanupExpiredApprovals(): number {
   let cleaned = 0;
 
   approvalStore.forEach((request, id) => {
-    if (request.status === 'pending' && now > request.expiresAt) {
-      request.status = 'expired';
+    if (request.status === "pending" && now > request.expiresAt) {
+      request.status = "expired";
     }
     // Remove old completed/expired requests
     if (
-      (request.status === 'expired' || request.status === 'approved' || request.status === 'rejected') &&
+      (request.status === "expired" ||
+        request.status === "approved" ||
+        request.status === "rejected") &&
       now - request.createdAt > 24 * 60 * 60 * 1000 // 24 hours
     ) {
       approvalStore.delete(id);

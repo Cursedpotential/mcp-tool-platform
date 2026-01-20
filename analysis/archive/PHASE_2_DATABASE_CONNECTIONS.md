@@ -13,12 +13,14 @@
 All four database plugins are **registered but stubbed**—they have function signatures but use placeholder HTTP calls instead of real connections. This document provides **complete, production-ready implementations** for all four.
 
 ### What's Currently Broken
+
 - ❌ `vector-db.ts` (17 functions) - Qdrant API calls timeout/fail
-- ❌ `graph-db.ts` (15 functions) - Neo4j HTTP API not implemented  
+- ❌ `graph-db.ts` (15 functions) - Neo4j HTTP API not implemented
 - ❌ `mem0.ts` (12 functions) - mem0 API calls return empty
 - ❌ `n8n.ts` (15 functions) - n8n webhooks never trigger
 
 ### What We're Building
+
 - ✅ Real Qdrant client with proper error handling
 - ✅ Neo4j driver with connection pooling
 - ✅ mem0 HTTP client with semantic search
@@ -106,6 +108,7 @@ Add these to `package.json`:
 ```
 
 **Install command:**
+
 ```bash
 npm install @qdrant/js-client-rest neo4j-driver pino pino-pretty
 ```
@@ -256,9 +259,11 @@ export async function vectorStore(
     }
 
     // Upsert points
-    const qdrantPoints: PointStruct[] = args.points.map((p) => ({
+    const qdrantPoints: PointStruct[] = args.points.map(p => ({
       id:
-        typeof p.id === "string" ? parseInt(p.id.split("-").pop() || "0") : p.id,
+        typeof p.id === "string"
+          ? parseInt(p.id.split("-").pop() || "0")
+          : p.id,
       vector: p.vector,
       payload: p.payload,
     }));
@@ -267,9 +272,7 @@ export async function vectorStore(
       points: qdrantPoints,
     });
 
-    logger.info(
-      `Stored ${args.points.length} vectors in ${collectionName}`
-    );
+    logger.info(`Stored ${args.points.length} vectors in ${collectionName}`);
 
     return { stored: args.points.length, collection: collectionName };
   } catch (error) {
@@ -290,9 +293,7 @@ interface VectorDBSearchArgs {
 /**
  * Search vectors in Qdrant
  */
-export async function vectorSearch(
-  args: VectorDBSearchArgs
-): Promise<
+export async function vectorSearch(args: VectorDBSearchArgs): Promise<
   Array<{
     id: string;
     score: number;
@@ -314,7 +315,7 @@ export async function vectorSearch(
       filter: args.filter,
     } as SearchParams);
 
-    return (results || []).map((r) => ({
+    return (results || []).map(r => ({
       id: String(r.id),
       score: r.score || 0,
       payload: r.payload || {},
@@ -347,7 +348,7 @@ export async function vectorDelete(
 
   try {
     if (args.ids) {
-      const numIds = args.ids.map((id) => parseInt(id.split("-").pop() || "0"));
+      const numIds = args.ids.map(id => parseInt(id.split("-").pop() || "0"));
       await client.delete(collectionName, {
         points_selector: {
           points: numIds,
@@ -385,9 +386,9 @@ export async function vectorListCollections(): Promise<{
   try {
     const result = await client.getCollections();
     const collections = (result.collections || [])
-      .map((c) => c.name || "")
-      .filter((name) => name.startsWith(config.collectionPrefix))
-      .map((name) => name.slice(config.collectionPrefix.length));
+      .map(c => c.name || "")
+      .filter(name => name.startsWith(config.collectionPrefix))
+      .map(name => name.slice(config.collectionPrefix.length));
 
     return { collections };
   } catch (error) {
@@ -400,9 +401,7 @@ export async function vectorListCollections(): Promise<{
 /**
  * Get collection stats
  */
-export async function vectorGetStats(
-  collection: string
-): Promise<{
+export async function vectorGetStats(collection: string): Promise<{
   name: string;
   vectorCount: number;
   vectorSize: number;
@@ -469,11 +468,15 @@ let driver: Driver | null = null;
  */
 function getDriver(): Driver {
   if (!driver) {
-    driver = neo4j.driver(config.url, neo4j.auth.basic(config.username, config.password), {
-      connectionTimeout: config.timeout,
-      maxConnectionPoolSize: 100,
-      acquireConnectionTimeout: 60000,
-    });
+    driver = neo4j.driver(
+      config.url,
+      neo4j.auth.basic(config.username, config.password),
+      {
+        connectionTimeout: config.timeout,
+        maxConnectionPoolSize: 100,
+        acquireConnectionTimeout: 60000,
+      }
+    );
   }
   return driver;
 }
@@ -534,7 +537,10 @@ interface AddEntityArgs {
  */
 export async function addEntity(
   args: AddEntityArgs
-): Promise<{ entity: { id: string; type: string; name: string }; created: boolean }> {
+): Promise<{
+  entity: { id: string; type: string; name: string };
+  created: boolean;
+}> {
   const driver = getDriver();
   const session = driver.session({ database: config.database });
 
@@ -617,7 +623,7 @@ export async function searchEntities(args: {
     });
 
     return {
-      entities: result.records.map((r) => ({
+      entities: result.records.map(r => ({
         id: r.get("id"),
         type: r.get("type"),
         name: r.get("name"),
@@ -643,9 +649,7 @@ interface AddRelationshipArgs {
 /**
  * Add a relationship
  */
-export async function addRelationship(
-  args: AddRelationshipArgs
-): Promise<{
+export async function addRelationship(args: AddRelationshipArgs): Promise<{
   relationship: { id: string; type: string };
   created: boolean;
 }> {
@@ -725,7 +729,7 @@ export async function findPaths(args: {
     );
 
     return {
-      paths: result.records.map((r) => ({
+      paths: result.records.map(r => ({
         nodes: r.get("nodes"),
         length: r.get("pathLength"),
       })),
@@ -793,7 +797,8 @@ function getClient(): AxiosInstance {
     });
 
     if (config.apiKey) {
-      client.defaults.headers.common["Authorization"] = `Bearer ${config.apiKey}`;
+      client.defaults.headers.common["Authorization"] =
+        `Bearer ${config.apiKey}`;
     }
   }
   return client;
@@ -912,7 +917,9 @@ export async function searchMemories(args: {
 /**
  * Delete a memory
  */
-export async function deleteMemory(memoryId: string): Promise<{ deleted: boolean }> {
+export async function deleteMemory(
+  memoryId: string
+): Promise<{ deleted: boolean }> {
   const client = getClient();
 
   try {
@@ -1076,7 +1083,10 @@ export async function triggerWorkflow(args: {
   const client = getClient();
 
   try {
-    const response = await client.post(`/api/v1/workflows/${args.id}/execute`, args.data || {});
+    const response = await client.post(
+      `/api/v1/workflows/${args.id}/execute`,
+      args.data || {}
+    );
 
     return {
       executionId: response.data?.data?.executionId,
@@ -1234,11 +1244,13 @@ volumes:
 ```
 
 **Start everything:**
+
 ```bash
 docker-compose up -d
 ```
 
 **Check health:**
+
 ```bash
 docker-compose ps
 ```
@@ -1469,9 +1481,10 @@ export function DatabasesTab() {
 ✅ Complete test suite (78+ test cases)  
 ✅ Docker Compose for local development  
 ✅ Settings UI integration  
-✅ Proper logging with pino  
+✅ Proper logging with pino
 
 **Installation Steps:**
+
 1. Copy all files to your project
 2. Install dependencies: `npm install @qdrant/js-client-rest neo4j-driver`
 3. Start services: `docker-compose up -d`

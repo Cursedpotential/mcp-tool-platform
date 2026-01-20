@@ -7,9 +7,11 @@
 ## VPS Overview
 
 ### VPS1 - Storage & Database Backend (8c/16GB + 50GB block)
+
 **Hostname:** `salem-storage`  
 **Tailscale tag:** `tag:salem-storage`  
 **Services:**
+
 - PostgreSQL (port 5432)
 - FerretDB (port 27017)
 - Directus (port 8055)
@@ -17,9 +19,11 @@
 - n8n (port 5678)
 
 ### VPS2 - AI & Compute Backend (8c/16GB)
+
 **Hostname:** `salem-compute`  
 **Tailscale tag:** `tag:salem-compute`  
 **Services:**
+
 - LiteLLM (port 4000)
 - MetaMCP (port 4001)
 - Chroma (port 8000)
@@ -76,6 +80,7 @@ tailscale ping salem-storage
 ### VPS2 → VPS1 (Compute accessing Storage)
 
 **LibreChat → FerretDB (MongoDB):**
+
 ```yaml
 # In docker-compose.vps2-compute.yml
 librechat:
@@ -84,6 +89,7 @@ librechat:
 ```
 
 **MetaMCP → PostgreSQL:**
+
 ```yaml
 # In docker-compose.vps2-compute.yml
 metamcp:
@@ -92,6 +98,7 @@ metamcp:
 ```
 
 **Platform (Manus app) → PostgreSQL:**
+
 ```typescript
 // In your Manus app server/_core/env.ts
 DATABASE_URL=postgres://postgres:password@salem-storage:5432/salem
@@ -100,6 +107,7 @@ DATABASE_URL=postgres://postgres:password@salem-storage:5432/salem
 ### VPS1 → VPS2 (Storage accessing Compute)
 
 **n8n → LiteLLM:**
+
 ```yaml
 # In n8n workflow
 HTTP Request Node:
@@ -109,18 +117,19 @@ HTTP Request Node:
 ```
 
 **Directus → LiteLLM (for AI extensions):**
+
 ```javascript
 // In Directus extension
-const response = await fetch('http://salem-compute:4000/v1/chat/completions', {
-  method: 'POST',
+const response = await fetch("http://salem-compute:4000/v1/chat/completions", {
+  method: "POST",
   headers: {
-    'Authorization': `Bearer ${process.env.LITELLM_MASTER_KEY}`,
-    'Content-Type': 'application/json'
+    Authorization: `Bearer ${process.env.LITELLM_MASTER_KEY}`,
+    "Content-Type": "application/json",
   },
   body: JSON.stringify({
-    model: 'gpt-4',
-    messages: [{ role: 'user', content: 'Analyze this document' }]
-  })
+    model: "gpt-4",
+    messages: [{ role: "user", content: "Analyze this document" }],
+  }),
 });
 ```
 
@@ -140,6 +149,7 @@ Tailscale provides automatic DNS resolution:
 ## Firewall Rules
 
 ### VPS1 Firewall (Storage)
+
 ```bash
 # Allow from Tailscale network only
 ufw allow in on tailscale0 to any port 5432  # PostgreSQL
@@ -156,6 +166,7 @@ ufw deny 27017/tcp
 ```
 
 ### VPS2 Firewall (Compute)
+
 ```bash
 # Allow from Tailscale network only
 ufw allow in on tailscale0 to any port 4000  # LiteLLM
@@ -198,17 +209,20 @@ curl -X POST http://salem-compute:4000/v1/chat/completions \
 ### Service can't reach other VPS
 
 1. **Check Tailscale status:**
+
    ```bash
    tailscale status
    ```
 
 2. **Verify DNS resolution:**
+
    ```bash
    ping salem-storage  # From VPS2
    ping salem-compute  # From VPS1
    ```
 
 3. **Check Docker network:**
+
    ```bash
    docker network inspect salem-network
    ```
@@ -222,6 +236,7 @@ curl -X POST http://salem-compute:4000/v1/chat/completions \
 ### Slow cross-VPS communication
 
 1. **Check Tailscale latency:**
+
    ```bash
    tailscale ping salem-storage
    ```
@@ -242,6 +257,7 @@ curl -X POST http://salem-compute:4000/v1/chat/completions \
 ### VPS1 → R2 (Nightly at 2am)
 
 Automated via infrastructure sidecar:
+
 - PostgreSQL dump → R2
 - `/data/media` → R2
 - Directus config → R2
@@ -249,6 +265,7 @@ Automated via infrastructure sidecar:
 ### VPS2 → Local Volumes
 
 No backup needed (stateless services):
+
 - Chroma data (can rebuild from PostgreSQL)
 - Ollama models (can re-download)
 - Kasm home (ephemeral)
@@ -277,22 +294,27 @@ No backup needed (stateless services):
 ## Cost Breakdown
 
 **Hetzner VPS:**
+
 - VPS1 (8c/16GB): $10.50/month
 - VPS2 (8c/16GB): $10.50/month
 - Block storage (50GB): $3/month
 - **Total:** $24/month
 
 **Tailscale:**
+
 - Free tier (up to 100 devices)
 
 **AWS S3 (LiteLLM cache):**
+
 - Free tier (5GB, 12 months)
 - After free tier: ~$0.12/month
 
 **Cloudflare:**
+
 - Free tier (DNS + Access)
 
 **R2 (Backup):**
+
 - Free tier (10GB)
 - After free tier: ~$0.30/month
 

@@ -1,7 +1,7 @@
 // File: server/mcp/gateway.ts | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
 /**
  * MCP Gateway API
- * 
+ *
  * Token-efficient gateway exposing 4 core endpoints:
  * - search_tools: Discover tools with minimal token overhead
  * - describe_tool: Get full tool specification on demand
@@ -9,17 +9,17 @@
  * - get_ref: Retrieve content-addressed artifacts with paging
  */
 
-import { z } from 'zod';
-import { router, publicProcedure, protectedProcedure } from '../core/trpc';
+import { z } from "zod";
+import { router, publicProcedure, protectedProcedure } from "../core/trpc";
 
-import { TRPCError } from '@trpc/server';
+import { TRPCError } from "@trpc/server";
 
-import { getContentStore } from './store/content-store';
-import { getPluginRegistry } from './plugins/registry';
-import { getTaskExecutor } from './workers/executor';
-import { getMCPProxy } from './proxy/mcp-proxy';
-import { importMcpServersFromConfig } from './proxy/mcp-config-import';
-import { LLMProviderHub } from './llm/provider-hub';
+import { getContentStore } from "./store/content-store";
+import { getPluginRegistry } from "./plugins/registry";
+import { getTaskExecutor } from "./workers/executor";
+import { getMCPProxy } from "./proxy/mcp-proxy";
+import { importMcpServersFromConfig } from "./proxy/mcp-config-import";
+import { LLMProviderHub } from "./llm/provider-hub";
 import type {
   ToolCard,
   ToolSpec,
@@ -28,9 +28,9 @@ import type {
   PagedContent,
   ContentRef,
   ApiResponse,
-} from '../../shared/mcp-types';
-import type { WorkflowTemplate } from '../../shared/workflow-types';
-import { nanoid } from 'nanoid';
+} from "../../shared/mcp-types";
+import type { WorkflowTemplate } from "../../shared/workflow-types";
+import { nanoid } from "nanoid";
 
 // ============================================================================
 // Input Schemas
@@ -50,17 +50,19 @@ const describeToolInput = z.object({
 const invokeToolInput = z.object({
   toolName: z.string().min(1).max(100),
   args: z.record(z.string(), z.unknown()),
-  options: z.object({
-    timeout: z.number().int().min(1000).max(300000).optional(),
-    maxOutputSize: z.number().int().min(1).max(10485760).optional(),
-    returnRef: z.boolean().optional(),
-    priority: z.enum(['low', 'normal', 'high']).optional(),
-  }).optional(),
+  options: z
+    .object({
+      timeout: z.number().int().min(1000).max(300000).optional(),
+      maxOutputSize: z.number().int().min(1).max(10485760).optional(),
+      returnRef: z.boolean().optional(),
+      priority: z.enum(["low", "normal", "high"]).optional(),
+    })
+    .optional(),
 });
 
 const getRefInput = z.object({
-  ref: z.string().refine((s): s is ContentRef => s.startsWith('sha256:'), {
-    message: 'Invalid content reference format',
+  ref: z.string().refine((s): s is ContentRef => s.startsWith("sha256:"), {
+    message: "Invalid content reference format",
   }),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(256).max(65536).optional(),
@@ -69,7 +71,7 @@ const getRefInput = z.object({
 const registerMcpServerInput = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  transport: z.enum(['http', 'websocket', 'stdio']).default('http'),
+  transport: z.enum(["http", "websocket", "stdio"]).default("http"),
   endpoint: z.string().min(1),
   apiKey: z.string().optional(),
   headers: z.record(z.string(), z.string()).optional(),
@@ -109,9 +111,13 @@ function filterToolCards(
   tags?: string[]
 ): ToolCard[] {
   const normalizedQuery = query.toLowerCase();
-  return tools.filter((tool) => {
+  return tools.filter(tool => {
     if (category && tool.category !== category) return false;
-    if (tags && tags.length > 0 && !tags.every(tag => tool.tags.includes(tag))) {
+    if (
+      tags &&
+      tags.length > 0 &&
+      !tags.every(tag => tool.tags.includes(tag))
+    ) {
       return false;
     }
     return (
@@ -123,13 +129,13 @@ function filterToolCards(
 }
 
 const SOURCE_HINTS: Record<string, string[]> = {
-  facebook: ['chat', 'messages', 'social', 'forensics'],
-  instagram: ['chat', 'messages', 'social'],
-  whatsapp: ['chat', 'messages', 'forensics'],
-  sms: ['chat', 'messages'],
-  transcript: ['transcript', 'document', 'analysis', 'nlp'],
-  email: ['email', 'messages', 'document'],
-  pdf: ['document', 'ocr', 'conversion'],
+  facebook: ["chat", "messages", "social", "forensics"],
+  instagram: ["chat", "messages", "social"],
+  whatsapp: ["chat", "messages", "forensics"],
+  sms: ["chat", "messages"],
+  transcript: ["transcript", "document", "analysis", "nlp"],
+  email: ["email", "messages", "document"],
+  pdf: ["document", "ocr", "conversion"],
 };
 
 function tokenizeIntent(value: string): string[] {
@@ -160,21 +166,24 @@ async function refineWithLlm(
   const toolList = candidates.map(tool => tool.name);
 
   const prompt = [
-    'Select the best tool names for the task.',
-    'Return a JSON array of tool names only.',
+    "Select the best tool names for the task.",
+    "Return a JSON array of tool names only.",
     `Task: ${intent}`,
-    `Tools: ${toolList.join(', ')}`,
-  ].join('\n');
+    `Tools: ${toolList.join(", ")}`,
+  ].join("\n");
 
   const response = await hub.chat({
     messages: [
-      { role: 'system', content: 'You select tool names for routing. Output JSON only.' },
-      { role: 'user', content: prompt },
+      {
+        role: "system",
+        content: "You select tool names for routing. Output JSON only.",
+      },
+      { role: "user", content: prompt },
     ],
     temperature: 0.1,
     maxTokens: 200,
-    task: 'tool_selection',
-    complexity: 'simple',
+    task: "tool_selection",
+    complexity: "simple",
   });
 
   try {
@@ -194,7 +203,7 @@ async function refineWithLlm(
 export const mcpGatewayRouter = router({
   /**
    * search_tools - Discover available tools with minimal token overhead
-   * 
+   *
    * Returns compact tool cards (name, category, description, tags) to minimize
    * context window usage. Use describe_tool for full specifications.
    */
@@ -220,7 +229,7 @@ export const mcpGatewayRouter = router({
         );
 
         // Return minimal tool cards for token efficiency
-        const cards: ToolCard[] = tools.map((tool) => ({
+        const cards: ToolCard[] = tools.map(tool => ({
           name: tool.name,
           category: tool.category,
           description: tool.description,
@@ -242,8 +251,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'SEARCH_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "SEARCH_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -255,7 +264,7 @@ export const mcpGatewayRouter = router({
 
   /**
    * describe_tool - Get full tool specification on demand
-   * 
+   *
    * Returns complete schema, examples, permissions, and cost estimates.
    * Only call when you need the full specification.
    */
@@ -273,7 +282,7 @@ export const mcpGatewayRouter = router({
 
         if (!remoteTool) {
           throw new TRPCError({
-            code: 'NOT_FOUND',
+            code: "NOT_FOUND",
             message: `Tool not found: ${input.toolName}`,
           });
         }
@@ -291,8 +300,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'DESCRIBE_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "DESCRIBE_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -304,7 +313,7 @@ export const mcpGatewayRouter = router({
 
   /**
    * invoke_tool - Execute a tool with reference-based returns
-   * 
+   *
    * For small outputs (<4KB), returns inline data.
    * For large outputs, returns a content reference for paged retrieval.
    */
@@ -328,7 +337,7 @@ export const mcpGatewayRouter = router({
 
           if (!proxyResult.success) {
             throw new TRPCError({
-              code: 'NOT_FOUND',
+              code: "NOT_FOUND",
               message: proxyResult.error || `Tool not found: ${input.toolName}`,
             });
           }
@@ -362,8 +371,8 @@ export const mcpGatewayRouter = router({
         );
         if (!hasPermission) {
           throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Insufficient permissions for this tool',
+            code: "FORBIDDEN",
+            message: "Insufficient permissions for this tool",
           });
         }
 
@@ -391,8 +400,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'INVOKE_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "INVOKE_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -404,7 +413,7 @@ export const mcpGatewayRouter = router({
 
   /**
    * get_ref - Retrieve content-addressed artifacts with paging
-   * 
+   *
    * Enables token-efficient retrieval of large outputs by fetching
    * only the pages needed for the current context.
    */
@@ -424,7 +433,7 @@ export const mcpGatewayRouter = router({
 
         if (!content) {
           throw new TRPCError({
-            code: 'NOT_FOUND',
+            code: "NOT_FOUND",
             message: `Content not found: ${input.ref}`,
           });
         }
@@ -442,8 +451,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'GET_REF_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "GET_REF_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -455,17 +464,26 @@ export const mcpGatewayRouter = router({
 
   /**
    * list_refs - List all stored content references
-   * 
+   *
    * Returns metadata for all stored artifacts without loading content.
    */
-  listRefs: protectedProcedure
-    .query(async (): Promise<ApiResponse<{ refs: Array<{ ref: string; size: number; mime: string; preview?: string }> }>> => {
+  listRefs: protectedProcedure.query(
+    async (): Promise<
+      ApiResponse<{
+        refs: Array<{
+          ref: string;
+          size: number;
+          mime: string;
+          preview?: string;
+        }>;
+      }>
+    > => {
       const traceId = nanoid();
       const startTime = Date.now();
 
       try {
         const store = await getContentStore();
-        const refs = store.list().map((r) => ({
+        const refs = store.list().map(r => ({
           ref: r.ref,
           size: r.size,
           mime: r.mime,
@@ -484,8 +502,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'LIST_REFS_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "LIST_REFS_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -493,85 +511,98 @@ export const mcpGatewayRouter = router({
           },
         };
       }
-    }),
+    }
+  ),
 
   /**
    * list_tools - List all available tools (full catalog)
-   * 
+   *
    * Returns complete tool catalog for agent discovery.
    * Agents can browse all tools without needing to search.
    */
   listTools: publicProcedure
-    .input(z.object({
-      category: z.string().optional(),
-      limit: z.number().int().min(1).max(500).default(100),
-      offset: z.number().int().min(0).default(0),
-    }).optional())
-    .query(async ({ input }): Promise<ApiResponse<{ tools: ToolCard[]; total: number }>> => {
-      const traceId = nanoid();
-      const startTime = Date.now();
+    .input(
+      z
+        .object({
+          category: z.string().optional(),
+          limit: z.number().int().min(1).max(500).default(100),
+          offset: z.number().int().min(0).default(0),
+        })
+        .optional()
+    )
+    .query(
+      async ({
+        input,
+      }): Promise<ApiResponse<{ tools: ToolCard[]; total: number }>> => {
+        const traceId = nanoid();
+        const startTime = Date.now();
 
-      try {
-        const registry = await getPluginRegistry();
-        const proxy = getMCPProxy();
-        let tools: ToolSpec[];
+        try {
+          const registry = await getPluginRegistry();
+          const proxy = getMCPProxy();
+          let tools: ToolSpec[];
 
-        if (input?.category) {
-          tools = registry.getToolsByCategory(input.category);
-        } else {
-          // Get all tools from all categories
-          const categories = registry.getCategories();
-          tools = categories.flatMap(cat => registry.getToolsByCategory(cat));
+          if (input?.category) {
+            tools = registry.getToolsByCategory(input.category);
+          } else {
+            // Get all tools from all categories
+            const categories = registry.getCategories();
+            tools = categories.flatMap(cat => registry.getToolsByCategory(cat));
+          }
+
+          const localCards: ToolCard[] = tools.map(tool => ({
+            name: tool.name,
+            category: tool.category,
+            description: tool.description,
+            tags: tool.tags,
+          }));
+
+          const remoteCards = input?.category
+            ? proxy
+                .getAllTools()
+                .filter(tool => tool.category === input.category)
+            : proxy.getAllTools();
+
+          const allCards = [...localCards, ...remoteCards];
+          const total = allCards.length;
+          const offset = input?.offset || 0;
+          const limit = input?.limit || 100;
+          const paged = allCards.slice(offset, offset + limit);
+
+          return {
+            success: true,
+            data: { tools: paged, total },
+            meta: {
+              traceId,
+              executionTimeMs: Date.now() - startTime,
+              cached: false,
+            },
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: {
+              code: "LIST_TOOLS_FAILED",
+              message: error instanceof Error ? error.message : "Unknown error",
+            },
+            meta: {
+              traceId,
+              executionTimeMs: Date.now() - startTime,
+            },
+          };
         }
-
-        const localCards: ToolCard[] = tools.map((tool) => ({
-          name: tool.name,
-          category: tool.category,
-          description: tool.description,
-          tags: tool.tags,
-        }));
-
-        const remoteCards = input?.category
-          ? proxy.getAllTools().filter(tool => tool.category === input.category)
-          : proxy.getAllTools();
-
-        const allCards = [...localCards, ...remoteCards];
-        const total = allCards.length;
-        const offset = input?.offset || 0;
-        const limit = input?.limit || 100;
-        const paged = allCards.slice(offset, offset + limit);
-
-        return {
-          success: true,
-          data: { tools: paged, total },
-          meta: {
-            traceId,
-            executionTimeMs: Date.now() - startTime,
-            cached: false,
-          },
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: {
-            code: 'LIST_TOOLS_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
-          },
-          meta: {
-            traceId,
-            executionTimeMs: Date.now() - startTime,
-          },
-        };
       }
-    }),
+    ),
 
   /**
    * list_categories - List all tool categories
-   * 
+   *
    * Returns available categories for category-based navigation.
    */
-  listCategories: publicProcedure
-    .query(async (): Promise<ApiResponse<{ categories: Array<{ name: string; count: number }> }>> => {
+  listCategories: publicProcedure.query(
+    async (): Promise<
+      ApiResponse<{ categories: Array<{ name: string; count: number }> }>
+    > => {
       const traceId = nanoid();
       const startTime = Date.now();
 
@@ -580,10 +611,13 @@ export const mcpGatewayRouter = router({
         const proxy = getMCPProxy();
         const categories = registry.getCategories();
         const remoteTools = proxy.getAllTools();
-        const remoteCategoryCounts = remoteTools.reduce<Record<string, number>>((acc, tool) => {
-          acc[tool.category] = (acc[tool.category] || 0) + 1;
-          return acc;
-        }, {});
+        const remoteCategoryCounts = remoteTools.reduce<Record<string, number>>(
+          (acc, tool) => {
+            acc[tool.category] = (acc[tool.category] || 0) + 1;
+            return acc;
+          },
+          {}
+        );
 
         const categoriesWithCounts = categories.map(cat => ({
           name: cat,
@@ -611,8 +645,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'LIST_CATEGORIES_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "LIST_CATEGORIES_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -620,7 +654,8 @@ export const mcpGatewayRouter = router({
           },
         };
       }
-    }),
+    }
+  ),
 
   /**
    * get_tools_by_category - Get all tools in a specific category
@@ -635,13 +670,15 @@ export const mcpGatewayRouter = router({
         const registry = await getPluginRegistry();
         const proxy = getMCPProxy();
         const tools = registry.getToolsByCategory(input.category);
-        const cards: ToolCard[] = tools.map((tool) => ({
+        const cards: ToolCard[] = tools.map(tool => ({
           name: tool.name,
           category: tool.category,
           description: tool.description,
           tags: tool.tags,
         }));
-        const remoteCards = proxy.getAllTools().filter(tool => tool.category === input.category);
+        const remoteCards = proxy
+          .getAllTools()
+          .filter(tool => tool.category === input.category);
         const combined = [...cards, ...remoteCards];
 
         return {
@@ -656,8 +693,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'GET_TOOLS_BY_CATEGORY_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "GET_TOOLS_BY_CATEGORY_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -669,11 +706,16 @@ export const mcpGatewayRouter = router({
 
   /**
    * get_related_tools - Get tools related to a specific tool
-   * 
+   *
    * Returns tools that are commonly used together or serve similar purposes.
    */
   getRelatedTools: publicProcedure
-    .input(z.object({ toolName: z.string(), limit: z.number().int().min(1).max(20).default(5) }))
+    .input(
+      z.object({
+        toolName: z.string(),
+        limit: z.number().int().min(1).max(20).default(5),
+      })
+    )
     .query(async ({ input }): Promise<ApiResponse<ToolCard[]>> => {
       const traceId = nanoid();
       const startTime = Date.now();
@@ -688,7 +730,7 @@ export const mcpGatewayRouter = router({
 
         if (!tool && !remoteTool) {
           throw new TRPCError({
-            code: 'NOT_FOUND',
+            code: "NOT_FOUND",
             message: `Tool not found: ${input.toolName}`,
           });
         }
@@ -696,25 +738,29 @@ export const mcpGatewayRouter = router({
         // Find related tools by:
         // 1. Same category
         // 2. Shared tags
-        const baseCategory = tool?.category ?? remoteTool?.category ?? 'remote';
+        const baseCategory = tool?.category ?? remoteTool?.category ?? "remote";
         const baseTags = tool?.tags ?? remoteTool?.tags ?? [];
 
-        const categoryTools = registry.getToolsByCategory(baseCategory)
+        const categoryTools = registry
+          .getToolsByCategory(baseCategory)
           .filter(t => t.name !== input.toolName)
-          .map((t) => ({
+          .map(t => ({
             name: t.name,
             category: t.category,
             description: t.description,
             tags: t.tags,
           }))
           .concat(
-            proxy.getAllTools()
-              .filter(t => t.category === baseCategory && t.name !== input.toolName)
+            proxy
+              .getAllTools()
+              .filter(
+                t => t.category === baseCategory && t.name !== input.toolName
+              )
           );
 
         const scored = categoryTools.map(t => {
           let score = 1; // Same category baseline
-          
+
           // Add points for shared tags
           const sharedTags = baseTags.filter(tag => t.tags.includes(tag));
           score += sharedTags.length * 2;
@@ -738,8 +784,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'GET_RELATED_TOOLS_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "GET_RELATED_TOOLS_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -751,7 +797,7 @@ export const mcpGatewayRouter = router({
 
   /**
    * list_workflows - List available workflow templates
-   * 
+   *
    * Returns pre-built tool chains for common tasks.
    */
   listWorkflows: publicProcedure
@@ -761,8 +807,9 @@ export const mcpGatewayRouter = router({
       const startTime = Date.now();
 
       try {
-        const { WORKFLOW_TEMPLATES } = await import('../../shared/workflow-types');
-        
+        const { WORKFLOW_TEMPLATES } =
+          await import("../../shared/workflow-types");
+
         let workflows = WORKFLOW_TEMPLATES;
         if (input?.category) {
           workflows = workflows.filter(w => w.category === input.category);
@@ -780,8 +827,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'LIST_WORKFLOWS_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "LIST_WORKFLOWS_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -801,7 +848,8 @@ export const mcpGatewayRouter = router({
       const startTime = Date.now();
 
       try {
-        const { WORKFLOW_TEMPLATES } = await import('../../shared/workflow-types');
+        const { WORKFLOW_TEMPLATES } =
+          await import("../../shared/workflow-types");
         const workflow = WORKFLOW_TEMPLATES.find(w => w.id === input.id);
 
         return {
@@ -816,8 +864,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'GET_WORKFLOW_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "GET_WORKFLOW_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -829,34 +877,37 @@ export const mcpGatewayRouter = router({
 
   /**
    * semantic_route - Match user intent to best tool or workflow
-   * 
+   *
    * Helps agents discover the right tool without knowing exact names.
    */
-  semanticRoute: publicProcedure
-    .input(z.object({ intent: z.string() }))
-    .query(async ({ input }): Promise<ApiResponse<{
-      recommendedTool: string;
-      alternativeTools?: string[];
-      workflow?: string;
-      confidence: number;
-    }>> => {
+  semanticRoute: publicProcedure.input(z.object({ intent: z.string() })).query(
+    async ({
+      input,
+    }): Promise<
+      ApiResponse<{
+        recommendedTool: string;
+        alternativeTools?: string[];
+        workflow?: string;
+        confidence: number;
+      }>
+    > => {
       const traceId = nanoid();
       const startTime = Date.now();
 
       try {
-        const { SEMANTIC_ROUTES } = await import('../../shared/workflow-types');
-        
+        const { SEMANTIC_ROUTES } = await import("../../shared/workflow-types");
+
         const query = input.intent.toLowerCase();
-        
+
         // Find best matching route
-        let bestMatch: typeof SEMANTIC_ROUTES[0] | null = null;
+        let bestMatch: (typeof SEMANTIC_ROUTES)[0] | null = null;
         let bestScore = 0;
 
         for (const route of SEMANTIC_ROUTES) {
           let score = 0;
-          
+
           // Check if intent matches
-          if (query.includes(route.intent.replace(/_/g, ' '))) {
+          if (query.includes(route.intent.replace(/_/g, " "))) {
             score += 10;
           }
 
@@ -875,8 +926,8 @@ export const mcpGatewayRouter = router({
 
         if (!bestMatch) {
           throw new TRPCError({
-            code: 'NOT_FOUND',
-            message: 'No matching tool found for intent',
+            code: "NOT_FOUND",
+            message: "No matching tool found for intent",
           });
         }
 
@@ -900,8 +951,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'SEMANTIC_ROUTE_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "SEMANTIC_ROUTE_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -909,18 +960,21 @@ export const mcpGatewayRouter = router({
           },
         };
       }
-    }),
+    }
+  ),
 
   /**
    * get_stats - Get gateway statistics
    */
-  getStats: publicProcedure
-    .query(async (): Promise<ApiResponse<{
-      totalRefs: number;
-      totalSize: number;
-      toolCount: number;
-      categories: string[];
-    }>> => {
+  getStats: publicProcedure.query(
+    async (): Promise<
+      ApiResponse<{
+        totalRefs: number;
+        totalSize: number;
+        toolCount: number;
+        categories: string[];
+      }>
+    > => {
       const traceId = nanoid();
       const startTime = Date.now();
 
@@ -951,8 +1005,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'STATS_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "STATS_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -960,23 +1014,28 @@ export const mcpGatewayRouter = router({
           },
         };
       }
-    }),
+    }
+  ),
 
   /**
    * list_mcp_servers - List registered MCP servers
    */
-  listMcpServers: protectedProcedure
-    .query(async (): Promise<ApiResponse<Array<{
-      id: string;
-      name: string;
-      description?: string;
-      transport: string;
-      endpoint: string;
-      enabled: boolean;
-      status: string;
-      toolCount: number;
-      tags?: string[];
-    }>>> => {
+  listMcpServers: protectedProcedure.query(
+    async (): Promise<
+      ApiResponse<
+        Array<{
+          id: string;
+          name: string;
+          description?: string;
+          transport: string;
+          endpoint: string;
+          enabled: boolean;
+          status: string;
+          toolCount: number;
+          tags?: string[];
+        }>
+      >
+    > => {
       const traceId = nanoid();
       const startTime = Date.now();
 
@@ -1006,8 +1065,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'LIST_MCP_SERVERS_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "LIST_MCP_SERVERS_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -1015,7 +1074,8 @@ export const mcpGatewayRouter = router({
           },
         };
       }
-    }),
+    }
+  ),
 
   /**
    * register_mcp_server - Register a remote MCP server
@@ -1054,8 +1114,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'REGISTER_MCP_SERVER_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "REGISTER_MCP_SERVER_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -1090,8 +1150,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'UNREGISTER_MCP_SERVER_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "UNREGISTER_MCP_SERVER_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -1106,47 +1166,52 @@ export const mcpGatewayRouter = router({
    */
   refreshMcpServer: protectedProcedure
     .input(refreshMcpServerInput)
-    .mutation(async ({ input }): Promise<ApiResponse<{ refreshed: boolean }>> => {
-      const traceId = nanoid();
-      const startTime = Date.now();
+    .mutation(
+      async ({ input }): Promise<ApiResponse<{ refreshed: boolean }>> => {
+        const traceId = nanoid();
+        const startTime = Date.now();
 
-      try {
-        const proxy = getMCPProxy();
-        await proxy.refreshServer(input.serverId);
+        try {
+          const proxy = getMCPProxy();
+          await proxy.refreshServer(input.serverId);
 
-        return {
-          success: true,
-          data: { refreshed: true },
-          meta: {
-            traceId,
-            executionTimeMs: Date.now() - startTime,
-          },
-        };
-      } catch (error) {
-        return {
-          success: false,
-          error: {
-            code: 'REFRESH_MCP_SERVER_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
-          },
-          meta: {
-            traceId,
-            executionTimeMs: Date.now() - startTime,
-          },
-        };
+          return {
+            success: true,
+            data: { refreshed: true },
+            meta: {
+              traceId,
+              executionTimeMs: Date.now() - startTime,
+            },
+          };
+        } catch (error) {
+          return {
+            success: false,
+            error: {
+              code: "REFRESH_MCP_SERVER_FAILED",
+              message: error instanceof Error ? error.message : "Unknown error",
+            },
+            meta: {
+              traceId,
+              executionTimeMs: Date.now() - startTime,
+            },
+          };
+        }
       }
-    }),
+    ),
 
   /**
    * import_mcp_servers - Import MCP server definitions from client config
    */
-  importMcpServers: protectedProcedure
-    .input(importMcpServersInput)
-    .mutation(async ({ input }): Promise<ApiResponse<{
-      imported: number;
-      serverIds: string[];
-      sources: string[];
-    }>> => {
+  importMcpServers: protectedProcedure.input(importMcpServersInput).mutation(
+    async ({
+      input,
+    }): Promise<
+      ApiResponse<{
+        imported: number;
+        serverIds: string[];
+        sources: string[];
+      }>
+    > => {
       const traceId = nanoid();
       const startTime = Date.now();
 
@@ -1182,8 +1247,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'IMPORT_MCP_SERVERS_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "IMPORT_MCP_SERVERS_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -1191,35 +1256,45 @@ export const mcpGatewayRouter = router({
           },
         };
       }
-    }),
+    }
+  ),
 
   /**
    * recommend_tools - Suggest tools/workflows based on intent and source
    */
-  recommendTools: publicProcedure
-    .input(recommendToolsInput)
-    .query(async ({ input }): Promise<ApiResponse<{
-      tools: ToolCard[];
-      workflows: WorkflowTemplate[];
-      rationale: string[];
-    }>> => {
+  recommendTools: publicProcedure.input(recommendToolsInput).query(
+    async ({
+      input,
+    }): Promise<
+      ApiResponse<{
+        tools: ToolCard[];
+        workflows: WorkflowTemplate[];
+        rationale: string[];
+      }>
+    > => {
       const traceId = nanoid();
       const startTime = Date.now();
 
       try {
         const registry = await getPluginRegistry();
         const proxy = getMCPProxy();
-        const { WORKFLOW_TEMPLATES, SEMANTIC_ROUTES } = await import('../../shared/workflow-types');
+        const { WORKFLOW_TEMPLATES, SEMANTIC_ROUTES } =
+          await import("../../shared/workflow-types");
 
         const intentTokens = tokenizeIntent(input.intent);
         const sourceTokens = input.sourceType
-          ? (SOURCE_HINTS[input.sourceType.toLowerCase()] || [input.sourceType.toLowerCase()])
+          ? SOURCE_HINTS[input.sourceType.toLowerCase()] || [
+              input.sourceType.toLowerCase(),
+            ]
           : [];
-        const keywords = Array.from(new Set([...intentTokens, ...sourceTokens]));
+        const keywords = Array.from(
+          new Set([...intentTokens, ...sourceTokens])
+        );
 
-        const localTools = registry.getCategories()
+        const localTools = registry
+          .getCategories()
           .flatMap(cat => registry.getToolsByCategory(cat))
-          .map((tool) => ({
+          .map(tool => ({
             name: tool.name,
             category: tool.category,
             description: tool.description,
@@ -1228,11 +1303,18 @@ export const mcpGatewayRouter = router({
         const remoteTools = proxy.getAllTools();
         const allTools = [...localTools, ...remoteTools];
 
-        const workflowCandidates = WORKFLOW_TEMPLATES.filter((workflow) => {
-          if (keywords.some(k => workflow.id.toLowerCase().includes(k))) return true;
-          if (keywords.some(k => workflow.name.toLowerCase().includes(k))) return true;
-          if (keywords.some(k => workflow.description.toLowerCase().includes(k))) return true;
-          return workflow.tags.some(tag => keywords.includes(tag.toLowerCase()));
+        const workflowCandidates = WORKFLOW_TEMPLATES.filter(workflow => {
+          if (keywords.some(k => workflow.id.toLowerCase().includes(k)))
+            return true;
+          if (keywords.some(k => workflow.name.toLowerCase().includes(k)))
+            return true;
+          if (
+            keywords.some(k => workflow.description.toLowerCase().includes(k))
+          )
+            return true;
+          return workflow.tags.some(tag =>
+            keywords.includes(tag.toLowerCase())
+          );
         });
 
         const workflowScores = workflowCandidates.map(workflow => ({
@@ -1258,8 +1340,10 @@ export const mcpGatewayRouter = router({
         }));
 
         for (const route of SEMANTIC_ROUTES) {
-          const matchesIntent = keywords.some(k =>
-            route.intent.toLowerCase().includes(k) || route.keywords.some(kw => kw.includes(k))
+          const matchesIntent = keywords.some(
+            k =>
+              route.intent.toLowerCase().includes(k) ||
+              route.keywords.some(kw => kw.includes(k))
           );
           if (!matchesIntent) continue;
 
@@ -1281,30 +1365,38 @@ export const mcpGatewayRouter = router({
 
         const rationale: string[] = [];
         if (input.sourceType) {
-          rationale.push(`Matched sourceType="${input.sourceType}" to tags: ${sourceTokens.join(', ') || 'none'}`);
+          rationale.push(
+            `Matched sourceType="${input.sourceType}" to tags: ${sourceTokens.join(", ") || "none"}`
+          );
         }
         if (workflowScores.length > 0) {
-          rationale.push('Ranked workflows by tag/name match.');
+          rationale.push("Ranked workflows by tag/name match.");
         }
         if (toolScores.length > 0) {
-          rationale.push('Ranked tools by tag/name/description match.');
+          rationale.push("Ranked tools by tag/name/description match.");
         }
 
         if (input.useLlm && tools.length > 0) {
           try {
-            const refined = await refineWithLlm(input.intent, tools, input.maxTools);
+            const refined = await refineWithLlm(
+              input.intent,
+              tools,
+              input.maxTools
+            );
             if (refined) {
               tools = refined;
-              rationale.push('LLM refinement applied to tool ranking.');
+              rationale.push("LLM refinement applied to tool ranking.");
             }
           } catch (error) {
-            rationale.push(`LLM refinement skipped: ${error instanceof Error ? error.message : 'unknown error'}`);
+            rationale.push(
+              `LLM refinement skipped: ${error instanceof Error ? error.message : "unknown error"}`
+            );
           }
         }
 
         if (input.workflowOnly) {
           tools = [];
-          rationale.push('workflowOnly=true; returned workflows only.');
+          rationale.push("workflowOnly=true; returned workflows only.");
         }
 
         return {
@@ -1323,8 +1415,8 @@ export const mcpGatewayRouter = router({
         return {
           success: false,
           error: {
-            code: 'RECOMMEND_TOOLS_FAILED',
-            message: error instanceof Error ? error.message : 'Unknown error',
+            code: "RECOMMEND_TOOLS_FAILED",
+            message: error instanceof Error ? error.message : "Unknown error",
           },
           meta: {
             traceId,
@@ -1332,7 +1424,8 @@ export const mcpGatewayRouter = router({
           },
         };
       }
-    }),
+    }
+  ),
 });
 
 export type McpGatewayRouter = typeof mcpGatewayRouter;

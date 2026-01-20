@@ -12,6 +12,7 @@
 Complete infrastructure scaffold for a production-ready forensic analysis platform combining MCP tool orchestration, LLM routing, vector/graph databases, and cloud AI services. All scaffolds include clear TODOs and are ready for parallel implementation by multiple agents.
 
 **Key Architecture Decisions:**
+
 1. **8GB/4-core VPS optimization** - Service tiers (core always-on vs on-demand webhook-controlled)
 2. **Intelligent routing** - Manus built-in → VPS services → External APIs → Databases
 3. **Cloud AI separation** - AWS/GCP for fast operational tasks, Colab Enterprise for deep forensic analysis
@@ -22,11 +23,13 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ## Work Streams (Parallel Execution Ready)
 
 ### 🔴 **Stream 1: VPS Infrastructure Deployment** (Priority: Critical)
+
 **Files:** `docker-compose.8gb.yml`, `.env.docker.example`, `Dockerfile.*`  
 **Agent:** DevOps/Infrastructure specialist  
 **Estimated effort:** 8-12 hours
 
 **Tasks:**
+
 1. Set up 8GB/4-core VPS (Ubuntu 22.04)
 2. Install Docker + Docker Compose
 3. Copy all Dockerfiles and docker-compose.8gb.yml to VPS
@@ -39,6 +42,7 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 10. Test service health checks
 
 **Deliverables:**
+
 - Running VPS with all core services
 - Health monitoring dashboard
 - Access credentials document
@@ -47,11 +51,13 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ---
 
 ### 🟠 **Stream 2: LiteLLM + MetaMCP Integration** (Priority: High)
+
 **Files:** `server/_core/router.ts`, `litellm_config.yaml`, `Dockerfile.metamcp`  
 **Agent:** Backend developer with LLM experience  
 **Estimated effort:** 12-16 hours
 
 **Tasks:**
+
 1. Complete `routeLLM()` function in `server/_core/router.ts`
    - Implement Manus built-in → LiteLLM → Direct API fallback chain
    - Add cost tracking for each provider
@@ -69,6 +75,7 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 7. Add metrics dashboard
 
 **Deliverables:**
+
 - Working LLM routing with fallbacks
 - Cost tracking per model/provider
 - MCP server registry with tool discovery
@@ -77,11 +84,13 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ---
 
 ### 🟡 **Stream 3: AWS AI Services Integration** (Priority: Medium)
+
 **Files:** `server/_core/aws-ai.ts`  
 **Agent:** Backend developer with AWS experience  
 **Estimated effort:** 16-20 hours
 
 **Tasks:**
+
 1. Install AWS SDKs: `npm install @aws-sdk/client-rekognition @aws-sdk/client-comprehend @aws-sdk/client-textract`
 2. Configure AWS credentials in environment
 3. Implement Rekognition functions:
@@ -107,6 +116,7 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 9. Add cost tracking
 
 **Deliverables:**
+
 - Working AWS AI service wrappers
 - Screenshot analysis pipeline
 - tRPC procedures for frontend
@@ -116,11 +126,13 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ---
 
 ### 🟢 **Stream 4: GCP AI Services Integration** (Priority: Medium)
+
 **Files:** `server/_core/gcp-ai.ts`  
 **Agent:** Backend developer with GCP experience  
 **Estimated effort:** 20-24 hours
 
 **Tasks:**
+
 1. Install GCP SDKs: `npm install @google-cloud/documentai @google-cloud/aiplatform @google-cloud/notebooks`
 2. Create GCP service account with required permissions
 3. Download service account JSON key
@@ -147,6 +159,7 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 11. Test with trial credits
 
 **Deliverables:**
+
 - Working GCP AI service wrappers
 - Colab Enterprise integration
 - Notebook templates for forensic analysis
@@ -156,11 +169,13 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ---
 
 ### 🔵 **Stream 5: Backend UI Implementation** (Priority: High)
+
 **Files:** `server/routers/settings.ts`, `server/routers/patterns.ts`, `client/src/pages/Settings.tsx`, `client/src/pages/PatternLibrary.tsx`  
 **Agent:** Full-stack developer  
 **Estimated effort:** 24-32 hours
 
 **Tasks:**
+
 1. Merge database schemas from `drizzle/settings-schema.ts` into `drizzle/schema.ts`
 2. Run `pnpm db:push` to create tables
 3. Implement database helpers in `server/db.ts`
@@ -186,6 +201,7 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 11. Test end-to-end
 
 **Deliverables:**
+
 - Working backend management UI
 - Pattern library with 256 patterns
 - Settings management
@@ -195,11 +211,13 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ---
 
 ### 🟣 **Stream 6: n8n Workflow Automation** (Priority: Medium)
+
 **Files:** `n8n-workflows/service-control.json`  
 **Agent:** Automation specialist  
 **Estimated effort:** 8-12 hours
 
 **Tasks:**
+
 1. Import `n8n-workflows/service-control.json` into n8n
 2. Test webhook endpoints:
    - POST `/webhook/service/start` with `{"service": "salem-kasm-workspace"}`
@@ -216,6 +234,7 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 6. Create workflow documentation
 
 **Deliverables:**
+
 - Working webhook-based service control
 - Scheduled automation workflows
 - Resource monitoring workflows
@@ -225,11 +244,13 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ---
 
 ### 🟤 **Stream 7: Kasm Workspace Setup** (Priority: Medium)
+
 **Files:** `Dockerfile.kasm`  
 **Agent:** DevOps/Desktop specialist  
 **Estimated effort:** 8-12 hours
 
 **Tasks:**
+
 1. Build Kasm Dockerfile: `docker build -f Dockerfile.kasm -t salem-kasm .`
 2. Start Kasm container: `docker-compose -f docker-compose.8gb.yml up -d kasm-workspace`
 3. Access VNC at `http://localhost:6901` (password from .env.docker)
@@ -252,6 +273,7 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 10. Add usage tracking
 
 **Deliverables:**
+
 - Working Kasm workspace with VNC access
 - Bidirectional R2 sync (every 5 minutes)
 - Configured AI CLI tools
@@ -262,11 +284,13 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ---
 
 ### ⚫ **Stream 8: Documentation Generation** (Priority: Low)
+
 **Files:** `DOCUMENTATION_HANDOFF.md`, `docs/`  
 **Agent:** Technical writer or free LLM (Gemini Flash)  
 **Estimated effort:** 40-60 hours (can be delegated to free model)
 
 **Tasks:**
+
 1. Use `DOCUMENTATION_HANDOFF.md` as guide
 2. Generate 60+ tool documentation files in `docs/tools/`
 3. Generate 20+ workflow documentation files in `docs/workflows/`
@@ -279,6 +303,7 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 10. Publish to documentation site
 
 **Deliverables:**
+
 - Complete wiki-style documentation
 - API reference
 - Developer guides
@@ -288,11 +313,13 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ---
 
 ### ⚪ **Stream 9: VPS Failover Deployment** (Priority: Low)
+
 **Files:** `docker-compose.yml`, `server/`, `client/`  
 **Agent:** DevOps specialist  
 **Estimated effort:** 16-24 hours
 
 **Tasks:**
+
 1. Create Dockerfile for full Manus app (client + server)
 2. Add web app service to docker-compose.yml
 3. Configure Nginx reverse proxy for web app
@@ -311,6 +338,7 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 14. Document cost comparison (Manus vs VPS vs hybrid)
 
 **Deliverables:**
+
 - Dockerized Manus app
 - Database migration scripts
 - Failover automation
@@ -323,6 +351,7 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ## Critical Files Reference
 
 ### Infrastructure
+
 - `docker-compose.8gb.yml` - Optimized VPS deployment (8GB/4-core)
 - `.env.docker.example` - Environment variables template
 - `Dockerfile.kasm` - Kasm workspace with AI CLI tools
@@ -330,25 +359,30 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 - `Dockerfile.playwright` - Headless browser automation
 
 ### Backend Core
+
 - `server/_core/router.ts` - Intelligent routing layer (TODOs)
 - `server/_core/llm.ts` - LLM integration (needs update)
 - `server/_core/aws-ai.ts` - AWS AI services wrapper (TODOs)
 - `server/_core/gcp-ai.ts` - GCP AI services wrapper (TODOs)
 
 ### Backend Features
+
 - `server/routers/settings.ts` - Settings management (TODOs)
 - `server/routers/patterns.ts` - Pattern library (TODOs)
 - `drizzle/settings-schema.ts` - Database schema additions
 
 ### Frontend
+
 - `client/src/pages/Settings.tsx` - Settings UI (TODOs)
 - `client/src/pages/PatternLibrary.tsx` - Pattern library UI (TODOs)
 
 ### Automation
+
 - `n8n-workflows/service-control.json` - Webhook-based service control
 - `litellm_config.yaml` - LLM routing configuration
 
 ### Documentation
+
 - `DOCUMENTATION_HANDOFF.md` - Documentation generation guide
 - `IMPLEMENTATION_GUIDE.md` - Backend UI implementation guide
 - `AGENT_HANDOFF.md` - This file
@@ -361,11 +395,13 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ### Required Credentials
 
 **AWS:**
+
 - `AWS_ACCESS_KEY_ID`
 - `AWS_SECRET_ACCESS_KEY`
 - `AWS_REGION`
 
 **GCP:**
+
 - `GCP_PROJECT_ID`
 - `GCP_SERVICE_ACCOUNT_KEY_PATH` (JSON file)
 - `GCP_DOCUMENT_AI_PROCESSOR_ID`
@@ -373,6 +409,7 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 - `GCP_VERTEX_AI_ENDPOINT`
 
 **LLM APIs:**
+
 - `OPENAI_API_KEY`
 - `ANTHROPIC_API_KEY`
 - `GEMINI_API_KEY`
@@ -381,12 +418,14 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 - `GROQ_API_KEY`
 
 **Infrastructure:**
+
 - `NEO4J_AUTH` (using Neo4j Aura hosted)
 - `SUPABASE_HOST`, `SUPABASE_PASSWORD`
 - `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
 - `TAILSCALE_AUTH_KEY`
 
 **Services:**
+
 - `LITELLM_MASTER_KEY`
 - `CHROMA_AUTH_TOKEN`
 - `KASM_VNC_PASSWORD`
@@ -397,11 +436,13 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ## Testing Strategy
 
 ### Unit Tests
+
 - All tRPC procedures must have vitest tests
 - See `server/auth.logout.test.ts` for reference
 - Run: `pnpm test`
 
 ### Integration Tests
+
 - Test complete pipelines end-to-end
 - Test AWS AI services with sample data
 - Test GCP AI services with sample data
@@ -409,12 +450,14 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 - Test MCP tool execution
 
 ### Performance Tests
+
 - Load test LiteLLM with concurrent requests
 - Test batch processing (1000+ documents)
 - Measure latency for each service
 - Track cost per operation
 
 ### Failover Tests
+
 - Test Manus → VPS failover
 - Test service restart via webhooks
 - Test automatic failover on service degradation
@@ -424,30 +467,35 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ## Success Criteria
 
 ### Stream 1 (VPS Infrastructure)
+
 - [ ] All core services running and healthy
 - [ ] SSL certificates configured
 - [ ] Tailscale VPN working
 - [ ] Health monitoring dashboard live
 
 ### Stream 2 (LiteLLM + MetaMCP)
+
 - [ ] LLM routing working with fallbacks
 - [ ] Cost tracking per model/provider
 - [ ] MCP tool discovery working
 - [ ] Cross-server tool execution working
 
 ### Stream 3 (AWS AI)
+
 - [ ] Screenshot analysis pipeline working
 - [ ] All AWS services integrated
 - [ ] Cost tracking dashboard
 - [ ] Integration tests passing
 
 ### Stream 4 (GCP AI)
+
 - [ ] Document AI processing working
 - [ ] Colab Enterprise execution working
 - [ ] HuggingFace models integrated
 - [ ] Batch processing working
 
 ### Stream 5 (Backend UI)
+
 - [ ] All database tables created
 - [ ] All tRPC procedures implemented
 - [ ] Settings UI working
@@ -455,24 +503,28 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 - [ ] All vitest tests passing
 
 ### Stream 6 (n8n Automation)
+
 - [ ] Webhook service control working
 - [ ] Scheduled workflows running
 - [ ] Resource monitoring active
 - [ ] Notifications working
 
 ### Stream 7 (Kasm Workspace)
+
 - [ ] VNC access working
 - [ ] R2 bidirectional sync working
 - [ ] AI CLI tools configured
 - [ ] Agent access working
 
 ### Stream 8 (Documentation)
+
 - [ ] All tool docs generated
 - [ ] All workflow docs generated
 - [ ] All system docs generated
 - [ ] Developer guides complete
 
 ### Stream 9 (VPS Failover)
+
 - [ ] Manus app Dockerized
 - [ ] Database migration working
 - [ ] Failover automation working
@@ -483,21 +535,25 @@ Complete infrastructure scaffold for a production-ready forensic analysis platfo
 ## Communication Protocol
 
 ### Daily Standups
+
 - Report progress on assigned stream
 - Identify blockers
 - Request help if needed
 
 ### Blocker Resolution
+
 - Document blocker in todo.md
 - Tag with `[BLOCKED]`
 - Notify team immediately
 
 ### Code Review
+
 - All PRs require review before merge
 - Follow existing code style
 - Include tests with all changes
 
 ### Documentation
+
 - Update todo.md as tasks complete
 - Document all decisions in CHANGELOG.md
 - Update AGENT_HANDOFF.md with new findings

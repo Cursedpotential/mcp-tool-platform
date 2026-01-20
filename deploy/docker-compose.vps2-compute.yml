@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 # ============================================================================
 # VPS2 - AI & Compute Backend (Hetzner 8c/16GB)
@@ -78,7 +78,6 @@ services:
     labels:
       - "coolify.managed=true"
       - "coolify.type=infrastructure"
-
 
   # ============================================================================
   # Chroma - Vector Database
@@ -177,7 +176,6 @@ services:
       - "traefik.http.services.litellm.loadbalancer.server.port=4000"
       - "coolify.managed=true"
       - "coolify.type=service"
-
 
   # ============================================================================
   # MetaMCP - MCP Server Registry

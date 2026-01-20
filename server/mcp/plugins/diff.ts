@@ -1,6 +1,6 @@
 /**
  * Diff Plugin
- * 
+ *
  * Provides text comparison and merge capabilities:
  * - Text diff with unified/JSON/inline formats
  * - Similarity analysis
@@ -8,20 +8,20 @@
  * - Patch generation and application
  */
 
-import { getContentStore } from '../store/content-store';
-import type { ContentRef } from '../../../shared/mcp-types';
+import { getContentStore } from "../store/content-store";
+import type { ContentRef } from "../../../shared/mcp-types";
 
 interface DiffTextArgs {
   refA: string;
   refB: string;
-  format?: 'unified' | 'json' | 'inline';
+  format?: "unified" | "json" | "inline";
   contextLines?: number;
 }
 
 interface SimilarityArgs {
   refA: string;
   refB: string;
-  method?: 'levenshtein' | 'jaccard' | 'cosine';
+  method?: "levenshtein" | "jaccard" | "cosine";
 }
 
 interface MergeProposeArgs {
@@ -36,7 +36,7 @@ interface DiffHunk {
   newStart: number;
   newLines: number;
   lines: Array<{
-    type: 'context' | 'add' | 'remove';
+    type: "context" | "add" | "remove";
     content: string;
     oldLineNo?: number;
     newLineNo?: number;
@@ -67,11 +67,11 @@ export async function diffText(args: DiffTextArgs): Promise<DiffResult> {
     throw new Error(`Content not found: ${args.refB}`);
   }
 
-  const format = args.format ?? 'unified';
+  const format = args.format ?? "unified";
   const contextLines = args.contextLines ?? 3;
 
-  const linesA = textA.split('\n');
-  const linesB = textB.split('\n');
+  const linesA = textA.split("\n");
+  const linesB = textB.split("\n");
 
   // Compute LCS-based diff
   const diff = computeDiff(linesA, linesB);
@@ -84,13 +84,14 @@ export async function diffText(args: DiffTextArgs): Promise<DiffResult> {
   let deletions = 0;
   for (const hunk of hunks) {
     for (const line of hunk.lines) {
-      if (line.type === 'add') additions++;
-      if (line.type === 'remove') deletions++;
+      if (line.type === "add") additions++;
+      if (line.type === "remove") deletions++;
     }
   }
 
   // Calculate similarity
-  const similarity = 1 - (additions + deletions) / Math.max(linesA.length + linesB.length, 1);
+  const similarity =
+    1 - (additions + deletions) / Math.max(linesA.length + linesB.length, 1);
 
   const result: DiffResult = {
     additions,
@@ -98,21 +99,21 @@ export async function diffText(args: DiffTextArgs): Promise<DiffResult> {
     similarity,
   };
 
-  if (format === 'unified') {
-    result.unified = generateUnifiedDiff(hunks, 'a', 'b');
-    
+  if (format === "unified") {
+    result.unified = generateUnifiedDiff(hunks, "a", "b");
+
     // Store large diffs as reference
     if (result.unified.length > 4096) {
-      const stored = await store.put(result.unified, 'text/plain');
+      const stored = await store.put(result.unified, "text/plain");
       result.diffRef = stored.ref;
-      result.unified = result.unified.slice(0, 1000) + '\n... (truncated)';
+      result.unified = result.unified.slice(0, 1000) + "\n... (truncated)";
     }
-  } else if (format === 'json') {
+  } else if (format === "json") {
     result.hunks = hunks;
-    
+
     // Store large diffs as reference
     if (hunks.length > 20) {
-      const stored = await store.put(JSON.stringify(hunks), 'application/json');
+      const stored = await store.put(JSON.stringify(hunks), "application/json");
       result.diffRef = stored.ref;
       result.hunks = hunks.slice(0, 5);
     }
@@ -140,12 +141,12 @@ export async function similarity(args: SimilarityArgs): Promise<{
     throw new Error(`Content not found: ${args.refB}`);
   }
 
-  const method = args.method ?? 'jaccard';
+  const method = args.method ?? "jaccard";
   let similarity: number;
   const details: Record<string, number> = {};
 
   switch (method) {
-    case 'levenshtein':
+    case "levenshtein":
       const distance = levenshteinDistance(textA, textB);
       const maxLen = Math.max(textA.length, textB.length);
       similarity = 1 - distance / maxLen;
@@ -153,17 +154,19 @@ export async function similarity(args: SimilarityArgs): Promise<{
       details.maxLength = maxLen;
       break;
 
-    case 'jaccard':
+    case "jaccard":
       const wordsA = new Set(textA.toLowerCase().match(/\b\w+\b/g) ?? []);
       const wordsB = new Set(textB.toLowerCase().match(/\b\w+\b/g) ?? []);
-      const intersection = new Set(Array.from(wordsA).filter((x) => wordsB.has(x)));
+      const intersection = new Set(
+        Array.from(wordsA).filter(x => wordsB.has(x))
+      );
       const union = new Set([...Array.from(wordsA), ...Array.from(wordsB)]);
       similarity = intersection.size / union.size;
       details.intersectionSize = intersection.size;
       details.unionSize = union.size;
       break;
 
-    case 'cosine':
+    case "cosine":
       similarity = cosineSimilarity(textA, textB);
       break;
 
@@ -199,19 +202,19 @@ export async function mergePropose(args: MergeProposeArgs): Promise<{
   const theirs = await store.getString(args.theirsRef as ContentRef);
 
   if (!base || !ours || !theirs) {
-    throw new Error('One or more content references not found');
+    throw new Error("One or more content references not found");
   }
 
-  const baseLines = base.split('\n');
-  const ourLines = ours.split('\n');
-  const theirLines = theirs.split('\n');
+  const baseLines = base.split("\n");
+  const ourLines = ours.split("\n");
+  const theirLines = theirs.split("\n");
 
   // Simple three-way merge
   const { merged, conflicts } = threeWayMerge(baseLines, ourLines, theirLines);
 
   // Store merged result
-  const mergedText = merged.join('\n');
-  const stored = await store.put(mergedText, 'text/plain');
+  const mergedText = merged.join("\n");
+  const stored = await store.put(mergedText, "text/plain");
 
   const approvalId = `merge-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -226,20 +229,23 @@ export async function mergePropose(args: MergeProposeArgs): Promise<{
 /**
  * Generate a patch from diff
  */
-export async function generatePatch(args: { refA: string; refB: string }): Promise<{
+export async function generatePatch(args: {
+  refA: string;
+  refB: string;
+}): Promise<{
   patchRef: ContentRef;
   size: number;
 }> {
   const diffResult = await diffText({
     refA: args.refA,
     refB: args.refB,
-    format: 'unified',
+    format: "unified",
     contextLines: 3,
   });
 
   const store = await getContentStore();
-  const patch = diffResult.unified ?? '';
-  const stored = await store.put(patch, 'text/x-patch');
+  const patch = diffResult.unified ?? "";
+  const stored = await store.put(patch, "text/x-patch");
 
   return {
     patchRef: stored.ref,
@@ -252,7 +258,7 @@ export async function generatePatch(args: { refA: string; refB: string }): Promi
 // ============================================================================
 
 interface DiffOp {
-  type: 'equal' | 'insert' | 'delete';
+  type: "equal" | "insert" | "delete";
   oldIdx: number;
   newIdx: number;
   line?: string;
@@ -298,7 +304,12 @@ function computeDiff(linesA: string[], linesB: string[]): DiffOp[] {
   return [];
 }
 
-function backtrack(trace: Array<Map<number, number>>, linesA: string[], linesB: string[], d: number): DiffOp[] {
+function backtrack(
+  trace: Array<Map<number, number>>,
+  linesA: string[],
+  linesB: string[],
+  d: number
+): DiffOp[] {
   const ops: DiffOp[] = [];
   let x = linesA.length;
   let y = linesB.length;
@@ -320,15 +331,25 @@ function backtrack(trace: Array<Map<number, number>>, linesA: string[], linesB: 
     while (x > prevX && y > prevY) {
       x--;
       y--;
-      ops.unshift({ type: 'equal', oldIdx: x, newIdx: y, line: linesA[x] });
+      ops.unshift({ type: "equal", oldIdx: x, newIdx: y, line: linesA[x] });
     }
 
     if (i > 0) {
       if (x === prevX) {
-        ops.unshift({ type: 'insert', oldIdx: x, newIdx: y - 1, line: linesB[y - 1] });
+        ops.unshift({
+          type: "insert",
+          oldIdx: x,
+          newIdx: y - 1,
+          line: linesB[y - 1],
+        });
         y--;
       } else {
-        ops.unshift({ type: 'delete', oldIdx: x - 1, newIdx: y, line: linesA[x - 1] });
+        ops.unshift({
+          type: "delete",
+          oldIdx: x - 1,
+          newIdx: y,
+          line: linesA[x - 1],
+        });
         x--;
       }
     }
@@ -337,32 +358,43 @@ function backtrack(trace: Array<Map<number, number>>, linesA: string[], linesB: 
   while (x > 0 && y > 0) {
     x--;
     y--;
-    ops.unshift({ type: 'equal', oldIdx: x, newIdx: y, line: linesA[x] });
+    ops.unshift({ type: "equal", oldIdx: x, newIdx: y, line: linesA[x] });
   }
 
   return ops;
 }
 
-function generateHunks(ops: DiffOp[], linesA: string[], linesB: string[], contextLines: number): DiffHunk[] {
+function generateHunks(
+  ops: DiffOp[],
+  linesA: string[],
+  linesB: string[],
+  contextLines: number
+): DiffHunk[] {
   const hunks: DiffHunk[] = [];
   let currentHunk: DiffHunk | null = null;
   let contextBuffer: DiffOp[] = [];
 
   for (const op of ops) {
-    if (op.type === 'equal') {
+    if (op.type === "equal") {
       if (currentHunk) {
         currentHunk.lines.push({
-          type: 'context',
-          content: op.line ?? '',
+          type: "context",
+          content: op.line ?? "",
           oldLineNo: op.oldIdx + 1,
           newLineNo: op.newIdx + 1,
         });
 
         // Check if we should close the hunk
-        const lastNonContext = currentHunk.lines.slice().reverse().findIndex((l) => l.type !== 'context');
+        const lastNonContext = currentHunk.lines
+          .slice()
+          .reverse()
+          .findIndex(l => l.type !== "context");
         if (lastNonContext >= contextLines) {
           // Trim trailing context
-          currentHunk.lines = currentHunk.lines.slice(0, currentHunk.lines.length - lastNonContext + contextLines);
+          currentHunk.lines = currentHunk.lines.slice(
+            0,
+            currentHunk.lines.length - lastNonContext + contextLines
+          );
           hunks.push(currentHunk);
           currentHunk = null;
           contextBuffer = [];
@@ -386,8 +418,8 @@ function generateHunks(ops: DiffOp[], linesA: string[], linesB: string[], contex
         // Add leading context
         for (const ctx of contextBuffer) {
           currentHunk.lines.push({
-            type: 'context',
-            content: ctx.line ?? '',
+            type: "context",
+            content: ctx.line ?? "",
             oldLineNo: ctx.oldIdx + 1,
             newLineNo: ctx.newIdx + 1,
           });
@@ -396,10 +428,10 @@ function generateHunks(ops: DiffOp[], linesA: string[], linesB: string[], contex
       }
 
       currentHunk.lines.push({
-        type: op.type === 'insert' ? 'add' : 'remove',
-        content: op.line ?? '',
-        oldLineNo: op.type === 'delete' ? op.oldIdx + 1 : undefined,
-        newLineNo: op.type === 'insert' ? op.newIdx + 1 : undefined,
+        type: op.type === "insert" ? "add" : "remove",
+        content: op.line ?? "",
+        oldLineNo: op.type === "delete" ? op.oldIdx + 1 : undefined,
+        newLineNo: op.type === "insert" ? op.newIdx + 1 : undefined,
       });
     }
   }
@@ -410,28 +442,32 @@ function generateHunks(ops: DiffOp[], linesA: string[], linesB: string[], contex
 
   // Update line counts
   for (const hunk of hunks) {
-    hunk.oldLines = hunk.lines.filter((l) => l.type !== 'add').length;
-    hunk.newLines = hunk.lines.filter((l) => l.type !== 'remove').length;
+    hunk.oldLines = hunk.lines.filter(l => l.type !== "add").length;
+    hunk.newLines = hunk.lines.filter(l => l.type !== "remove").length;
   }
 
   return hunks;
 }
 
-function generateUnifiedDiff(hunks: DiffHunk[], fileA: string, fileB: string): string {
-  const lines: string[] = [
-    `--- ${fileA}`,
-    `+++ ${fileB}`,
-  ];
+function generateUnifiedDiff(
+  hunks: DiffHunk[],
+  fileA: string,
+  fileB: string
+): string {
+  const lines: string[] = [`--- ${fileA}`, `+++ ${fileB}`];
 
   for (const hunk of hunks) {
-    lines.push(`@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@`);
+    lines.push(
+      `@@ -${hunk.oldStart},${hunk.oldLines} +${hunk.newStart},${hunk.newLines} @@`
+    );
     for (const line of hunk.lines) {
-      const prefix = line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' ';
+      const prefix =
+        line.type === "add" ? "+" : line.type === "remove" ? "-" : " ";
       lines.push(prefix + line.content);
     }
   }
 
-  return lines.join('\n');
+  return lines.join("\n");
 }
 
 // ============================================================================
@@ -454,8 +490,8 @@ function levenshteinDistance(a: string, b: string): number {
     for (let j = 1; j <= n; j++) {
       const cost = a[i - 1] === b[j - 1] ? 0 : 1;
       curr[j] = Math.min(
-        prev[j] + 1,      // deletion
-        curr[j - 1] + 1,  // insertion
+        prev[j] + 1, // deletion
+        curr[j - 1] + 1, // insertion
         prev[j - 1] + cost // substitution
       );
     }
@@ -479,7 +515,10 @@ function cosineSimilarity(a: string, b: string): number {
     freqB.set(word, (freqB.get(word) ?? 0) + 1);
   }
 
-  const allWords = new Set([...Array.from(freqA.keys()), ...Array.from(freqB.keys())]);
+  const allWords = new Set([
+    ...Array.from(freqA.keys()),
+    ...Array.from(freqB.keys()),
+  ]);
 
   let dotProduct = 0;
   let normA = 0;
@@ -507,18 +546,30 @@ function threeWayMerge(
   theirs: string[]
 ): {
   merged: string[];
-  conflicts: Array<{ startLine: number; endLine: number; ours: string; theirs: string; base: string }>;
+  conflicts: Array<{
+    startLine: number;
+    endLine: number;
+    ours: string;
+    theirs: string;
+    base: string;
+  }>;
 } {
   const merged: string[] = [];
-  const conflicts: Array<{ startLine: number; endLine: number; ours: string; theirs: string; base: string }> = [];
+  const conflicts: Array<{
+    startLine: number;
+    endLine: number;
+    ours: string;
+    theirs: string;
+    base: string;
+  }> = [];
 
   // Simple line-by-line merge
   const maxLen = Math.max(base.length, ours.length, theirs.length);
 
   for (let i = 0; i < maxLen; i++) {
-    const baseLine = base[i] ?? '';
-    const ourLine = ours[i] ?? '';
-    const theirLine = theirs[i] ?? '';
+    const baseLine = base[i] ?? "";
+    const ourLine = ours[i] ?? "";
+    const theirLine = theirs[i] ?? "";
 
     if (ourLine === theirLine) {
       // Both made same change or no change

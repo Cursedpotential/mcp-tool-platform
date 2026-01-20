@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,9 +15,17 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { Download, Copy, Sparkles, Settings2, FileJson, Code, CheckCircle } from "lucide-react";
+import {
+  Download,
+  Copy,
+  Sparkles,
+  Settings2,
+  FileJson,
+  Code,
+  CheckCircle,
+} from "lucide-react";
 
-type Platform = 'claude' | 'gemini' | 'openai' | 'generic';
+type Platform = "claude" | "gemini" | "openai" | "generic";
 
 interface PlatformInfo {
   id: Platform;
@@ -24,41 +38,42 @@ interface PlatformInfo {
 
 const PLATFORMS: PlatformInfo[] = [
   {
-    id: 'claude',
-    name: 'Claude Desktop',
-    description: 'Anthropic Claude Desktop app with MCP support',
-    icon: '🤖',
-    configPath: '~/Library/Application Support/Claude/claude_desktop_config.json',
-    features: ['MCP Tools', 'Skills', 'Prompt Caching'],
+    id: "claude",
+    name: "Claude Desktop",
+    description: "Anthropic Claude Desktop app with MCP support",
+    icon: "🤖",
+    configPath:
+      "~/Library/Application Support/Claude/claude_desktop_config.json",
+    features: ["MCP Tools", "Skills", "Prompt Caching"],
   },
   {
-    id: 'gemini',
-    name: 'Gemini CLI',
-    description: 'Google Gemini CLI with extensions',
-    icon: '✨',
-    configPath: '~/.gemini/extensions/',
-    features: ['Extensions', 'Long Context', 'Multimodal'],
+    id: "gemini",
+    name: "Gemini CLI",
+    description: "Google Gemini CLI with extensions",
+    icon: "✨",
+    configPath: "~/.gemini/extensions/",
+    features: ["Extensions", "Long Context", "Multimodal"],
   },
   {
-    id: 'openai',
-    name: 'OpenAI / GPT',
-    description: 'OpenAI function calling format',
-    icon: '🧠',
-    configPath: 'API Integration',
-    features: ['Function Calling', 'Tool Use', 'JSON Mode'],
+    id: "openai",
+    name: "OpenAI / GPT",
+    description: "OpenAI function calling format",
+    icon: "🧠",
+    configPath: "API Integration",
+    features: ["Function Calling", "Tool Use", "JSON Mode"],
   },
   {
-    id: 'generic',
-    name: 'Generic MCP',
-    description: 'Standard MCP protocol for any client',
-    icon: '🔧',
-    configPath: 'Custom Integration',
-    features: ['Standard Protocol', 'HTTP/WebSocket', 'Streaming'],
+    id: "generic",
+    name: "Generic MCP",
+    description: "Standard MCP protocol for any client",
+    icon: "🔧",
+    configPath: "Custom Integration",
+    features: ["Standard Protocol", "HTTP/WebSocket", "Streaming"],
   },
 ];
 
 export default function McpConfig() {
-  const [selectedPlatform, setSelectedPlatform] = useState<Platform>('claude');
+  const [selectedPlatform, setSelectedPlatform] = useState<Platform>("claude");
   const [includeAllTools, setIncludeAllTools] = useState(true);
   const [generateWithAI, setGenerateWithAI] = useState(true);
   const [generatedConfig, setGeneratedConfig] = useState<{
@@ -69,11 +84,11 @@ export default function McpConfig() {
   } | null>(null);
 
   const generateMutation = trpc.mcpConfig.generate.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       setGeneratedConfig(data);
       toast.success("MCP configuration generated successfully!");
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(`Failed to generate config: ${error.message}`);
     },
   });
@@ -96,10 +111,10 @@ export default function McpConfig() {
   const handleDownload = () => {
     if (generatedConfig) {
       const blob = new Blob([generatedConfig.file.content], {
-        type: 'application/json',
+        type: "application/json",
       });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = generatedConfig.file.filename;
       a.click();
@@ -108,7 +123,7 @@ export default function McpConfig() {
     }
   };
 
-  const currentPlatform = PLATFORMS.find((p) => p.id === selectedPlatform)!;
+  const currentPlatform = PLATFORMS.find(p => p.id === selectedPlatform)!;
 
   return (
     <DashboardLayout>
@@ -116,7 +131,8 @@ export default function McpConfig() {
         <div>
           <h1 className="text-3xl font-bold">MCP Configuration</h1>
           <p className="text-muted-foreground">
-            Generate platform-specific MCP configurations with AI-optimized prompts and skills
+            Generate platform-specific MCP configurations with AI-optimized
+            prompts and skills
           </p>
         </div>
 
@@ -131,14 +147,14 @@ export default function McpConfig() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {PLATFORMS.map((platform) => (
+                {PLATFORMS.map(platform => (
                   <button
                     key={platform.id}
                     onClick={() => setSelectedPlatform(platform.id)}
                     className={`w-full p-4 rounded-lg border text-left transition-all ${
                       selectedPlatform === platform.id
-                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                        : 'border-border hover:border-primary/50'
+                        ? "border-primary bg-primary/5 ring-2 ring-primary/20"
+                        : "border-border hover:border-primary/50"
                     }`}
                   >
                     <div className="flex items-start gap-3">
@@ -149,8 +165,12 @@ export default function McpConfig() {
                           {platform.description}
                         </div>
                         <div className="flex flex-wrap gap-1 mt-2">
-                          {platform.features.map((feature) => (
-                            <Badge key={feature} variant="secondary" className="text-xs">
+                          {platform.features.map(feature => (
+                            <Badge
+                              key={feature}
+                              variant="secondary"
+                              className="text-xs"
+                            >
                               {feature}
                             </Badge>
                           ))}
@@ -239,7 +259,11 @@ export default function McpConfig() {
                         <Copy className="h-4 w-4 mr-2" />
                         Copy
                       </Button>
-                      <Button variant="outline" size="sm" onClick={handleDownload}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleDownload}
+                      >
                         <Download className="h-4 w-4 mr-2" />
                         Download
                       </Button>
@@ -252,7 +276,9 @@ export default function McpConfig() {
                   <Tabs defaultValue="config">
                     <TabsList>
                       <TabsTrigger value="config">Configuration</TabsTrigger>
-                      <TabsTrigger value="instructions">Instructions</TabsTrigger>
+                      <TabsTrigger value="instructions">
+                        Instructions
+                      </TabsTrigger>
                     </TabsList>
                     <TabsContent value="config" className="mt-4">
                       <ScrollArea className="h-[500px] rounded-lg border bg-muted/30">
@@ -262,7 +288,8 @@ export default function McpConfig() {
                       </ScrollArea>
                       <div className="mt-4 p-3 bg-muted rounded-lg">
                         <p className="text-sm">
-                          <strong>API Key Created:</strong> {generatedConfig.apiKeyName}
+                          <strong>API Key Created:</strong>{" "}
+                          {generatedConfig.apiKeyName}
                         </p>
                         <p className="text-xs text-muted-foreground mt-1">
                           This key is embedded in the configuration above
@@ -271,49 +298,58 @@ export default function McpConfig() {
                     </TabsContent>
                     <TabsContent value="instructions" className="mt-4">
                       <div className="prose prose-sm dark:prose-invert max-w-none">
-                        <h3>Installation Instructions for {currentPlatform.name}</h3>
-                        {selectedPlatform === 'claude' && (
+                        <h3>
+                          Installation Instructions for {currentPlatform.name}
+                        </h3>
+                        {selectedPlatform === "claude" && (
                           <>
                             <ol>
                               <li>Open Claude Desktop settings</li>
                               <li>Navigate to the MCP Servers section</li>
                               <li>
-                                Copy the configuration to{' '}
+                                Copy the configuration to{" "}
                                 <code>{currentPlatform.configPath}</code>
                               </li>
                               <li>Restart Claude Desktop</li>
                               <li>
-                                The preprocessing tools will appear in your tool list
+                                The preprocessing tools will appear in your tool
+                                list
                               </li>
                             </ol>
                             <p>
-                              <strong>Note:</strong> Make sure to keep your API key
-                              secure and never share the configuration file publicly.
+                              <strong>Note:</strong> Make sure to keep your API
+                              key secure and never share the configuration file
+                              publicly.
                             </p>
                           </>
                         )}
-                        {selectedPlatform === 'gemini' && (
+                        {selectedPlatform === "gemini" && (
                           <>
                             <ol>
-                              <li>Save the configuration as an extension file</li>
                               <li>
-                                Place it in <code>{currentPlatform.configPath}</code>
+                                Save the configuration as an extension file
                               </li>
-                              <li>Enable the extension in Gemini CLI settings</li>
+                              <li>
+                                Place it in{" "}
+                                <code>{currentPlatform.configPath}</code>
+                              </li>
+                              <li>
+                                Enable the extension in Gemini CLI settings
+                              </li>
                               <li>
                                 Use <code>@preprocessing</code> to invoke tools
                               </li>
                             </ol>
                           </>
                         )}
-                        {selectedPlatform === 'openai' && (
+                        {selectedPlatform === "openai" && (
                           <>
                             <ol>
                               <li>
                                 Use the function definitions in your API calls
                               </li>
                               <li>
-                                Include the tool definitions in the{' '}
+                                Include the tool definitions in the{" "}
                                 <code>tools</code> parameter
                               </li>
                               <li>
@@ -322,11 +358,15 @@ export default function McpConfig() {
                             </ol>
                           </>
                         )}
-                        {selectedPlatform === 'generic' && (
+                        {selectedPlatform === "generic" && (
                           <>
                             <ol>
-                              <li>Configure your MCP client with the server URL</li>
-                              <li>Add the API key to the Authorization header</li>
+                              <li>
+                                Configure your MCP client with the server URL
+                              </li>
+                              <li>
+                                Add the API key to the Authorization header
+                              </li>
                               <li>
                                 Use the standard MCP protocol to discover and
                                 invoke tools
@@ -345,7 +385,8 @@ export default function McpConfig() {
                         Select a platform and click "Generate Configuration"
                       </p>
                       <p className="text-sm text-muted-foreground mt-2">
-                        AI will create optimized prompts and skills for your chosen platform
+                        AI will create optimized prompts and skills for your
+                        chosen platform
                       </p>
                     </div>
                   </div>

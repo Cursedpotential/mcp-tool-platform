@@ -7,6 +7,7 @@ This document provides detailed instructions for completing the backend UI skele
 ## Overview
 
 The skeleton includes:
+
 1. **Database Schemas** (`drizzle/settings-schema.ts`) - 12 new tables for settings, LLM providers, workflows, agents, etc.
 2. **tRPC Routers** - `server/routers/settings.ts` and `server/routers/patterns.ts` with 40+ procedures
 3. **UI Pages** - `client/src/pages/PatternLibrary.tsx` with tabs, dialogs, and tables
@@ -47,18 +48,18 @@ export async function getNlpConfig(userId: number) {
   const config = await db.query.nlpConfig.findFirst({
     where: eq(nlpConfig.userId, userId),
   });
-  
+
   if (!config) {
     // Return defaults
     return {
       similarityThreshold: 75,
       timeGapMinutes: 30,
-      chunkingStrategy: 'semantic',
+      chunkingStrategy: "semantic",
       chunkSize: 512,
       chunkOverlap: 50,
     };
   }
-  
+
   return config;
 }
 
@@ -67,14 +68,16 @@ export async function upsertNlpConfig(userId: number, data: any) {
   const existing = await db.query.nlpConfig.findFirst({
     where: eq(nlpConfig.userId, userId),
   });
-  
+
   if (existing) {
-    return await db.update(nlpConfig)
+    return await db
+      .update(nlpConfig)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(nlpConfig.id, existing.id))
       .returning();
   } else {
-    return await db.insert(nlpConfig)
+    return await db
+      .insert(nlpConfig)
       .values({ userId, ...data })
       .returning();
   }
@@ -82,6 +85,7 @@ export async function upsertNlpConfig(userId: number, data: any) {
 ```
 
 Repeat for:
+
 - `llmProviders` (list, add, update, delete)
 - `llmRoutingRules` (list, upsert)
 - `topicCodes` (list, add, update, delete)
@@ -163,24 +167,32 @@ list: protectedProcedure
 For `addApiKey` and `updateApiKey`, you need to encrypt API keys before storing:
 
 ```typescript
-import crypto from 'crypto';
+import crypto from "crypto";
 
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'your-32-byte-key-here';
-const ALGORITHM = 'aes-256-cbc';
+const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || "your-32-byte-key-here";
+const ALGORITHM = "aes-256-cbc";
 
 function encrypt(text: string): string {
   const iv = crypto.randomBytes(16);
-  const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY), iv);
+  const cipher = crypto.createCipheriv(
+    ALGORITHM,
+    Buffer.from(ENCRYPTION_KEY),
+    iv
+  );
   let encrypted = cipher.update(text);
   encrypted = Buffer.concat([encrypted, cipher.final()]);
-  return iv.toString('hex') + ':' + encrypted.toString('hex');
+  return iv.toString("hex") + ":" + encrypted.toString("hex");
 }
 
 function decrypt(text: string): string {
-  const parts = text.split(':');
-  const iv = Buffer.from(parts.shift()!, 'hex');
-  const encryptedText = Buffer.from(parts.join(':'), 'hex');
-  const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY), iv);
+  const parts = text.split(":");
+  const iv = Buffer.from(parts.shift()!, "hex");
+  const encryptedText = Buffer.from(parts.join(":"), "hex");
+  const decipher = crypto.createDecipheriv(
+    ALGORITHM,
+    Buffer.from(ENCRYPTION_KEY),
+    iv
+  );
   let decrypted = decipher.update(encryptedText);
   decrypted = Buffer.concat([decrypted, decipher.final()]);
   return decrypted.toString();
@@ -194,6 +206,7 @@ function decrypt(text: string): string {
 ### 4.1 Pattern Library Page (`client/src/pages/PatternLibrary.tsx`)
 
 1. **Uncomment tRPC queries:**
+
    ```typescript
    const { data: patternsData, isLoading } = trpc.patterns.list.useQuery({
      page: 1,
@@ -201,31 +214,33 @@ function decrypt(text: string): string {
      search: searchQuery,
      category: selectedCategory,
    });
-   
+
    const { data: categories } = trpc.patterns.getCategories.useQuery();
    const { data: stats } = trpc.patterns.getStats.useQuery();
    ```
 
 2. **Uncomment mutations:**
+
    ```typescript
    const createPattern = trpc.patterns.create.useMutation({
      onSuccess: () => {
        toast.success("Pattern created");
        setIsAddDialogOpen(false);
      },
-     onError: (error) => {
+     onError: error => {
        toast.error(error.message);
      },
    });
    ```
 
 3. **Wire form state:**
+
    ```typescript
    const [formData, setFormData] = useState({
-     name: '',
-     category: '',
-     pattern: '',
-     description: '',
+     name: "",
+     category: "",
+     pattern: "",
+     description: "",
      severity: 5,
      mclFactors: [],
      examples: [],
@@ -233,6 +248,7 @@ function decrypt(text: string): string {
    ```
 
 4. **Populate table:**
+
    ```typescript
    <TableBody>
      {patternsData?.patterns.map((pattern) => (
@@ -269,6 +285,7 @@ function decrypt(text: string): string {
 ### 4.2 Settings Page (Already Exists)
 
 The existing `client/src/pages/Settings.tsx` already has LLM provider management. You can:
+
 1. Add a new tab for "Forensic Settings"
 2. Add NLP configuration section
 3. Add workflow configuration section
@@ -290,9 +307,9 @@ Update sidebar navigation in `client/src/components/DashboardLayout.tsx`:
 
 ```typescript
 const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-  { name: 'Pattern Library', href: '/patterns', icon: DatabaseIcon },
-  { name: 'Settings', href: '/settings', icon: SettingsIcon },
+  { name: "Dashboard", href: "/dashboard", icon: HomeIcon },
+  { name: "Pattern Library", href: "/patterns", icon: DatabaseIcon },
+  { name: "Settings", href: "/settings", icon: SettingsIcon },
 ];
 ```
 
@@ -401,6 +418,7 @@ Once all UI is implemented, update documentation:
 ## Questions?
 
 If you encounter any issues:
+
 1. Check the existing `Settings.tsx` for reference implementation
 2. Check the template README for tRPC best practices
 3. Check the database schema for field names and types

@@ -1,9 +1,9 @@
-import { Request, Response } from 'express';
-import { ImageAnnotatorClient } from '@google-cloud/vision';
+import { Request, Response } from "express";
+import { ImageAnnotatorClient } from "@google-cloud/vision";
 
 // Initialize the Vision client with your API key
 const client = new ImageAnnotatorClient({
-  key: 'AIzaSyCmEDGGPNYFRKj4gnmJudWsJfQBQmeE-N8',
+  key: "AIzaSyCmEDGGPNYFRKj4gnmJudWsJfQBQmeE-N8",
 });
 
 export function registerVisionHandlers(app: any) {
@@ -15,11 +15,11 @@ export function registerVisionHandlers(app: any) {
    * @apiSuccess {object} response The OCR results.
    * @apiError {object} error Error details.
    */
-  app.post('/vision/detectText', async (req: Request, res: Response) => {
+  app.post("/vision/detectText", async (req: Request, res: Response) => {
     try {
       const { imageBase64 } = req.body;
       if (!imageBase64) {
-        return res.status(400).json({ error: 'imageBase64 is required.' });
+        return res.status(400).json({ error: "imageBase64 is required." });
       }
 
       const [result] = await client.textDetection({
@@ -29,7 +29,7 @@ export function registerVisionHandlers(app: any) {
       });
       res.json(result.fullTextAnnotation);
     } catch (error: any) {
-      console.error('Error detecting text:', error);
+      console.error("Error detecting text:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -42,11 +42,11 @@ export function registerVisionHandlers(app: any) {
    * @apiSuccess {object[]} response An array of face detection results.
    * @apiError {object} error Error details.
    */
-  app.post('/vision/detectFaces', async (req: Request, res: Response) => {
+  app.post("/vision/detectFaces", async (req: Request, res: Response) => {
     try {
       const { imageBase64 } = req.body;
       if (!imageBase64) {
-        return res.status(400).json({ error: 'imageBase64 is required.' });
+        return res.status(400).json({ error: "imageBase64 is required." });
       }
 
       const [result] = await client.faceDetection({
@@ -56,7 +56,7 @@ export function registerVisionHandlers(app: any) {
       });
       res.json(result.faceAnnotations);
     } catch (error: any) {
-      console.error('Error detecting faces:', error);
+      console.error("Error detecting faces:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -69,11 +69,11 @@ export function registerVisionHandlers(app: any) {
    * @apiSuccess {object[]} response An array of label detection results.
    * @apiError {object} error Error details.
    */
-  app.post('/vision/detectLabels', async (req: Request, res: Response) => {
+  app.post("/vision/detectLabels", async (req: Request, res: Response) => {
     try {
       const { imageBase64 } = req.body;
       if (!imageBase64) {
-        return res.status(400).json({ error: 'imageBase64 is required.' });
+        return res.status(400).json({ error: "imageBase64 is required." });
       }
 
       const [result] = await client.labelDetection({
@@ -83,7 +83,7 @@ export function registerVisionHandlers(app: any) {
       });
       res.json(result.labelAnnotations);
     } catch (error: any) {
-      console.error('Error detecting labels:', error);
+      console.error("Error detecting labels:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -96,11 +96,11 @@ export function registerVisionHandlers(app: any) {
    * @apiSuccess {object[]} response An array of object detection results.
    * @apiError {object} error Error details.
    */
-  app.post('/vision/detectObjects', async (req: Request, res: Response) => {
+  app.post("/vision/detectObjects", async (req: Request, res: Response) => {
     try {
       const { imageBase64 } = req.body;
       if (!imageBase64) {
-        return res.status(400).json({ error: 'imageBase64 is required.' });
+        return res.status(400).json({ error: "imageBase64 is required." });
       }
 
       const [result] = await client.objectLocalization({
@@ -110,7 +110,7 @@ export function registerVisionHandlers(app: any) {
       });
       res.json(result.localizedObjectAnnotations);
     } catch (error: any) {
-      console.error('Error detecting objects:', error);
+      console.error("Error detecting objects:", error);
       res.status(500).json({ error: error.message });
     }
   });
@@ -123,11 +123,11 @@ export function registerVisionHandlers(app: any) {
    * @apiSuccess {object} response Safe search detection results.
    * @apiError {object} error Error details.
    */
-  app.post('/vision/detectSafeSearch', async (req: Request, res: Response) => {
+  app.post("/vision/detectSafeSearch", async (req: Request, res: Response) => {
     try {
       const { imageBase64 } = req.body;
       if (!imageBase64) {
-        return res.status(400).json({ error: 'imageBase64 is required.' });
+        return res.status(400).json({ error: "imageBase64 is required." });
       }
 
       const [result] = await client.safeSearchDetection({
@@ -137,7 +137,7 @@ export function registerVisionHandlers(app: any) {
       });
       res.json(result.safeSearchAnnotation);
     } catch (error: any) {
-      console.error('Error detecting safe search:', error);
+      console.error("Error detecting safe search:", error);
       res.status(500).json({ error: error.message });
     }
   });

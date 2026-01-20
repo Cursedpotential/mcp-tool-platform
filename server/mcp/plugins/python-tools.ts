@@ -5,7 +5,7 @@
  * These calls require the corresponding Python packages to be installed.
  */
 
-import { spawn } from 'child_process';
+import { spawn } from "child_process";
 
 interface PythonResult<T = unknown> {
   success: boolean;
@@ -13,38 +13,47 @@ interface PythonResult<T = unknown> {
   error?: string;
 }
 
-function runPython<T>(script: string, payload: Record<string, unknown>): Promise<PythonResult<T>> {
-  return new Promise((resolve) => {
-    const pythonCmd = process.platform === 'win32' ? 'python' : 'python3';
-    const proc = spawn(pythonCmd, ['-c', script], {
-      stdio: ['pipe', 'pipe', 'pipe'],
+function runPython<T>(
+  script: string,
+  payload: Record<string, unknown>
+): Promise<PythonResult<T>> {
+  return new Promise(resolve => {
+    const pythonCmd = process.platform === "win32" ? "python" : "python3";
+    const proc = spawn(pythonCmd, ["-c", script], {
+      stdio: ["pipe", "pipe", "pipe"],
       timeout: 30000,
     });
 
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
 
-    proc.stdout.on('data', (data) => {
+    proc.stdout.on("data", data => {
       stdout += data.toString();
     });
-    proc.stderr.on('data', (data) => {
+    proc.stderr.on("data", data => {
       stderr += data.toString();
     });
 
-    proc.on('close', (code) => {
+    proc.on("close", code => {
       if (code === 0) {
         try {
           resolve({ success: true, data: JSON.parse(stdout) as T });
           return;
         } catch (error) {
-          resolve({ success: false, error: `Failed to parse Python output: ${stdout}` });
+          resolve({
+            success: false,
+            error: `Failed to parse Python output: ${stdout}`,
+          });
           return;
         }
       }
-      resolve({ success: false, error: stderr || `Python process exited with code ${code}` });
+      resolve({
+        success: false,
+        error: stderr || `Python process exited with code ${code}`,
+      });
     });
 
-    proc.on('error', (error) => {
+    proc.on("error", error => {
       resolve({ success: false, error: `Python error: ${error.message}` });
     });
 
@@ -90,14 +99,14 @@ print(json.dumps(result))
 
   const result = await runPython(script, args);
   if (!result.success) {
-    throw new Error(result.error || 'spaCy execution failed');
+    throw new Error(result.error || "spaCy execution failed");
   }
   return result.data ?? {};
 }
 
 export async function runNltk(args: {
   text: string;
-  operation: 'tokenize' | 'stem' | 'lemmatize' | 'chunk' | 'wordnet';
+  operation: "tokenize" | "stem" | "lemmatize" | "chunk" | "wordnet";
 }): Promise<{ result: unknown }> {
   const script = `
 import json
@@ -125,14 +134,14 @@ print(json.dumps({"result": result}))
 
   const result = await runPython<{ result: unknown }>(script, args);
   if (!result.success) {
-    throw new Error(result.error || 'NLTK execution failed');
+    throw new Error(result.error || "NLTK execution failed");
   }
   return result.data ?? { result: [] };
 }
 
 export async function runTransformers(args: {
   text: string;
-  operation: 'encode' | 'similarity' | 'classify' | 'qa';
+  operation: "encode" | "similarity" | "classify" | "qa";
   model?: string;
   options?: Record<string, unknown>;
 }): Promise<{ result: unknown }> {
@@ -168,7 +177,7 @@ print(json.dumps({"result": result}))
 
   const result = await runPython<{ result: unknown }>(script, args);
   if (!result.success) {
-    throw new Error(result.error || 'Transformers execution failed');
+    throw new Error(result.error || "Transformers execution failed");
   }
   return result.data ?? { result: null };
 }
@@ -176,7 +185,7 @@ print(json.dumps({"result": result}))
 export async function runBeautifulSoup(args: {
   html: string;
   selector?: string;
-  operation: 'find' | 'find_all' | 'select' | 'text' | 'attrs';
+  operation: "find" | "find_all" | "select" | "text" | "attrs";
 }): Promise<{ result: unknown }> {
   const script = `
 import json
@@ -208,7 +217,7 @@ print(json.dumps({"result": result}))
 
   const result = await runPython<{ result: unknown }>(script, args);
   if (!result.success) {
-    throw new Error(result.error || 'BeautifulSoup execution failed');
+    throw new Error(result.error || "BeautifulSoup execution failed");
   }
   return result.data ?? { result: null };
 }
@@ -246,16 +255,20 @@ if extract_tables:
 print(json.dumps(result))
 `;
 
-  const result = await runPython<{ text: string; tables?: unknown[]; pages: number }>(script, args);
+  const result = await runPython<{
+    text: string;
+    tables?: unknown[];
+    pages: number;
+  }>(script, args);
   if (!result.success) {
-    throw new Error(result.error || 'pdfplumber execution failed');
+    throw new Error(result.error || "pdfplumber execution failed");
   }
-  return result.data ?? { text: '', pages: 0 };
+  return result.data ?? { text: "", pages: 0 };
 }
 
 export async function runPandas(args: {
   input: string;
-  operation: 'read' | 'filter' | 'groupby' | 'merge' | 'pivot' | 'describe';
+  operation: "read" | "filter" | "groupby" | "merge" | "pivot" | "describe";
   options?: Record<string, unknown>;
 }): Promise<{ data: unknown; columns?: string[]; shape?: number[] }> {
   const script = `
@@ -308,9 +321,13 @@ result = {
 print(json.dumps(result))
 `;
 
-  const result = await runPython<{ data: unknown; columns?: string[]; shape?: number[] }>(script, args);
+  const result = await runPython<{
+    data: unknown;
+    columns?: string[];
+    shape?: number[];
+  }>(script, args);
   if (!result.success) {
-    throw new Error(result.error || 'pandas execution failed');
+    throw new Error(result.error || "pandas execution failed");
   }
   return result.data ?? { data: [] };
 }
@@ -319,7 +336,9 @@ export async function runLlamaIndexChunk(args: {
   text: string;
   chunkSize?: number;
   chunkOverlap?: number;
-}): Promise<{ chunks: Array<{ text: string; startChar?: number; endChar?: number }> }> {
+}): Promise<{
+  chunks: Array<{ text: string; startChar?: number; endChar?: number }>;
+}> {
   const script = `
 import json
 import sys
@@ -354,12 +373,11 @@ except Exception:
 print(json.dumps({"chunks": chunks}))
 `;
 
-  const result = await runPython<{ chunks: Array<{ text: string; startChar?: number; endChar?: number }> }>(
-    script,
-    args as Record<string, unknown>
-  );
+  const result = await runPython<{
+    chunks: Array<{ text: string; startChar?: number; endChar?: number }>;
+  }>(script, args as Record<string, unknown>);
   if (!result.success) {
-    throw new Error(result.error || 'LlamaIndex chunking failed');
+    throw new Error(result.error || "LlamaIndex chunking failed");
   }
   return result.data ?? { chunks: [] };
 }
@@ -390,11 +408,14 @@ except Exception:
 print(json.dumps({"prompt": prompt}))
 `;
 
-  const result = await runPython<{ prompt: string }>(script, args as Record<string, unknown>);
+  const result = await runPython<{ prompt: string }>(
+    script,
+    args as Record<string, unknown>
+  );
   if (!result.success) {
-    throw new Error(result.error || 'LangChain prompt formatting failed');
+    throw new Error(result.error || "LangChain prompt formatting failed");
   }
-  return result.data ?? { prompt: '' };
+  return result.data ?? { prompt: "" };
 }
 
 export async function runLangChainSplit(args: {
@@ -430,9 +451,12 @@ except Exception:
 print(json.dumps({"chunks": chunks}))
 `;
 
-  const result = await runPython<{ chunks: string[] }>(script, args as Record<string, unknown>);
+  const result = await runPython<{ chunks: string[] }>(
+    script,
+    args as Record<string, unknown>
+  );
   if (!result.success) {
-    throw new Error(result.error || 'LangChain split failed');
+    throw new Error(result.error || "LangChain split failed");
   }
   return result.data ?? { chunks: [] };
 }
@@ -442,7 +466,9 @@ export async function runLangGraphFlow(args: {
   edges: Array<{ from: string; to: string }>;
   start: string;
   end: string;
-}): Promise<{ trace: Array<{ state: string; payload?: Record<string, unknown> }> }> {
+}): Promise<{
+  trace: Array<{ state: string; payload?: Record<string, unknown> }>;
+}> {
   const script = `
 import json
 import sys
@@ -492,12 +518,11 @@ except Exception:
 print(json.dumps({"trace": trace}))
 `;
 
-  const result = await runPython<{ trace: Array<{ state: string; payload?: Record<string, unknown> }> }>(
-    script,
-    args as Record<string, unknown>
-  );
+  const result = await runPython<{
+    trace: Array<{ state: string; payload?: Record<string, unknown> }>;
+  }>(script, args as Record<string, unknown>);
   if (!result.success) {
-    throw new Error(result.error || 'LangGraph flow failed');
+    throw new Error(result.error || "LangGraph flow failed");
   }
   return result.data ?? { trace: [] };
 }

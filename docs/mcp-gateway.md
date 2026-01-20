@@ -1,13 +1,13 @@
 # MCP Gateway
 
 **NAME**
-    mcp-gateway - Token-efficient Model Context Protocol gateway for forensic analysis tools
+mcp-gateway - Token-efficient Model Context Protocol gateway for forensic analysis tools
 
 **SYNOPSIS**
-    The MCP Gateway provides 4 core endpoints for tool discovery, specification retrieval, execution, and content retrieval in a forensic legal case management system.
+The MCP Gateway provides 4 core endpoints for tool discovery, specification retrieval, execution, and content retrieval in a forensic legal case management system.
 
 **DESCRIPTION**
-    The MCP Gateway is the primary API interface for the MCP Tool Platform. It implements a token-efficient architecture that minimizes LLM context window usage through reference-based returns and compact tool cards.
+The MCP Gateway is the primary API interface for the MCP Tool Platform. It implements a token-efficient architecture that minimizes LLM context window usage through reference-based returns and compact tool cards.
 
     **Core Principles:**
     - **Token Efficiency**: Returns compact representations to minimize context usage
@@ -18,7 +18,7 @@
 **ENDPOINTS**
 
 **search_tools**
-    Discovers available tools with minimal token overhead.
+Discovers available tools with minimal token overhead.
 
     **Input Schema:**
     ```typescript
@@ -53,7 +53,7 @@
     ```
 
 **describe_tool**
-    Retrieves complete tool specification on demand.
+Retrieves complete tool specification on demand.
 
     **Input Schema:**
     ```typescript
@@ -92,7 +92,7 @@
     ```
 
 **invoke_tool**
-    Executes a tool with reference-based returns for large outputs.
+Executes a tool with reference-based returns for large outputs.
 
     **Input Schema:**
     ```typescript
@@ -137,7 +137,7 @@
     ```
 
 **get_ref**
-    Retrieves content-addressed artifacts with paging support.
+Retrieves content-addressed artifacts with paging support.
 
     **Input Schema:**
     ```typescript
@@ -177,6 +177,7 @@
 **ARCHITECTURE**
 
 **Request Processing Flow:**
+
 ```
 Client Request → Input Validation → Tool Discovery/Execution → Content Store → Response
      ↓                 ↓                 ↓                 ↓                 ↓
@@ -185,6 +186,7 @@ Client Request → Input Validation → Tool Discovery/Execution → Content Sto
 ```
 
 **Key Components:**
+
 - **Router**: tRPC-based type-safe API routing
 - **Registry**: Tool discovery and permission checking
 - **Executor**: Task execution with checkpoint/resume
@@ -192,37 +194,41 @@ Client Request → Input Validation → Tool Discovery/Execution → Content Sto
 - **Proxy**: External MCP server integration
 
 **Performance Optimizations:**
+
 - **Inline vs Reference**: <4KB = inline, >4KB = reference
 - **Deduplication**: SHA-256 content hashing prevents redundant storage
 - **Caching**: Task results cached by input hash
 - **Pagination**: Large content delivered in 4KB pages
 
 **Security Features:**
+
 - **Authentication**: Protected procedures require user context
 - **Authorization**: Tool permissions checked per user
 - **Rate Limiting**: Configurable per-user limits
 - **Audit Logging**: All invocations logged with trace IDs
 
 **Error Handling:**
+
 - **Validation Errors**: Invalid input schemas return 400
 - **Permission Errors**: Unauthorized access returns 403
 - **Not Found Errors**: Unknown tools return 404
 - **Execution Errors**: Tool failures return 500 with details
 
 **Integration Points:**
+
 - **LiteLLM Proxy**: LLM routing and cost tracking
 - **MetaMCP Server**: External tool exposure
 - **Content Store**: Artifact persistence and retrieval
 - **Tool Registry**: Dynamic tool loading and discovery
 
 **SEE ALSO**
-    tool-registry(7), task-executor(7), content-store(7), smart-router(7)
+tool-registry(7), task-executor(7), content-store(7), smart-router(7)
 
 **AUTHOR**
-    Claude Code - Opus 4.1
+Claude Code - Opus 4.1
 
 **VERSION**
-    1.0.0
+1.0.0
 
 **DATE**
-    January 11, 2026
+January 11, 2026

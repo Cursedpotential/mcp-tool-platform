@@ -1,12 +1,12 @@
 /**
  * Redis-backed Distributed Queue (Optional Mode)
- * 
+ *
  * Enables multi-worker orchestration for horizontal scaling.
  * Falls back to in-memory queue if Redis is unavailable.
  */
 
-import { nanoid } from 'nanoid';
-import { logger } from '../realtime/log-stream';
+import { nanoid } from "nanoid";
+import { logger } from "../realtime/log-stream";
 
 // ============================================================================
 // Types
@@ -20,7 +20,7 @@ export interface QueueTask {
   createdAt: number;
   attempts: number;
   maxAttempts: number;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: "pending" | "processing" | "completed" | "failed";
   workerId?: string;
   result?: unknown;
   error?: string;
@@ -53,18 +53,20 @@ class InMemoryQueue {
   private completedSet: Set<string> = new Set();
   private failedSet: Set<string> = new Set();
 
-  async push(task: Omit<QueueTask, 'id' | 'createdAt' | 'attempts' | 'status'>): Promise<string> {
+  async push(
+    task: Omit<QueueTask, "id" | "createdAt" | "attempts" | "status">
+  ): Promise<string> {
     const id = nanoid();
     const fullTask: QueueTask = {
       ...task,
       id,
       createdAt: Date.now(),
       attempts: 0,
-      status: 'pending',
+      status: "pending",
     };
 
     this.tasks.set(id, fullTask);
-    
+
     // Insert by priority (higher priority first)
     const insertIndex = this.pendingQueue.findIndex(taskId => {
       const t = this.tasks.get(taskId);
@@ -77,7 +79,10 @@ class InMemoryQueue {
       this.pendingQueue.splice(insertIndex, 0, id);
     }
 
-    logger.info('queue', `Task pushed: ${id}`, { type: task.type, priority: task.priority });
+    logger.info("queue", `Task pushed: ${id}`, {
+      type: task.type,
+      priority: task.priority,
+    });
     return id;
   }
 
@@ -88,7 +93,7 @@ class InMemoryQueue {
     const task = this.tasks.get(id);
     if (!task) return null;
 
-    task.status = 'processing';
+    task.status = "processing";
     task.attempts += 1;
     this.processingSet.add(id);
 
@@ -99,12 +104,12 @@ class InMemoryQueue {
     const task = this.tasks.get(taskId);
     if (!task) return;
 
-    task.status = 'completed';
+    task.status = "completed";
     task.result = result;
     this.processingSet.delete(taskId);
     this.completedSet.add(taskId);
 
-    logger.info('queue', `Task completed: ${taskId}`);
+    logger.info("queue", `Task completed: ${taskId}`);
   }
 
   async fail(taskId: string, error: string): Promise<void> {
@@ -113,17 +118,20 @@ class InMemoryQueue {
 
     if (task.attempts < task.maxAttempts) {
       // Retry
-      task.status = 'pending';
+      task.status = "pending";
       this.processingSet.delete(taskId);
       this.pendingQueue.push(taskId);
-      logger.warn('queue', `Task retry: ${taskId}`, { attempt: task.attempts, maxAttempts: task.maxAttempts });
+      logger.warn("queue", `Task retry: ${taskId}`, {
+        attempt: task.attempts,
+        maxAttempts: task.maxAttempts,
+      });
     } else {
       // Failed permanently
-      task.status = 'failed';
+      task.status = "failed";
       task.error = error;
       this.processingSet.delete(taskId);
       this.failedSet.add(taskId);
-      logger.error('queue', `Task failed: ${taskId}`, { error });
+      logger.error("queue", `Task failed: ${taskId}`, { error });
     }
   }
 
@@ -165,35 +173,37 @@ class RedisQueue {
   async connect(): Promise<void> {
     // TODO: Implement Redis connection
     // For now, throw to fall back to in-memory
-    throw new Error('Redis queue not yet implemented');
+    throw new Error("Redis queue not yet implemented");
   }
 
-  async push(_task: Omit<QueueTask, 'id' | 'createdAt' | 'attempts' | 'status'>): Promise<string> {
-    throw new Error('Redis queue not yet implemented');
+  async push(
+    _task: Omit<QueueTask, "id" | "createdAt" | "attempts" | "status">
+  ): Promise<string> {
+    throw new Error("Redis queue not yet implemented");
   }
 
   async pop(): Promise<QueueTask | null> {
-    throw new Error('Redis queue not yet implemented');
+    throw new Error("Redis queue not yet implemented");
   }
 
   async complete(_taskId: string, _result: unknown): Promise<void> {
-    throw new Error('Redis queue not yet implemented');
+    throw new Error("Redis queue not yet implemented");
   }
 
   async fail(_taskId: string, _error: string): Promise<void> {
-    throw new Error('Redis queue not yet implemented');
+    throw new Error("Redis queue not yet implemented");
   }
 
   async getTask(_taskId: string): Promise<QueueTask | null> {
-    throw new Error('Redis queue not yet implemented');
+    throw new Error("Redis queue not yet implemented");
   }
 
   async getStats(): Promise<QueueStats> {
-    throw new Error('Redis queue not yet implemented');
+    throw new Error("Redis queue not yet implemented");
   }
 
   async clear(): Promise<void> {
-    throw new Error('Redis queue not yet implemented');
+    throw new Error("Redis queue not yet implemented");
   }
 }
 
@@ -205,7 +215,7 @@ class QueueManager {
   private static instance: QueueManager | null = null;
   private queue: InMemoryQueue | RedisQueue;
   private config: QueueConfig;
-  private mode: 'memory' | 'redis' = 'memory';
+  private mode: "memory" | "redis" = "memory";
 
   private constructor(config: QueueConfig = {}) {
     this.config = {
@@ -220,17 +230,20 @@ class QueueManager {
     if (config.redisUrl) {
       try {
         this.queue = new RedisQueue(config.redisUrl);
-        this.mode = 'redis';
-        logger.info('queue', 'Using Redis queue for distributed orchestration');
+        this.mode = "redis";
+        logger.info("queue", "Using Redis queue for distributed orchestration");
       } catch (error) {
-        logger.warn('queue', 'Redis unavailable, falling back to in-memory queue');
+        logger.warn(
+          "queue",
+          "Redis unavailable, falling back to in-memory queue"
+        );
         this.queue = new InMemoryQueue();
-        this.mode = 'memory';
+        this.mode = "memory";
       }
     } else {
       this.queue = new InMemoryQueue();
-      this.mode = 'memory';
-      logger.info('queue', 'Using in-memory queue (single-worker mode)');
+      this.mode = "memory";
+      logger.info("queue", "Using in-memory queue (single-worker mode)");
     }
   }
 
@@ -241,7 +254,7 @@ class QueueManager {
     return QueueManager.instance;
   }
 
-  getMode(): 'memory' | 'redis' {
+  getMode(): "memory" | "redis" {
     return this.mode;
   }
 
@@ -274,7 +287,7 @@ class QueueManager {
     return this.queue.getTask(taskId);
   }
 
-  async getStats(): Promise<QueueStats & { mode: 'memory' | 'redis' }> {
+  async getStats(): Promise<QueueStats & { mode: "memory" | "redis" }> {
     const stats = await this.queue.getStats();
     return { ...stats, mode: this.mode };
   }

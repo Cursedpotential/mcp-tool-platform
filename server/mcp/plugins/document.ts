@@ -1,17 +1,21 @@
 /**
  * Document Plugin
- * 
+ *
  * Provides document processing capabilities:
  * - Pandoc for format conversion to markdown
  * - Tesseract for OCR on images and PDFs
  * - Text normalization and segmentation
  */
 
-import { spawn } from 'child_process';
-import { promises as fs } from 'fs';
-import path from 'path';
-import { getContentStore } from '../store/content-store';
-import type { DocumentChunk, DocumentSection, ContentRef } from '../../../shared/mcp-types';
+import { spawn } from "child_process";
+import { promises as fs } from "fs";
+import path from "path";
+import { getContentStore } from "../store/content-store";
+import type {
+  DocumentChunk,
+  DocumentSection,
+  ContentRef,
+} from "../../../shared/mcp-types";
 
 interface ConvertArgs {
   path: string;
@@ -28,7 +32,7 @@ interface OcrArgs {
 
 interface SegmentArgs {
   textRef: string;
-  strategy?: 'heading' | 'paragraph' | 'sentence' | 'fixed';
+  strategy?: "heading" | "paragraph" | "sentence" | "fixed";
   chunkSize?: number;
   overlap?: number;
 }
@@ -42,47 +46,49 @@ export async function convertToMarkdown(args: ConvertArgs): Promise<{
   preview: string;
 }> {
   const store = await getContentStore();
-  
+
   // Detect input format if not specified
   const ext = path.extname(args.path).toLowerCase();
   const formatMap: Record<string, string> = {
-    '.docx': 'docx',
-    '.doc': 'doc',
-    '.pdf': 'pdf',
-    '.html': 'html',
-    '.htm': 'html',
-    '.epub': 'epub',
-    '.odt': 'odt',
-    '.rtf': 'rtf',
-    '.tex': 'latex',
-    '.rst': 'rst',
-    '.org': 'org',
+    ".docx": "docx",
+    ".doc": "doc",
+    ".pdf": "pdf",
+    ".html": "html",
+    ".htm": "html",
+    ".epub": "epub",
+    ".odt": "odt",
+    ".rtf": "rtf",
+    ".tex": "latex",
+    ".rst": "rst",
+    ".org": "org",
   };
 
-  const inputFormat = args.format ?? formatMap[ext] ?? 'markdown';
+  const inputFormat = args.format ?? formatMap[ext] ?? "markdown";
 
   // Build Pandoc command
   const pandocArgs: string[] = [
-    '-f', inputFormat,
-    '-t', 'markdown',
-    '--wrap=none',
+    "-f",
+    inputFormat,
+    "-t",
+    "markdown",
+    "--wrap=none",
   ];
 
   if (args.extractMetadata) {
-    pandocArgs.push('--standalone');
+    pandocArgs.push("--standalone");
   }
 
   pandocArgs.push(args.path);
 
   try {
-    const markdown = await runCommand('pandoc', pandocArgs);
-    
+    const markdown = await runCommand("pandoc", pandocArgs);
+
     // Extract metadata if present
     let metadata: Record<string, unknown> | undefined;
     let content = markdown;
 
-    if (args.extractMetadata && markdown.startsWith('---')) {
-      const endIdx = markdown.indexOf('---', 3);
+    if (args.extractMetadata && markdown.startsWith("---")) {
+      const endIdx = markdown.indexOf("---", 3);
       if (endIdx !== -1) {
         const yamlBlock = markdown.slice(4, endIdx).trim();
         metadata = parseYamlMetadata(yamlBlock);
@@ -91,15 +97,17 @@ export async function convertToMarkdown(args: ConvertArgs): Promise<{
     }
 
     // Store the markdown
-    const stored = await store.put(content, 'text/markdown');
+    const stored = await store.put(content, "text/markdown");
 
     return {
       markdownRef: stored.ref,
       metadata,
-      preview: content.slice(0, 500) + (content.length > 500 ? '...' : ''),
+      preview: content.slice(0, 500) + (content.length > 500 ? "..." : ""),
     };
   } catch (error) {
-    throw new Error(`Pandoc conversion failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Pandoc conversion failed: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 }
 
@@ -113,13 +121,13 @@ export async function ocrImageOrPdf(args: OcrArgs): Promise<{
   preview: string;
 }> {
   const store = await getContentStore();
-  const language = args.language ?? 'eng';
+  const language = args.language ?? "eng";
   const psm = args.psm ?? 3; // Fully automatic page segmentation
 
   const ext = path.extname(args.path).toLowerCase();
-  const isPdf = ext === '.pdf';
+  const isPdf = ext === ".pdf";
 
-  let allText = '';
+  let allText = "";
   let pages = 1;
   let totalConfidence = 0;
 
@@ -128,15 +136,19 @@ export async function ocrImageOrPdf(args: OcrArgs): Promise<{
     // This is a simplified version - in production, use proper PDF handling
     try {
       // Try using pdftotext first (faster for text-based PDFs)
-      const pdfText = await runCommand('pdftotext', ['-layout', args.path, '-']);
+      const pdfText = await runCommand("pdftotext", [
+        "-layout",
+        args.path,
+        "-",
+      ]);
       if (pdfText.trim().length > 100) {
         // PDF has extractable text
-        const stored = await store.put(pdfText, 'text/plain');
+        const stored = await store.put(pdfText, "text/plain");
         return {
           textRef: stored.ref,
           pages: 1,
           confidence: 1.0,
-          preview: pdfText.slice(0, 500) + (pdfText.length > 500 ? '...' : ''),
+          preview: pdfText.slice(0, 500) + (pdfText.length > 500 ? "..." : ""),
         };
       }
     } catch {
@@ -146,28 +158,32 @@ export async function ocrImageOrPdf(args: OcrArgs): Promise<{
     // OCR the PDF
     const tesseractArgs = [
       args.path,
-      'stdout',
-      '-l', language,
-      '--psm', String(psm),
-      'pdf',
+      "stdout",
+      "-l",
+      language,
+      "--psm",
+      String(psm),
+      "pdf",
     ];
 
-    allText = await runCommand('tesseract', tesseractArgs);
+    allText = await runCommand("tesseract", tesseractArgs);
     totalConfidence = 0.8; // Estimate for PDF OCR
   } else {
     // Direct image OCR
     const tesseractArgs = [
       args.path,
-      'stdout',
-      '-l', language,
-      '--psm', String(psm),
+      "stdout",
+      "-l",
+      language,
+      "--psm",
+      String(psm),
     ];
 
     if (args.dpi) {
-      tesseractArgs.push('--dpi', String(args.dpi));
+      tesseractArgs.push("--dpi", String(args.dpi));
     }
 
-    allText = await runCommand('tesseract', tesseractArgs);
+    allText = await runCommand("tesseract", tesseractArgs);
     totalConfidence = 0.9; // Estimate for image OCR
   }
 
@@ -175,13 +191,13 @@ export async function ocrImageOrPdf(args: OcrArgs): Promise<{
   allText = normalizeText(allText);
 
   // Store the result
-  const stored = await store.put(allText, 'text/plain');
+  const stored = await store.put(allText, "text/plain");
 
   return {
     textRef: stored.ref,
     pages,
     confidence: totalConfidence,
-    preview: allText.slice(0, 500) + (allText.length > 500 ? '...' : ''),
+    preview: allText.slice(0, 500) + (allText.length > 500 ? "..." : ""),
   };
 }
 
@@ -194,7 +210,7 @@ export async function segmentText(args: SegmentArgs): Promise<{
   sections: DocumentSection[];
 }> {
   const store = await getContentStore();
-  const strategy = args.strategy ?? 'paragraph';
+  const strategy = args.strategy ?? "paragraph";
   const chunkSize = args.chunkSize ?? 1000;
   const overlap = args.overlap ?? 100;
 
@@ -210,22 +226,25 @@ export async function segmentText(args: SegmentArgs): Promise<{
   let docId = textRef.slice(7, 15); // Use part of hash as doc ID
 
   switch (strategy) {
-    case 'heading':
+    case "heading":
       segmentByHeading(text, docId, chunks, sections);
       break;
-    case 'paragraph':
+    case "paragraph":
       segmentByParagraph(text, docId, chunks);
       break;
-    case 'sentence':
+    case "sentence":
       segmentBySentence(text, docId, chunks);
       break;
-    case 'fixed':
+    case "fixed":
       segmentByFixed(text, docId, chunks, chunkSize, overlap);
       break;
   }
 
   // Store chunks
-  const chunksStored = await store.put(JSON.stringify(chunks), 'application/json');
+  const chunksStored = await store.put(
+    JSON.stringify(chunks),
+    "application/json"
+  );
 
   return {
     chunksRef: chunksStored.ref,
@@ -253,17 +272,17 @@ export async function cleanAndNormalize(args: { textRef: string }): Promise<{
 
   // Normalize whitespace
   const beforeWs = cleaned.length;
-  cleaned = cleaned.replace(/[ \t]+/g, ' ');
-  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+  cleaned = cleaned.replace(/[ \t]+/g, " ");
+  cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
   if (cleaned.length !== beforeWs) {
-    changes.push('Normalized whitespace');
+    changes.push("Normalized whitespace");
   }
 
   // Remove control characters
   const beforeCtrl = cleaned.length;
-  cleaned = cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  cleaned = cleaned.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
   if (cleaned.length !== beforeCtrl) {
-    changes.push('Removed control characters');
+    changes.push("Removed control characters");
   }
 
   // Normalize quotes
@@ -271,13 +290,16 @@ export async function cleanAndNormalize(args: { textRef: string }): Promise<{
   cleaned = cleaned.replace(/[""]/g, '"');
   cleaned = cleaned.replace(/['']/g, "'");
   if (cleaned !== beforeQuotes) {
-    changes.push('Normalized quotes');
+    changes.push("Normalized quotes");
   }
 
   // Trim lines
-  cleaned = cleaned.split('\n').map((line) => line.trim()).join('\n');
+  cleaned = cleaned
+    .split("\n")
+    .map(line => line.trim())
+    .join("\n");
 
-  const stored = await store.put(cleaned, 'text/plain');
+  const stored = await store.put(cleaned, "text/plain");
 
   return {
     cleanedRef: stored.ref,
@@ -292,18 +314,18 @@ export async function cleanAndNormalize(args: { textRef: string }): Promise<{
 function runCommand(cmd: string, args: string[]): Promise<string> {
   return new Promise((resolve, reject) => {
     const proc = spawn(cmd, args);
-    let stdout = '';
-    let stderr = '';
+    let stdout = "";
+    let stderr = "";
 
-    proc.stdout.on('data', (data) => {
+    proc.stdout.on("data", data => {
       stdout += data.toString();
     });
 
-    proc.stderr.on('data', (data) => {
+    proc.stderr.on("data", data => {
       stderr += data.toString();
     });
 
-    proc.on('close', (code) => {
+    proc.on("close", code => {
       if (code === 0) {
         resolve(stdout);
       } else {
@@ -311,7 +333,7 @@ function runCommand(cmd: string, args: string[]): Promise<string> {
       }
     });
 
-    proc.on('error', (err) => {
+    proc.on("error", err => {
       reject(err);
     });
   });
@@ -319,23 +341,23 @@ function runCommand(cmd: string, args: string[]): Promise<string> {
 
 function normalizeText(text: string): string {
   return text
-    .replace(/\r\n/g, '\n')
-    .replace(/\r/g, '\n')
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 }
 
 function parseYamlMetadata(yaml: string): Record<string, unknown> {
   const metadata: Record<string, unknown> = {};
-  const lines = yaml.split('\n');
+  const lines = yaml.split("\n");
 
   for (const line of lines) {
-    const colonIdx = line.indexOf(':');
+    const colonIdx = line.indexOf(":");
     if (colonIdx !== -1) {
       const key = line.slice(0, colonIdx).trim();
       const value = line.slice(colonIdx + 1).trim();
-      metadata[key] = value.replace(/^["']|["']$/g, '');
+      metadata[key] = value.replace(/^["']|["']$/g, "");
     }
   }
 
@@ -362,7 +384,7 @@ function segmentByHeading(
           id: `${docId}-chunk-${chunkIndex}`,
           documentId: docId,
           index: chunkIndex++,
-          type: 'paragraph',
+          type: "paragraph",
           content,
           startOffset: lastEnd,
           endOffset: match.index,
@@ -388,7 +410,7 @@ function segmentByHeading(
       id: `${docId}-chunk-${chunkIndex}`,
       documentId: docId,
       index: chunkIndex++,
-      type: 'heading',
+      type: "heading",
       content: match[0],
       startOffset: match.index,
       endOffset: match.index + match[0].length,
@@ -406,7 +428,7 @@ function segmentByHeading(
         id: `${docId}-chunk-${chunkIndex}`,
         documentId: docId,
         index: chunkIndex,
-        type: 'paragraph',
+        type: "paragraph",
         content,
         startOffset: lastEnd,
         endOffset: text.length,
@@ -415,7 +437,11 @@ function segmentByHeading(
   }
 }
 
-function segmentByParagraph(text: string, docId: string, chunks: DocumentChunk[]): void {
+function segmentByParagraph(
+  text: string,
+  docId: string,
+  chunks: DocumentChunk[]
+): void {
   const paragraphs = text.split(/\n\n+/);
   let offset = 0;
 
@@ -427,7 +453,7 @@ function segmentByParagraph(text: string, docId: string, chunks: DocumentChunk[]
         id: `${docId}-chunk-${i}`,
         documentId: docId,
         index: i,
-        type: 'paragraph',
+        type: "paragraph",
         content: para,
         startOffset,
         endOffset: startOffset + para.length,
@@ -437,7 +463,11 @@ function segmentByParagraph(text: string, docId: string, chunks: DocumentChunk[]
   }
 }
 
-function segmentBySentence(text: string, docId: string, chunks: DocumentChunk[]): void {
+function segmentBySentence(
+  text: string,
+  docId: string,
+  chunks: DocumentChunk[]
+): void {
   // Simple sentence splitting - in production, use NLP library
   const sentenceRegex = /[^.!?]+[.!?]+/g;
   let match;
@@ -450,7 +480,7 @@ function segmentBySentence(text: string, docId: string, chunks: DocumentChunk[])
         id: `${docId}-chunk-${index}`,
         documentId: docId,
         index,
-        type: 'paragraph',
+        type: "paragraph",
         content: sentence,
         startOffset: match.index,
         endOffset: match.index + match[0].length,
@@ -478,7 +508,7 @@ function segmentByFixed(
       id: `${docId}-chunk-${index}`,
       documentId: docId,
       index,
-      type: 'paragraph',
+      type: "paragraph",
       content,
       startOffset: start,
       endOffset: end,

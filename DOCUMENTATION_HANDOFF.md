@@ -3,7 +3,7 @@
 **Date:** January 6, 2026  
 **Project:** Salem Forensic Trinity - MCP Tool Platform  
 **Target Model:** Gemini Flash 2.0 (free tier) or OpenRouter free models  
-**Estimated Effort:** 100+ documents, ~50,000 words total  
+**Estimated Effort:** 100+ documents, ~50,000 words total
 
 ---
 
@@ -20,6 +20,7 @@ Generate comprehensive wiki-style documentation for a forensic analysis platform
 This is a **forensic analysis platform for custody case evidence processing**. It ingests multi-platform messaging data (SMS, Facebook, iMessage, email, ChatGPT), performs multi-pass NLP classification to detect psychological abuse patterns (gaslighting, DARVO, parental alienation), and exports to multiple databases with court-admissible audit trails.
 
 **Core Workflow:**
+
 1. Upload documents (Facebook HTML, SMS XML, iMessage PDF)
 2. Parse and chunk documents
 3. Classify with 6-pass NLP system (spaCy, NLTK, TextBlob, Pattern Analyzer, Sentence Transformers, Aggregation)
@@ -73,16 +74,21 @@ Every document MUST follow this structure:
 # [Tool/Workflow/System Name]
 
 ## Overview
+
 Brief description (2-3 sentences) of what this is and why it exists.
 
 ## Purpose
+
 What problem does this solve? What use case does it address?
 
 ## How It Works
+
 Step-by-step explanation of the internal process.
 
 ## Parameters/Configuration
+
 List of inputs with:
+
 - **Name:** Parameter name
 - **Type:** Data type (string, number, boolean, object)
 - **Required:** Yes/No
@@ -90,7 +96,9 @@ List of inputs with:
 - **Example:** Sample value
 
 ## Return Values/Output
+
 What does this produce? Include:
+
 - **Type:** Return type
 - **Structure:** Object shape or data format
 - **Example:** Sample output
@@ -98,6 +106,7 @@ What does this produce? Include:
 ## Usage Examples
 
 ### Example 1: Basic Usage
+
 \`\`\`typescript
 // Code example with explanation
 const result = await toolName({ param: value });
@@ -105,22 +114,26 @@ console.log(result);
 \`\`\`
 
 ### Example 2: Advanced Usage
+
 \`\`\`typescript
 // More complex example
 \`\`\`
 
 ## Related Tools/Systems
+
 - [Tool Name](../tools/tool-name.md) - Brief description
 - [Workflow Name](../workflows/workflow-name.md) - Brief description
 
 ## Troubleshooting
 
 ### Issue: [Common problem]
+
 **Symptom:** What the user sees  
 **Cause:** Why this happens  
 **Solution:** How to fix it
 
 ## See Also
+
 - [Related Doc 1](../path/to/doc1.md)
 - [Related Doc 2](../path/to/doc2.md)
 ```
@@ -130,18 +143,21 @@ console.log(result);
 ## **Tools to Document (60+ files)**
 
 ### Search Tools (4 files)
+
 - `/docs/tools/search-web.md` - Web search tool
 - `/docs/tools/search-semantic.md` - Semantic search tool
 - `/docs/tools/search-tavily.md` - Tavily LLM-optimized search
 - `/docs/tools/search-perplexity.md` - Perplexity search
 
 ### Document Tools (4 files)
+
 - `/docs/tools/document-parse.md` - Document parsing tool
 - `/docs/tools/document-ocr.md` - OCR tool
 - `/docs/tools/document-extract.md` - Text extraction tool
 - `/docs/tools/document-chunk.md` - Document chunking tool
 
 ### NLP Tools (8 files)
+
 - `/docs/tools/nlp-sentiment.md` - Sentiment analysis tool
 - `/docs/tools/nlp-entities.md` - Entity extraction tool
 - `/docs/tools/nlp-classify.md` - Text classification tool
@@ -152,6 +168,7 @@ console.log(result);
 - `/docs/tools/nlp-transformers.md` - Sentence Transformers (semantic similarity)
 
 ### Forensics Tools (6 files)
+
 - `/docs/tools/forensics-analyze-patterns.md` - Pattern analysis tool (256 custom patterns)
 - `/docs/tools/forensics-detect-hurtlex.md` - HurtLex detection (offensive language lexicon)
 - `/docs/tools/forensics-score-severity.md` - Severity scoring (1-10 scale)
@@ -160,6 +177,7 @@ console.log(result);
 - `/docs/tools/forensics-priority-screener.md` - Priority screener (Pass 0: custody interference, child references)
 
 ### Vector Database Tools (6 files)
+
 - `/docs/tools/vector-add.md` - Add embeddings to vector DB
 - `/docs/tools/vector-search.md` - Semantic search in vector DB
 - `/docs/tools/vector-delete.md` - Delete embeddings
@@ -168,6 +186,7 @@ console.log(result);
 - `/docs/tools/vector-qdrant.md` - Qdrant integration
 
 ### Graph Database Tools (6 files)
+
 - `/docs/tools/graph-add-entity.md` - Add entity to graph (Person, Place, Organization, Event)
 - `/docs/tools/graph-add-relationship.md` - Add relationship to graph (PARENT_OF, DATED, EMPLOYED_BY)
 - `/docs/tools/graph-search-entities.md` - Search entities
@@ -177,18 +196,21 @@ console.log(result);
 - `/docs/tools/graph-graphiti.md` - Graphiti integration (temporal knowledge graphs)
 
 ### LLM Tools (4 files)
+
 - `/docs/tools/llm-invoke.md` - Invoke LLM
 - `/docs/tools/llm-embed.md` - Generate embeddings
 - `/docs/tools/llm-smart-router.md` - Smart LLM routing (task-based, cost-based, latency-based)
 - `/docs/tools/llm-providers.md` - LLM provider overview (OpenAI, Gemini, Cohere, Groq, Claude, etc.)
 
 ### Format Conversion Tools (4 files)
+
 - `/docs/tools/format-convert.md` - Format conversion tool
 - `/docs/tools/format-parse.md` - Format parsing tool (SMS XML, Facebook HTML, iMessage PDF)
 - `/docs/tools/format-check-schema.md` - Schema validation
 - `/docs/tools/format-ocr.md` - OCR tool
 
 ### Evidence Chain Tools (7 files)
+
 - `/docs/tools/evidence-create-chain.md` - Create evidence chain
 - `/docs/tools/evidence-add-stage.md` - Add stage to chain
 - `/docs/tools/evidence-verify.md` - Verify evidence integrity
@@ -198,9 +220,11 @@ console.log(result);
 - `/docs/tools/evidence-report.md` - Generate evidence report
 
 ### Text Mining Tools (1 file)
+
 - `/docs/tools/text-mine.md` - Text mining tool (ugrep/ripgrep smart routing)
 
 ### Schema Tools (3 files)
+
 - `/docs/tools/schema-resolve.md` - Schema resolution
 - `/docs/tools/schema-apply.md` - Apply schema
 - `/docs/tools/schema-cache.md` - Schema caching
@@ -212,7 +236,7 @@ console.log(result);
 Each workflow needs: Purpose, Steps, Input/Output, Mermaid Diagram, Examples
 
 - `/docs/workflows/forensic-investigation.md` - 8-stage forensic investigation workflow
-  * Steps: Preliminary Analysis → Export to Chroma → [CHECKPOINT] Preliminary Approval → Meta-Analysis → Detect Contradictions → Export to Neo4j → Export to Supabase → [CHECKPOINT] Meta-Analysis Approval
+  - Steps: Preliminary Analysis → Export to Chroma → [CHECKPOINT] Preliminary Approval → Meta-Analysis → Detect Contradictions → Export to Neo4j → Export to Supabase → [CHECKPOINT] Meta-Analysis Approval
 - `/docs/workflows/document-processing.md` - Document processing workflow (type detection → extraction → validation → storage)
 - `/docs/workflows/document-analysis.md` - Document analysis workflow
 - `/docs/workflows/forensic-chat-analysis.md` - Chat analysis workflow
@@ -222,6 +246,7 @@ Each workflow needs: Purpose, Steps, Input/Output, Mermaid Diagram, Examples
 - `/docs/workflows/format-conversion-chain.md` - Format conversion chain
 
 **Mermaid Diagram Example:**
+
 ```mermaid
 graph TD
     A[Upload Document] --> B[Parse Document]
@@ -286,6 +311,7 @@ graph TD
 The user uploaded `NEO4J_GRAPH_SCHEMA_COMPLETE.md` with the complete Neo4j/Graphiti schema. This document contains:
 
 **Node Labels:**
+
 - Person (opposing_party, child, witness, expert, family_petitioner, family_respondent, associate, romantic_interest, professional)
 - Address (geocoded with lat/lon, geohash for proximity queries)
 - Place (court, school, workplace, medical, business, residence)
@@ -298,6 +324,7 @@ The user uploaded `NEO4J_GRAPH_SCHEMA_COMPLETE.md` with the complete Neo4j/Graph
 - Event (incidents, parenting time denial)
 
 **Edge Types:**
+
 - Familial: PARENT_OF, CHILD_OF, SIBLING_OF, RELATIVE_OF
 - Romantic: DATED, MARRIED_TO, DIVORCED_FROM, AFFAIR_WITH
 - Professional: EMPLOYED_BY, COWORKER_OF, SUPERVISED_BY
@@ -307,6 +334,7 @@ The user uploaded `NEO4J_GRAPH_SCHEMA_COMPLETE.md` with the complete Neo4j/Graph
 - Temporal: OCCURRED_AT, MENTIONED_IN
 
 **Key Features:**
+
 - Geohash precision tiers (geohash_7: ~150m, geohash_6: ~1.2km, geohash_5: ~5km)
 - Spatial indexes for fast proximity queries
 - Temporal relationships with start_date/end_date
@@ -321,6 +349,7 @@ The user uploaded `NEO4J_GRAPH_SCHEMA_COMPLETE.md` with the complete Neo4j/Graph
 ## **Key Technical Context**
 
 ### Multi-Pass NLP Classifier (6 passes)
+
 1. **Pass 0: Priority Screener** - Immediate flags for custody interference, child references (Kailah/Kyla), call blocking, visit blocking, parenting time denial. Automatic HIGH severity (8-10).
 2. **Pass 1: spaCy** - Structure analysis, entity extraction, speaker attribution
 3. **Pass 2: NLTK VADER** - Sentiment lexicons, negation handling, intensity modifiers
@@ -332,6 +361,7 @@ The user uploaded `NEO4J_GRAPH_SCHEMA_COMPLETE.md` with the complete Neo4j/Graph
 **Dual-Polarity Analysis:** Detect BOTH negative patterns (gaslighting, abuse) AND positive patterns (love bombing, excessive affection) to identify manipulation via contradiction.
 
 ### Pattern Library (256 patterns)
+
 - Gaslighting (memory denial, reality distortion, blame shifting)
 - DARVO (Deny, Attack, Reverse Victim/Offender)
 - Overelaboration (location reporting, time reporting, justification)
@@ -345,24 +375,28 @@ The user uploaded `NEO4J_GRAPH_SCHEMA_COMPLETE.md` with the complete Neo4j/Graph
 - Power Asymmetry (threats, intimidation, isolation)
 
 ### Conversation Segmentation
+
 - **Cluster ID Format:** `PLAT_YYMM_TOPIC_iii`
 - **Platform Codes:** SMS, FB, IMSG, EMAIL, CHATGPT
 - **Topic Codes:** KAILAH, VISITS, CUSTODY, MONEY, MEDICAL, SCHOOL, etc.
 - **Segmentation:** Semantic similarity + time-window + entity-based
 
 ### LLM Provider Routing
+
 - **Task-Based:** Code → Codex, Math → GPT-4, Speed → Groq, Multimodal → Gemini
 - **Cost-Based:** Cheapest first (Groq, Cohere, OpenRouter free tier)
 - **Latency-Based:** Fastest first (Groq, Gemini Flash)
 - **Claude-Last Strategy:** Only use Claude for critical architecture decisions (user has spent $120 this week)
 
 ### Storage Architecture
+
 - **Chroma:** 72hr TTL working memory for preliminary analysis (JSON persistence, auto-cleanup)
 - **Supabase:** Permanent storage for messages, behaviors, evidence (7 tables, pgvector for embeddings)
 - **Neo4j/Graphiti:** Entity graph with temporal relationships (see NEO4J_GRAPH_SCHEMA_COMPLETE.md)
 - **R2/Directus:** Raw file storage with SHA-256 hashing (chain of custody)
 
 ### Audit Logging & Chain of Custody
+
 - **Immutable Logs:** Append-only audit trail for court admissibility
 - **SHA-256 Hashing:** File integrity verification
 - **Timestamps:** All operations timestamped (UTC)
@@ -377,27 +411,32 @@ The user uploaded `NEO4J_GRAPH_SCHEMA_COMPLETE.md` with the complete Neo4j/Graph
 You can read these files to understand implementation details:
 
 ### Core Infrastructure
+
 - `/home/ubuntu/mcp-tool-platform/server/mcp/gateway/executor.ts` - Tool executor with 60+ registered handlers
 - `/home/ubuntu/mcp-tool-platform/server/mcp/gateway/gateway.ts` - MCP Gateway API (4 endpoints)
 - `/home/ubuntu/mcp-tool-platform/server/mcp/plugins/` - All plugin implementations
 
 ### NLP & Forensics
+
 - `/home/ubuntu/mcp-tool-platform/server/lib/ai/multi-pass-classifier.ts` - 6-pass NLP classifier
 - `/home/ubuntu/mcp-tool-platform/server/lib/ai/pattern-analyzer.ts` - Pattern matching engine
 - `/home/ubuntu/mcp-tool-platform/server/lib/ai/nlp_runner.py` - Python NLP bridge (spaCy, NLTK, langdetect)
 - `/home/ubuntu/mcp-tool-platform/server/mcp/plugins/forensics-plugin.ts` - Forensics tools
 
 ### AI Libraries
+
 - `/home/ubuntu/mcp-tool-platform/server/mcp/orchestration/langgraph-adapter.ts` - LangGraph state machines
 - `/home/ubuntu/mcp-tool-platform/server/mcp/orchestration/langchain-memory.ts` - LangChain memory
 - `/home/ubuntu/mcp-tool-platform/server/mcp/loaders/` - LlamaIndex document loaders
 
 ### Database Integration
+
 - `/home/ubuntu/mcp-tool-platform/server/mcp/plugins/pgvector-supabase.ts` - pgvector/Supabase
 - `/home/ubuntu/mcp-tool-platform/server/python-tools/graphiti_runner.py` - Graphiti/Neo4j bridge
 - `/home/ubuntu/mcp-tool-platform/server/mcp/plugins/chroma-plugin.ts` - Chroma working memory
 
 ### Schemas
+
 - `/home/ubuntu/mcp-tool-platform/server/lib/ai/schemas/production-schemas.ts` - Supabase table schemas
 - `/home/ubuntu/upload/NEO4J_GRAPH_SCHEMA_COMPLETE.md` - Neo4j graph schema (CRITICAL)
 
@@ -406,6 +445,7 @@ You can read these files to understand implementation details:
 ## **Your Workflow**
 
 1. **Create directory structure:**
+
    ```bash
    mkdir -p /home/ubuntu/mcp-tool-platform/docs/{tools,workflows,systems,guides,api,images}
    ```
@@ -424,6 +464,7 @@ You can read these files to understand implementation details:
    - Then utility tools
 
 4. **Add Mermaid diagrams for workflows:**
+
    ```mermaid
    graph TD
        A[Start] --> B[Step 1]
@@ -431,6 +472,7 @@ You can read these files to understand implementation details:
    ```
 
 5. **Add code examples for all tools:**
+
    ```typescript
    // Example usage
    const result = await toolName({ param: value });
@@ -460,6 +502,7 @@ You can read these files to understand implementation details:
 ## **Deliverables**
 
 When complete, you should have:
+
 - [ ] 100+ markdown files in `/docs` directory
 - [ ] Main index (`README.md`) with links to all docs
 - [ ] All tools documented (60+ files)
@@ -487,6 +530,7 @@ When complete, you should have:
 ## **Questions?**
 
 If you need clarification:
+
 1. Read the source files listed above
 2. Check ARCHITECTURE.md for system overview
 3. Check todo.md for implementation details
@@ -497,6 +541,7 @@ If you need clarification:
 ## **Start Here**
 
 Begin with these 5 high-priority docs:
+
 1. `/docs/README.md` - Main index
 2. `/docs/GETTING_STARTED.md` - Quick start
 3. `/docs/systems/multi-pass-classifier.md` - Core NLP

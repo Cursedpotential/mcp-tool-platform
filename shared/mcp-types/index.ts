@@ -1,6 +1,6 @@
 /**
  * MCP Preprocessing Tool Shop - Shared Types
- * 
+ *
  * Core type definitions for the token-efficient preprocessing platform.
  * Designed for 85%+ token reduction through reference-based returns,
  * structured metadata, and working memory patterns.
@@ -72,22 +72,22 @@ export interface ToolExample {
   output: Record<string, unknown>;
 }
 
-export type ToolPermission = 
-  | 'read:filesystem'
-  | 'write:filesystem'
-  | 'read:network'
-  | 'write:network'
-  | 'execute:process'
-  | 'access:llm'
-  | 'access:vectordb'
-  | 'access:graphdb'
-  | 'access:mem0'
-  | 'access:n8n'
-  | 'access:notebooklm'
-  | 'fs_read'
-  | 'fs_write'
-  | 'network'
-  | 'write';
+export type ToolPermission =
+  | "read:filesystem"
+  | "write:filesystem"
+  | "read:network"
+  | "write:network"
+  | "execute:process"
+  | "access:llm"
+  | "access:vectordb"
+  | "access:graphdb"
+  | "access:mem0"
+  | "access:n8n"
+  | "access:notebooklm"
+  | "fs_read"
+  | "fs_write"
+  | "network"
+  | "write";
 
 export interface CostEstimate {
   tokens?: number;
@@ -106,7 +106,7 @@ export interface InvokeOptions {
   timeout?: number;
   maxOutputSize?: number;
   returnRef?: boolean;
-  priority?: 'low' | 'normal' | 'high';
+  priority?: "low" | "normal" | "high";
 }
 
 /** Tool invocation result */
@@ -141,14 +141,14 @@ export interface InvokeError {
 // Task Graph & Worker Types
 // ============================================================================
 
-export type TaskStatus = 
-  | 'pending'
-  | 'queued'
-  | 'running'
-  | 'completed'
-  | 'failed'
-  | 'cancelled'
-  | 'waiting_approval';
+export type TaskStatus =
+  | "pending"
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "waiting_approval";
 
 export interface Task {
   id: string;
@@ -187,8 +187,8 @@ export interface TaskGraph {
 
 export interface WorkerInfo {
   id: string;
-  type: 'local' | 'remote';
-  status: 'idle' | 'busy' | 'offline';
+  type: "local" | "remote";
+  status: "idle" | "busy" | "offline";
   capabilities: string[];
   currentTaskId?: string;
   lastHeartbeat: number;
@@ -215,7 +215,7 @@ export interface DocumentMeta {
   markdownRef?: ContentRef;
   ocrRef?: ContentRef;
   chunksRef?: ContentRef;
-  status: 'pending' | 'processing' | 'ready' | 'failed';
+  status: "pending" | "processing" | "ready" | "failed";
   createdAt: number;
   processedAt?: number;
 }
@@ -224,7 +224,7 @@ export interface DocumentChunk {
   id: string;
   documentId: string;
   index: number;
-  type: 'heading' | 'paragraph' | 'list' | 'code' | 'table' | 'image';
+  type: "heading" | "paragraph" | "list" | "code" | "table" | "image";
   content: string;
   startOffset: number;
   endOffset: number;
@@ -247,21 +247,21 @@ export interface DocumentSection {
 // NLP & Entity Types
 // ============================================================================
 
-export type EntityType = 
-  | 'PERSON'
-  | 'ORG'
-  | 'GPE'
-  | 'LOC'
-  | 'DATE'
-  | 'TIME'
-  | 'MONEY'
-  | 'PERCENT'
-  | 'PRODUCT'
-  | 'EVENT'
-  | 'WORK_OF_ART'
-  | 'LAW'
-  | 'LANGUAGE'
-  | 'CUSTOM';
+export type EntityType =
+  | "PERSON"
+  | "ORG"
+  | "GPE"
+  | "LOC"
+  | "DATE"
+  | "TIME"
+  | "MONEY"
+  | "PERCENT"
+  | "PRODUCT"
+  | "EVENT"
+  | "WORK_OF_ART"
+  | "LAW"
+  | "LANGUAGE"
+  | "CUSTOM";
 
 export interface Entity {
   text: string;
@@ -273,7 +273,7 @@ export interface Entity {
 }
 
 export interface SentimentResult {
-  label: 'positive' | 'negative' | 'neutral';
+  label: "positive" | "negative" | "neutral";
   score: number;
   confidence: number;
 }
@@ -308,7 +308,7 @@ export interface SearchMatch {
 
 export interface SearchResult {
   query: string;
-  engine: 'ripgrep' | 'ugrep' | 'js';
+  engine: "ripgrep" | "ugrep" | "js";
   totalMatches: number;
   files: number;
   matches: SearchMatch[];
@@ -333,7 +333,7 @@ export interface RuleSet {
 export interface Rule {
   id: string;
   name: string;
-  type: 'regex' | 'keyword' | 'path' | 'structural' | 'semantic';
+  type: "regex" | "keyword" | "path" | "structural" | "semantic";
   pattern: string;
   action: RuleAction;
   priority: number;
@@ -341,13 +341,13 @@ export interface Rule {
   metadata?: Record<string, unknown>;
 }
 
-export type RuleAction = 
-  | { type: 'label'; labels: string[] }
-  | { type: 'move'; destination: string }
-  | { type: 'delete' }
-  | { type: 'merge'; target: string }
-  | { type: 'flag'; reason: string }
-  | { type: 'transform'; transformer: string };
+export type RuleAction =
+  | { type: "label"; labels: string[] }
+  | { type: "move"; destination: string }
+  | { type: "delete" }
+  | { type: "merge"; target: string }
+  | { type: "flag"; reason: string }
+  | { type: "transform"; transformer: string };
 
 export interface RuleMatch {
   ruleId: string;
@@ -365,7 +365,7 @@ export interface RuleMatch {
 
 export interface ApprovalRequest {
   id: string;
-  type: 'write' | 'delete' | 'move' | 'merge' | 'execute';
+  type: "write" | "delete" | "move" | "merge" | "execute";
   description: string;
   preview: string;
   diff?: string;
@@ -373,14 +373,14 @@ export interface ApprovalRequest {
   taskId: string;
   createdAt: number;
   expiresAt: number;
-  status: 'pending' | 'approved' | 'rejected' | 'expired';
+  status: "pending" | "approved" | "rejected" | "expired";
   approvedBy?: string;
   approvedAt?: number;
 }
 
 export interface ApprovalResponse {
   approvalId: string;
-  decision: 'approve' | 'reject';
+  decision: "approve" | "reject";
   comment?: string;
 }
 
@@ -389,7 +389,7 @@ export interface ApprovalResponse {
 // ============================================================================
 
 export interface ExportConfig {
-  target: 'neo4j' | 'supabase' | 'vectordb' | 'json';
+  target: "neo4j" | "supabase" | "vectordb" | "json";
   options: Record<string, unknown>;
 }
 
@@ -402,7 +402,7 @@ export interface Neo4jExportOptions {
 }
 
 export interface VectorDBExportOptions {
-  provider: 'chroma' | 'faiss' | 'pinecone' | 'qdrant';
+  provider: "chroma" | "faiss" | "pinecone" | "qdrant";
   collection: string;
   embeddingModel: string;
   batchSize: number;
@@ -412,7 +412,12 @@ export interface VectorDBExportOptions {
 // LLM Provider Types
 // ============================================================================
 
-export type LLMProvider = 'ollama' | 'gemini' | 'openrouter' | 'local-bert' | 'openai';
+export type LLMProvider =
+  | "ollama"
+  | "gemini"
+  | "openrouter"
+  | "local-bert"
+  | "openai";
 
 export interface LLMConfig {
   provider: LLMProvider;
@@ -444,7 +449,7 @@ export interface CompletionRequest {
 export interface CompletionResult {
   text: string;
   tokensUsed: number;
-  finishReason: 'stop' | 'length' | 'error';
+  finishReason: "stop" | "length" | "error";
 }
 
 // ============================================================================
@@ -465,7 +470,7 @@ export interface TraceContext {
 
 export interface TraceLog {
   timestamp: number;
-  level: 'debug' | 'info' | 'warn' | 'error';
+  level: "debug" | "info" | "warn" | "error";
   message: string;
   fields?: Record<string, unknown>;
 }
@@ -475,7 +480,7 @@ export interface Metrics {
   name: string;
   value: number;
   tags: Record<string, string>;
-  type: 'counter' | 'gauge' | 'histogram';
+  type: "counter" | "gauge" | "histogram";
 }
 
 // ============================================================================
@@ -519,7 +524,7 @@ export interface TraceContext {
 
 export interface TraceLog {
   timestamp: number;
-  level: 'debug' | 'info' | 'warn' | 'error';
+  level: "debug" | "info" | "warn" | "error";
   message: string;
   fields?: Record<string, unknown>;
 }
@@ -529,6 +534,5 @@ export interface Metrics {
   name: string;
   value: number;
   tags: Record<string, string>;
-  type: 'counter' | 'gauge' | 'histogram';
+  type: "counter" | "gauge" | "histogram";
 }
-

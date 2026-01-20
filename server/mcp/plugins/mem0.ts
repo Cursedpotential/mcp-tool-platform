@@ -1,9 +1,9 @@
 /**
  * mem0 Shared Context Plugin
- * 
+ *
  * Provides persistent memory layer for cross-agent context sharing.
  * Runs on Docker VPS, connected via Tailscale/Cloudflare Tunnel.
- * 
+ *
  * Features:
  * - Long-term memory storage
  * - Semantic memory search
@@ -25,10 +25,10 @@ interface Mem0Config {
 
 const defaultConfig: Mem0Config = {
   enabled: false,
-  url: process.env.MEM0_URL || 'http://localhost:8000',
+  url: process.env.MEM0_URL || "http://localhost:8000",
   apiKey: process.env.MEM0_API_KEY,
-  defaultUserId: 'system',
-  defaultAgentId: 'mcp-tool-shop',
+  defaultUserId: "system",
+  defaultAgentId: "mcp-tool-shop",
 };
 
 let config: Mem0Config = { ...defaultConfig };
@@ -63,7 +63,7 @@ interface Memory {
   score?: number;
 }
 
-type MemoryScope = 'agent' | 'project' | 'user' | 'global';
+type MemoryScope = "agent" | "project" | "user" | "global";
 
 // ============================================================================
 // Memory Operations
@@ -81,40 +81,42 @@ export async function addMemory(args: {
   scope?: MemoryScope;
 }): Promise<{ memory: Memory; created: boolean }> {
   if (!config.enabled) {
-    throw new Error('mem0 is not enabled');
+    throw new Error("mem0 is not enabled");
   }
-  
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   };
   if (config.apiKey) {
-    headers['Authorization'] = `Bearer ${config.apiKey}`;
+    headers["Authorization"] = `Bearer ${config.apiKey}`;
   }
-  
+
   const body: Record<string, unknown> = {
-    messages: [{ role: 'user', content: args.content }],
+    messages: [{ role: "user", content: args.content }],
     user_id: args.userId || config.defaultUserId,
     agent_id: args.agentId || config.defaultAgentId,
     metadata: {
       ...args.metadata,
-      scope: args.scope || 'agent',
+      scope: args.scope || "agent",
       projectId: args.projectId,
     },
   };
-  
+
   const response = await fetch(`${config.url}/v1/memories/`, {
-    method: 'POST',
+    method: "POST",
     headers,
     body: JSON.stringify(body),
   });
-  
+
   if (!response.ok) {
     throw new Error(`mem0 add failed: ${response.status}`);
   }
-  
-  const data = await response.json() as { results: Array<{ id: string; memory: string; event: string }> };
+
+  const data = (await response.json()) as {
+    results: Array<{ id: string; memory: string; event: string }>;
+  };
   const result = data.results?.[0];
-  
+
   const memory: Memory = {
     id: result?.id || `mem-${Date.now()}`,
     content: args.content,
@@ -125,10 +127,10 @@ export async function addMemory(args: {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  
+
   return {
     memory,
-    created: result?.event === 'ADD',
+    created: result?.event === "ADD",
   };
 }
 
@@ -144,55 +146,63 @@ export async function searchMemories(args: {
   limit?: number;
 }): Promise<{ memories: Memory[] }> {
   if (!config.enabled) {
-    throw new Error('mem0 is not enabled');
+    throw new Error("mem0 is not enabled");
   }
-  
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   };
   if (config.apiKey) {
-    headers['Authorization'] = `Bearer ${config.apiKey}`;
+    headers["Authorization"] = `Bearer ${config.apiKey}`;
   }
-  
+
   const body: Record<string, unknown> = {
     query: args.query,
     user_id: args.userId || config.defaultUserId,
     agent_id: args.agentId || config.defaultAgentId,
     limit: args.limit || 10,
   };
-  
+
   const response = await fetch(`${config.url}/v1/memories/search/`, {
-    method: 'POST',
+    method: "POST",
     headers,
     body: JSON.stringify(body),
   });
-  
+
   if (!response.ok) {
     throw new Error(`mem0 search failed: ${response.status}`);
   }
-  
-  const data = await response.json() as { results: Array<{ id: string; memory: string; score: number; metadata?: Record<string, unknown> }> };
-  
-  const memories: Memory[] = (data.results || []).map((r) => ({
+
+  const data = (await response.json()) as {
+    results: Array<{
+      id: string;
+      memory: string;
+      score: number;
+      metadata?: Record<string, unknown>;
+    }>;
+  };
+
+  const memories: Memory[] = (data.results || []).map(r => ({
     id: r.id,
     content: r.memory,
     metadata: r.metadata || {},
     score: r.score,
-    createdAt: '',
-    updatedAt: '',
+    createdAt: "",
+    updatedAt: "",
   }));
-  
+
   // Filter by scope/project if specified
   if (args.scope || args.projectId) {
     return {
-      memories: memories.filter((m) => {
+      memories: memories.filter(m => {
         if (args.scope && m.metadata.scope !== args.scope) return false;
-        if (args.projectId && m.metadata.projectId !== args.projectId) return false;
+        if (args.projectId && m.metadata.projectId !== args.projectId)
+          return false;
         return true;
       }),
     };
   }
-  
+
   return { memories };
 }
 
@@ -203,35 +213,41 @@ export async function getMemory(args: {
   id: string;
 }): Promise<{ memory: Memory | null }> {
   if (!config.enabled) {
-    throw new Error('mem0 is not enabled');
+    throw new Error("mem0 is not enabled");
   }
-  
+
   const headers: Record<string, string> = {};
   if (config.apiKey) {
-    headers['Authorization'] = `Bearer ${config.apiKey}`;
+    headers["Authorization"] = `Bearer ${config.apiKey}`;
   }
-  
+
   const response = await fetch(`${config.url}/v1/memories/${args.id}/`, {
-    method: 'GET',
+    method: "GET",
     headers,
   });
-  
+
   if (!response.ok) {
     if (response.status === 404) {
       return { memory: null };
     }
     throw new Error(`mem0 get failed: ${response.status}`);
   }
-  
-  const data = await response.json() as { id: string; memory: string; metadata?: Record<string, unknown>; created_at?: string; updated_at?: string };
-  
+
+  const data = (await response.json()) as {
+    id: string;
+    memory: string;
+    metadata?: Record<string, unknown>;
+    created_at?: string;
+    updated_at?: string;
+  };
+
   return {
     memory: {
       id: data.id,
       content: data.memory,
       metadata: data.metadata || {},
-      createdAt: data.created_at || '',
-      updatedAt: data.updated_at || '',
+      createdAt: data.created_at || "",
+      updatedAt: data.updated_at || "",
     },
   };
 }
@@ -248,48 +264,56 @@ export async function listMemories(args: {
   offset?: number;
 }): Promise<{ memories: Memory[]; total: number }> {
   if (!config.enabled) {
-    throw new Error('mem0 is not enabled');
+    throw new Error("mem0 is not enabled");
   }
-  
+
   const headers: Record<string, string> = {};
   if (config.apiKey) {
-    headers['Authorization'] = `Bearer ${config.apiKey}`;
+    headers["Authorization"] = `Bearer ${config.apiKey}`;
   }
-  
+
   const params = new URLSearchParams();
-  params.set('user_id', args.userId || config.defaultUserId);
-  params.set('agent_id', args.agentId || config.defaultAgentId);
-  if (args.limit) params.set('limit', String(args.limit));
-  if (args.offset) params.set('offset', String(args.offset));
-  
+  params.set("user_id", args.userId || config.defaultUserId);
+  params.set("agent_id", args.agentId || config.defaultAgentId);
+  if (args.limit) params.set("limit", String(args.limit));
+  if (args.offset) params.set("offset", String(args.offset));
+
   const response = await fetch(`${config.url}/v1/memories/?${params}`, {
-    method: 'GET',
+    method: "GET",
     headers,
   });
-  
+
   if (!response.ok) {
     throw new Error(`mem0 list failed: ${response.status}`);
   }
-  
-  const data = await response.json() as { results: Array<{ id: string; memory: string; metadata?: Record<string, unknown> }>; count?: number };
-  
-  let memories: Memory[] = (data.results || []).map((r) => ({
+
+  const data = (await response.json()) as {
+    results: Array<{
+      id: string;
+      memory: string;
+      metadata?: Record<string, unknown>;
+    }>;
+    count?: number;
+  };
+
+  let memories: Memory[] = (data.results || []).map(r => ({
     id: r.id,
     content: r.memory,
     metadata: r.metadata || {},
-    createdAt: '',
-    updatedAt: '',
+    createdAt: "",
+    updatedAt: "",
   }));
-  
+
   // Filter by scope/project if specified
   if (args.scope || args.projectId) {
-    memories = memories.filter((m) => {
+    memories = memories.filter(m => {
       if (args.scope && m.metadata.scope !== args.scope) return false;
-      if (args.projectId && m.metadata.projectId !== args.projectId) return false;
+      if (args.projectId && m.metadata.projectId !== args.projectId)
+        return false;
       return true;
     });
   }
-  
+
   return {
     memories,
     total: data.count || memories.length,
@@ -305,35 +329,35 @@ export async function updateMemory(args: {
   metadata?: Record<string, unknown>;
 }): Promise<{ memory: Memory; updated: boolean }> {
   if (!config.enabled) {
-    throw new Error('mem0 is not enabled');
+    throw new Error("mem0 is not enabled");
   }
-  
+
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   };
   if (config.apiKey) {
-    headers['Authorization'] = `Bearer ${config.apiKey}`;
+    headers["Authorization"] = `Bearer ${config.apiKey}`;
   }
-  
+
   const response = await fetch(`${config.url}/v1/memories/${args.id}/`, {
-    method: 'PUT',
+    method: "PUT",
     headers,
     body: JSON.stringify({
       text: args.content,
       metadata: args.metadata,
     }),
   });
-  
+
   if (!response.ok) {
     throw new Error(`mem0 update failed: ${response.status}`);
   }
-  
+
   return {
     memory: {
       id: args.id,
       content: args.content,
       metadata: args.metadata || {},
-      createdAt: '',
+      createdAt: "",
       updatedAt: new Date().toISOString(),
     },
     updated: true,
@@ -347,19 +371,19 @@ export async function deleteMemory(args: {
   id: string;
 }): Promise<{ deleted: boolean }> {
   if (!config.enabled) {
-    throw new Error('mem0 is not enabled');
+    throw new Error("mem0 is not enabled");
   }
-  
+
   const headers: Record<string, string> = {};
   if (config.apiKey) {
-    headers['Authorization'] = `Bearer ${config.apiKey}`;
+    headers["Authorization"] = `Bearer ${config.apiKey}`;
   }
-  
+
   const response = await fetch(`${config.url}/v1/memories/${args.id}/`, {
-    method: 'DELETE',
+    method: "DELETE",
     headers,
   });
-  
+
   return { deleted: response.ok };
 }
 
@@ -372,28 +396,28 @@ export async function deleteAllMemories(args: {
   projectId?: string;
 }): Promise<{ deleted: number }> {
   if (!config.enabled) {
-    throw new Error('mem0 is not enabled');
+    throw new Error("mem0 is not enabled");
   }
-  
+
   const headers: Record<string, string> = {};
   if (config.apiKey) {
-    headers['Authorization'] = `Bearer ${config.apiKey}`;
+    headers["Authorization"] = `Bearer ${config.apiKey}`;
   }
-  
+
   const params = new URLSearchParams();
-  params.set('user_id', args.userId || config.defaultUserId);
-  params.set('agent_id', args.agentId || config.defaultAgentId);
-  
+  params.set("user_id", args.userId || config.defaultUserId);
+  params.set("agent_id", args.agentId || config.defaultAgentId);
+
   const response = await fetch(`${config.url}/v1/memories/?${params}`, {
-    method: 'DELETE',
+    method: "DELETE",
     headers,
   });
-  
+
   if (!response.ok) {
     throw new Error(`mem0 delete all failed: ${response.status}`);
   }
-  
-  const data = await response.json() as { deleted?: number };
+
+  const data = (await response.json()) as { deleted?: number };
   return { deleted: data.deleted || 0 };
 }
 
@@ -411,16 +435,16 @@ export async function shareContext(args: {
   limit?: number;
 }): Promise<{ shared: Memory[]; count: number }> {
   if (!config.enabled) {
-    throw new Error('mem0 is not enabled');
+    throw new Error("mem0 is not enabled");
   }
-  
+
   // Search memories from source agent
   const { memories } = await searchMemories({
     query: args.query,
     agentId: args.fromAgentId,
     limit: args.limit || 5,
   });
-  
+
   // Copy to target agent
   const shared: Memory[] = [];
   for (const memory of memories) {
@@ -435,7 +459,7 @@ export async function shareContext(args: {
     });
     shared.push(newMemory);
   }
-  
+
   return { shared, count: shared.length };
 }
 
@@ -448,19 +472,17 @@ export async function getConversationContext(args: {
   limit?: number;
 }): Promise<{ context: string; memories: Memory[] }> {
   if (!config.enabled) {
-    throw new Error('mem0 is not enabled');
+    throw new Error("mem0 is not enabled");
   }
-  
+
   const { memories } = await listMemories({
     userId: args.userId,
     agentId: args.agentId,
     limit: args.limit || 10,
   });
-  
-  const context = memories
-    .map((m) => m.content)
-    .join('\n\n');
-  
+
+  const context = memories.map(m => m.content).join("\n\n");
+
   return { context, memories };
 }
 
@@ -476,20 +498,20 @@ export async function memorizeToolResult(args: {
   projectId?: string;
 }): Promise<{ memory: Memory }> {
   const content = `Tool: ${args.toolName}\nInput: ${JSON.stringify(args.input)}\nResult: ${JSON.stringify(args.output)}`;
-  
+
   const { memory } = await addMemory({
     content,
     metadata: {
-      type: 'tool_result',
+      type: "tool_result",
       toolName: args.toolName,
       inputHash: hashObject(args.input),
     },
     userId: args.userId,
     agentId: args.agentId,
     projectId: args.projectId,
-    scope: 'agent',
+    scope: "agent",
   });
-  
+
   return { memory };
 }
 
@@ -502,7 +524,7 @@ function hashObject(obj: unknown): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
+    hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
   return Math.abs(hash).toString(36);
