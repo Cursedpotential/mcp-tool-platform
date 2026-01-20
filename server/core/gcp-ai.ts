@@ -1,6 +1,6 @@
 /**
  * GCP AI Services Integration
- * 
+ *
  * Wrappers for:
  * - Document AI (complex document parsing, form extraction)
  * - Colab Enterprise (custom models, batch jobs, GPU/TPU inference)
@@ -75,7 +75,7 @@ export async function processDocument(
   // 3. Extract text, entities, tables, and form fields
   // 4. Parse structured data
   // 5. Return normalized results
-  
+
   throw new Error("TODO: Implement processDocument");
 }
 
@@ -93,7 +93,7 @@ export async function batchProcessDocuments(
   // 3. Start batch job
   // 4. Poll for completion
   // 5. Download and parse results
-  
+
   throw new Error("TODO: Implement batchProcessDocuments");
 }
 
@@ -105,7 +105,11 @@ export interface ColabNotebookExecution {
   notebookPath: string;
   parameters: Record<string, any>;
   machineType: "n1-standard-4" | "n1-highmem-8" | "a2-highgpu-1g" | "custom";
-  accelerator?: "NVIDIA_TESLA_T4" | "NVIDIA_TESLA_V100" | "NVIDIA_TESLA_A100" | "TPU_V3";
+  accelerator?:
+    | "NVIDIA_TESLA_T4"
+    | "NVIDIA_TESLA_V100"
+    | "NVIDIA_TESLA_A100"
+    | "TPU_V3";
 }
 
 export interface ColabExecutionResult {
@@ -130,7 +134,7 @@ export async function executeNotebook(
   // 4. Poll for completion
   // 5. Extract outputs and logs
   // 6. Return results
-  
+
   throw new Error("TODO: Implement executeNotebook");
 }
 
@@ -147,7 +151,7 @@ export async function scheduleNotebook(
   // 2. Configure trigger (cron schedule)
   // 3. Link to Colab notebook
   // 4. Return schedule ID
-  
+
   throw new Error("TODO: Implement scheduleNotebook");
 }
 
@@ -180,7 +184,7 @@ export async function predictCustomModel(
   // 2. Call prediction endpoint
   // 3. Parse model outputs
   // 4. Return structured predictions
-  
+
   throw new Error("TODO: Implement predictCustomModel");
 }
 
@@ -199,7 +203,7 @@ export async function deployModel(
   // 3. Deploy model to endpoint
   // 4. Wait for deployment completion
   // 5. Return endpoint details
-  
+
   throw new Error("TODO: Implement deployModel");
 }
 
@@ -231,7 +235,7 @@ export async function analyzeForensicDocument(
   // 3. If useCustomModel, call custom Vertex AI endpoint
   // 4. Combine results
   // 5. Store in Supabase
-  
+
   throw new Error("TODO: Implement analyzeForensicDocument");
 }
 
@@ -250,7 +254,7 @@ export async function batchForensicAnalysis(
   // 3. Notebook processes all documents
   // 4. Store results in GCS/R2
   // 5. Return execution ID and results URL
-  
+
   throw new Error("TODO: Implement batchForensicAnalysis");
 }
 
@@ -263,7 +267,11 @@ export async function batchForensicAnalysis(
  * Use case: Create reusable analysis templates
  */
 export function generateAnalysisNotebook(
-  analysisType: "sentiment" | "entity_extraction" | "pattern_detection" | "custom",
+  analysisType:
+    | "sentiment"
+    | "entity_extraction"
+    | "pattern_detection"
+    | "custom",
   modelPath?: string
 ): string {
   // TODO: Implement notebook generation
@@ -273,7 +281,7 @@ export function generateAnalysisNotebook(
   // 4. Add cells for analysis logic
   // 5. Add cells for results export
   // 6. Return notebook as string
-  
+
   const notebookTemplate = `
 {
   "cells": [
@@ -304,7 +312,7 @@ export function generateAnalysisNotebook(
   "nbformat_minor": 4
 }
   `;
-  
+
   return notebookTemplate;
 }
 
@@ -316,16 +324,16 @@ export const gcpAI = {
   // Document AI
   processDocument,
   batchProcessDocuments,
-  
+
   // Colab Enterprise
   executeNotebook,
   scheduleNotebook,
   generateAnalysisNotebook,
-  
+
   // Vertex AI
   predictCustomModel,
   deployModel,
-  
+
   // Pipelines
   analyzeForensicDocument,
   batchForensicAnalysis,

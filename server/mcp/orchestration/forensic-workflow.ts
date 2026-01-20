@@ -1,6 +1,6 @@
 /**
  * Forensic Investigation Workflow
- * 
+ *
  * Pre-built LangGraph workflow for forensic document analysis.
  * Implements the full pipeline: preliminary → full context → meta-analysis → reconciliation
  */
@@ -9,9 +9,9 @@ import {
   langGraphAdapter,
   ForensicInvestigationState,
   DocumentProcessingState,
-  GraphDefinition
-} from './langgraph-adapter';
-import { subAgents } from './sub-agents';
+  GraphDefinition,
+} from "./langgraph-adapter";
+import { subAgents } from "./sub-agents";
 
 // ============================================================================
 // FORENSIC INVESTIGATION WORKFLOW
@@ -19,7 +19,7 @@ import { subAgents } from './sub-agents';
 
 /**
  * Create forensic investigation graph
- * 
+ *
  * Workflow stages:
  * 1. Preliminary Analysis (Chroma, 0-72h) - analyze without full context
  * 2. Export to Chroma - store preliminary findings
@@ -36,48 +36,54 @@ export function createForensicInvestigationWorkflow(
   caseId: string
 ): GraphDefinition<ForensicInvestigationState> {
   const graph = langGraphAdapter.createGraph<ForensicInvestigationState>(
-    'forensic_investigation',
-    'Multi-stage forensic analysis with preliminary and full-context assessments',
+    "forensic_investigation",
+    "Multi-stage forensic analysis with preliminary and full-context assessments",
     {
       workflow_id: `forensic_${Date.now()}`,
-      stage: 'preliminary',
+      stage: "preliminary",
       evidence_id: evidenceId,
       case_id: caseId,
       timestamp: new Date(),
       metadata: {},
-      audit_trail: []
+      audit_trail: [],
     }
   );
-  
+
   // Add nodes
   graph
-    .addNode('preliminary_analysis', subAgents.forensics.preliminaryAnalysis)
-    .addNode('export_to_chroma', subAgents.export.exportToChroma)
-    .addNode('preliminary_approval', subAgents.approval.requestPreliminaryApproval)
-    .addNode('meta_analysis', subAgents.forensics.metaAnalysis)
-    .addNode('detect_contradictions', subAgents.forensics.detectContradictions)
-    .addNode('export_to_neo4j', subAgents.export.exportToNeo4j)
-    .addNode('export_to_supabase', subAgents.export.exportToSupabase)
-    .addNode('meta_analysis_approval', subAgents.approval.requestMetaAnalysisApproval);
-  
+    .addNode("preliminary_analysis", subAgents.forensics.preliminaryAnalysis)
+    .addNode("export_to_chroma", subAgents.export.exportToChroma)
+    .addNode(
+      "preliminary_approval",
+      subAgents.approval.requestPreliminaryApproval
+    )
+    .addNode("meta_analysis", subAgents.forensics.metaAnalysis)
+    .addNode("detect_contradictions", subAgents.forensics.detectContradictions)
+    .addNode("export_to_neo4j", subAgents.export.exportToNeo4j)
+    .addNode("export_to_supabase", subAgents.export.exportToSupabase)
+    .addNode(
+      "meta_analysis_approval",
+      subAgents.approval.requestMetaAnalysisApproval
+    );
+
   // Add edges
   graph
-    .addEdge('preliminary_analysis', 'export_to_chroma')
-    .addEdge('export_to_chroma', 'preliminary_approval')
-    .addEdge('preliminary_approval', 'meta_analysis')
-    .addEdge('meta_analysis', 'detect_contradictions')
-    .addEdge('detect_contradictions', 'export_to_neo4j')
-    .addEdge('export_to_neo4j', 'export_to_supabase')
-    .addEdge('export_to_supabase', 'meta_analysis_approval')
-    .addEdge('meta_analysis_approval', 'END');
-  
+    .addEdge("preliminary_analysis", "export_to_chroma")
+    .addEdge("export_to_chroma", "preliminary_approval")
+    .addEdge("preliminary_approval", "meta_analysis")
+    .addEdge("meta_analysis", "detect_contradictions")
+    .addEdge("detect_contradictions", "export_to_neo4j")
+    .addEdge("export_to_neo4j", "export_to_supabase")
+    .addEdge("export_to_supabase", "meta_analysis_approval")
+    .addEdge("meta_analysis_approval", "END");
+
   // Set entry point
-  graph.setEntryPoint('preliminary_analysis');
-  
+  graph.setEntryPoint("preliminary_analysis");
+
   // Add checkpoints for human approval
-  graph.addCheckpoint('preliminary_approval');
-  graph.addCheckpoint('meta_analysis_approval');
-  
+  graph.addCheckpoint("preliminary_approval");
+  graph.addCheckpoint("meta_analysis_approval");
+
   return graph.build();
 }
 
@@ -87,7 +93,7 @@ export function createForensicInvestigationWorkflow(
 
 /**
  * Create document processing graph
- * 
+ *
  * Workflow stages:
  * 1. Type Detection - identify document format
  * 2. Content Extraction - extract text/metadata based on type
@@ -99,50 +105,50 @@ export function createDocumentProcessingWorkflow(
   sourcePath: string
 ): GraphDefinition<DocumentProcessingState> {
   const graph = langGraphAdapter.createGraph<DocumentProcessingState>(
-    'document_processing',
-    'Multi-stage document ingestion and processing',
+    "document_processing",
+    "Multi-stage document ingestion and processing",
     {
       workflow_id: `doc_${Date.now()}`,
-      stage: 'ingestion',
+      stage: "ingestion",
       document_id: documentId,
       source_path: sourcePath,
       timestamp: new Date(),
-      metadata: {}
+      metadata: {},
     }
   );
-  
+
   // Add nodes
   graph
-    .addNode('type_detection', subAgents.document.detectType)
-    .addNode('content_extraction', subAgents.document.extractContent)
-    .addNode('validation', subAgents.document.validateContent)
-    .addNode('storage', async (state) => {
-      console.log('[DocumentWorkflow] Storing document...');
+    .addNode("type_detection", subAgents.document.detectType)
+    .addNode("content_extraction", subAgents.document.extractContent)
+    .addNode("validation", subAgents.document.validateContent)
+    .addNode("storage", async state => {
+      console.log("[DocumentWorkflow] Storing document...");
       return {
-        stage: 'complete',
+        stage: "complete",
         storage: {
           r2_key: `documents/${state.document_id}`,
           supabase_id: `supabase_${state.document_id}`,
-          directus_id: `directus_${state.document_id}`
-        }
+          directus_id: `directus_${state.document_id}`,
+        },
       };
     });
-  
+
   // Add conditional edge based on validation result
   graph
-    .addEdge('type_detection', 'content_extraction')
-    .addEdge('content_extraction', 'validation')
-    .addConditionalEdge('validation', (state) => {
+    .addEdge("type_detection", "content_extraction")
+    .addEdge("content_extraction", "validation")
+    .addConditionalEdge("validation", state => {
       if (state.validation?.passed) {
-        return 'storage';
+        return "storage";
       } else {
-        return 'END'; // Skip storage if validation failed
+        return "END"; // Skip storage if validation failed
       }
     })
-    .addEdge('storage', 'END');
-  
-  graph.setEntryPoint('type_detection');
-  
+    .addEdge("storage", "END");
+
+  graph.setEntryPoint("type_detection");
+
   return graph.build();
 }
 
@@ -194,5 +200,5 @@ export const forensicWorkflows = {
   createDocumentProcessing: createDocumentProcessingWorkflow,
   executeForensicInvestigation,
   streamForensicInvestigation,
-  executeDocumentProcessing
+  executeDocumentProcessing,
 };

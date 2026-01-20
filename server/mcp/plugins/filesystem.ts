@@ -1,6 +1,6 @@
 /**
  * Filesystem Plugin
- * 
+ *
  * Provides filesystem operations with:
  * - Directory listing with metadata
  * - File reading into content store
@@ -8,15 +8,15 @@
  * - Glob pattern matching
  */
 
-import { promises as fs } from 'fs';
-import path from 'path';
-import { getContentStore } from '../store/content-store';
-import type { ContentRef } from '../../../shared/mcp-types';
+import { promises as fs } from "fs";
+import path from "path";
+import { getContentStore } from "../store/content-store";
+import type { ContentRef } from "../../../shared/mcp-types";
 
 // Allowed root directories for sandboxed operations
 const ALLOWED_ROOTS = new Set([
-  process.env.SANDBOX_ROOT ?? '/tmp/mcp-sandbox',
-  process.env.DATA_ROOT ?? './data',
+  process.env.SANDBOX_ROOT ?? "/tmp/mcp-sandbox",
+  process.env.DATA_ROOT ?? "./data",
 ]);
 
 interface ListDirArgs {
@@ -49,7 +49,7 @@ interface StatArgs {
 interface FileEntry {
   name: string;
   path: string;
-  type: 'file' | 'directory' | 'symlink';
+  type: "file" | "directory" | "symlink";
   size: number;
   modified: number;
   created: number;
@@ -84,7 +84,7 @@ export async function listDir(args: ListDirArgs): Promise<{
 
         // Apply glob filter if specified
         if (args.glob) {
-          const pattern = args.glob.replace(/\*/g, '.*').replace(/\?/g, '.');
+          const pattern = args.glob.replace(/\*/g, ".*").replace(/\?/g, ".");
           if (!new RegExp(pattern).test(item.name)) {
             continue;
           }
@@ -95,7 +95,11 @@ export async function listDir(args: ListDirArgs): Promise<{
           const entry: FileEntry = {
             name: item.name,
             path: fullPath,
-            type: item.isDirectory() ? 'directory' : item.isSymbolicLink() ? 'symlink' : 'file',
+            type: item.isDirectory()
+              ? "directory"
+              : item.isSymbolicLink()
+                ? "symlink"
+                : "file",
             size: stat.size,
             modified: stat.mtimeMs,
             created: stat.birthtimeMs,
@@ -117,7 +121,9 @@ export async function listDir(args: ListDirArgs): Promise<{
         }
       }
     } catch (error) {
-      throw new Error(`Failed to read directory: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to read directory: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     }
   }
 
@@ -142,7 +148,7 @@ export async function readFile(args: ReadFileArgs): Promise<{
   validatePath(args.path);
 
   const store = await getContentStore();
-  const encoding = args.encoding ?? 'utf-8';
+  const encoding = args.encoding ?? "utf-8";
 
   try {
     const content = await fs.readFile(args.path, encoding);
@@ -155,7 +161,9 @@ export async function readFile(args: ReadFileArgs): Promise<{
       mime,
     };
   } catch (error) {
-    throw new Error(`Failed to read file: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to read file: ${error instanceof Error ? error.message : "Unknown error"}`
+    );
   }
 }
 
@@ -182,26 +190,31 @@ export async function writeFile(args: WriteFileArgs): Promise<{
 
   // Store the pending write operation
   const pendingOp = {
-    type: 'write',
+    type: "write",
     path: args.path,
     contentRef: args.contentRef,
     createDirs: args.createDirs,
     timestamp: Date.now(),
   };
 
-  await store.put(JSON.stringify(pendingOp), 'application/json');
+  await store.put(JSON.stringify(pendingOp), "application/json");
 
   return {
     success: false, // Not yet executed
     approvalId,
-    preview: content.slice(0, 500) + (content.length > 500 ? '...' : ''),
+    preview: content.slice(0, 500) + (content.length > 500 ? "..." : ""),
   };
 }
 
 /**
  * Execute approved write operation
  */
-export async function executeApprovedWrite(approvalId: string, contentRef: string, targetPath: string, createDirs?: boolean): Promise<{
+export async function executeApprovedWrite(
+  approvalId: string,
+  contentRef: string,
+  targetPath: string,
+  createDirs?: boolean
+): Promise<{
   success: boolean;
   bytesWritten: number;
 }> {
@@ -218,11 +231,11 @@ export async function executeApprovedWrite(approvalId: string, contentRef: strin
     await fs.mkdir(path.dirname(targetPath), { recursive: true });
   }
 
-  await fs.writeFile(targetPath, content, 'utf-8');
+  await fs.writeFile(targetPath, content, "utf-8");
 
   return {
     success: true,
-    bytesWritten: Buffer.byteLength(content, 'utf-8'),
+    bytesWritten: Buffer.byteLength(content, "utf-8"),
   };
 }
 
@@ -236,7 +249,7 @@ export async function glob(args: GlobArgs): Promise<{
   validatePath(args.root);
 
   const files: string[] = [];
-  const pattern = args.pattern.replace(/\*/g, '.*').replace(/\?/g, '.');
+  const pattern = args.pattern.replace(/\*/g, ".*").replace(/\?/g, ".");
   const regex = new RegExp(pattern);
 
   async function walkDir(dir: string): Promise<void> {
@@ -270,7 +283,7 @@ export async function glob(args: GlobArgs): Promise<{
  */
 export async function stat(args: StatArgs): Promise<{
   exists: boolean;
-  type?: 'file' | 'directory' | 'symlink';
+  type?: "file" | "directory" | "symlink";
   size?: number;
   modified?: number;
   created?: number;
@@ -282,7 +295,11 @@ export async function stat(args: StatArgs): Promise<{
     const stats = await fs.stat(args.path);
     return {
       exists: true,
-      type: stats.isDirectory() ? 'directory' : stats.isSymbolicLink() ? 'symlink' : 'file',
+      type: stats.isDirectory()
+        ? "directory"
+        : stats.isSymbolicLink()
+          ? "symlink"
+          : "file",
       size: stats.size,
       modified: stats.mtimeMs,
       created: stats.birthtimeMs,
@@ -296,7 +313,10 @@ export async function stat(args: StatArgs): Promise<{
 /**
  * Move file or directory (requires approval)
  */
-export async function movePath(args: { source: string; destination: string }): Promise<{
+export async function movePath(args: {
+  source: string;
+  destination: string;
+}): Promise<{
   approvalId: string;
   preview: string;
 }> {
@@ -314,7 +334,10 @@ export async function movePath(args: { source: string; destination: string }): P
 /**
  * Delete file or directory (requires approval)
  */
-export async function deletePath(args: { path: string; recursive?: boolean }): Promise<{
+export async function deletePath(args: {
+  path: string;
+  recursive?: boolean;
+}): Promise<{
   approvalId: string;
   preview: string;
 }> {
@@ -324,7 +347,7 @@ export async function deletePath(args: { path: string; recursive?: boolean }): P
 
   return {
     approvalId,
-    preview: `Delete ${args.path}${args.recursive ? ' (recursive)' : ''}`,
+    preview: `Delete ${args.path}${args.recursive ? " (recursive)" : ""}`,
   };
 }
 
@@ -356,32 +379,32 @@ function validatePath(filePath: string): void {
   }
 
   // Prevent path traversal
-  if (filePath.includes('..')) {
-    throw new Error('Path traversal not allowed');
+  if (filePath.includes("..")) {
+    throw new Error("Path traversal not allowed");
   }
 }
 
 function getMimeType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
   const mimeTypes: Record<string, string> = {
-    '.txt': 'text/plain',
-    '.md': 'text/markdown',
-    '.json': 'application/json',
-    '.js': 'text/javascript',
-    '.ts': 'text/typescript',
-    '.html': 'text/html',
-    '.css': 'text/css',
-    '.xml': 'application/xml',
-    '.yaml': 'application/yaml',
-    '.yml': 'application/yaml',
-    '.csv': 'text/csv',
-    '.pdf': 'application/pdf',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.gif': 'image/gif',
-    '.svg': 'image/svg+xml',
+    ".txt": "text/plain",
+    ".md": "text/markdown",
+    ".json": "application/json",
+    ".js": "text/javascript",
+    ".ts": "text/typescript",
+    ".html": "text/html",
+    ".css": "text/css",
+    ".xml": "application/xml",
+    ".yaml": "application/yaml",
+    ".yml": "application/yaml",
+    ".csv": "text/csv",
+    ".pdf": "application/pdf",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".svg": "image/svg+xml",
   };
 
-  return mimeTypes[ext] ?? 'application/octet-stream';
+  return mimeTypes[ext] ?? "application/octet-stream";
 }

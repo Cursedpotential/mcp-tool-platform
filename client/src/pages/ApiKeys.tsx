@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,32 +37,43 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { Key, Plus, MoreHorizontal, Copy, RefreshCw, Trash2, Shield, Clock } from "lucide-react";
+import {
+  Key,
+  Plus,
+  MoreHorizontal,
+  Copy,
+  RefreshCw,
+  Trash2,
+  Shield,
+  Clock,
+} from "lucide-react";
 
 interface Permission {
   resource: string;
-  actions: ('read' | 'write' | 'execute')[];
+  actions: ("read" | "write" | "execute")[];
 }
 
 export default function ApiKeys() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [newKeyName, setNewKeyName] = useState("");
   const [newKeyPermissions, setNewKeyPermissions] = useState<Permission[]>([
-    { resource: 'tools', actions: ['read', 'execute'] },
+    { resource: "tools", actions: ["read", "execute"] },
   ]);
-  const [newKeyExpiry, setNewKeyExpiry] = useState<number | undefined>(undefined);
+  const [newKeyExpiry, setNewKeyExpiry] = useState<number | undefined>(
+    undefined
+  );
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
 
   const utils = trpc.useUtils();
   const { data: apiKeys, isLoading } = trpc.apiKeys.list.useQuery();
 
   const createMutation = trpc.apiKeys.create.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       setNewlyCreatedKey(data.plainKey);
       utils.apiKeys.list.invalidate();
       toast.success("API key created successfully");
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(`Failed to create API key: ${error.message}`);
     },
   });
@@ -66,18 +83,18 @@ export default function ApiKeys() {
       utils.apiKeys.list.invalidate();
       toast.success("API key revoked");
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(`Failed to revoke API key: ${error.message}`);
     },
   });
 
   const rotateMutation = trpc.apiKeys.rotate.useMutation({
-    onSuccess: (data) => {
+    onSuccess: data => {
       if (data) setNewlyCreatedKey(data.plainKey);
       utils.apiKeys.list.invalidate();
       toast.success("API key rotated successfully");
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(`Failed to rotate API key: ${error.message}`);
     },
   });
@@ -99,21 +116,24 @@ export default function ApiKeys() {
     toast.success("API key copied to clipboard");
   };
 
-  const togglePermission = (resource: string, action: 'read' | 'write' | 'execute') => {
-    setNewKeyPermissions((prev) => {
-      const existing = prev.find((p) => p.resource === resource);
+  const togglePermission = (
+    resource: string,
+    action: "read" | "write" | "execute"
+  ) => {
+    setNewKeyPermissions(prev => {
+      const existing = prev.find(p => p.resource === resource);
       if (existing) {
         const hasAction = existing.actions.includes(action);
         if (hasAction) {
-          const newActions = existing.actions.filter((a) => a !== action);
+          const newActions = existing.actions.filter(a => a !== action);
           if (newActions.length === 0) {
-            return prev.filter((p) => p.resource !== resource);
+            return prev.filter(p => p.resource !== resource);
           }
-          return prev.map((p) =>
+          return prev.map(p =>
             p.resource === resource ? { ...p, actions: newActions } : p
           );
         } else {
-          return prev.map((p) =>
+          return prev.map(p =>
             p.resource === resource
               ? { ...p, actions: [...p.actions, action] }
               : p
@@ -125,8 +145,11 @@ export default function ApiKeys() {
     });
   };
 
-  const hasPermission = (resource: string, action: 'read' | 'write' | 'execute') => {
-    const perm = newKeyPermissions.find((p) => p.resource === resource);
+  const hasPermission = (
+    resource: string,
+    action: "read" | "write" | "execute"
+  ) => {
+    const perm = newKeyPermissions.find(p => p.resource === resource);
     return perm?.actions.includes(action) || false;
   };
 
@@ -193,26 +216,37 @@ export default function ApiKeys() {
                       id="keyName"
                       placeholder="e.g., Claude Desktop, My App"
                       value={newKeyName}
-                      onChange={(e) => setNewKeyName(e.target.value)}
+                      onChange={e => setNewKeyName(e.target.value)}
                     />
                   </div>
 
                   <div className="space-y-2">
                     <Label>Permissions</Label>
                     <div className="border rounded-lg p-3 space-y-3">
-                      {['tools', 'config', 'admin'].map((resource) => (
-                        <div key={resource} className="flex items-center justify-between">
-                          <span className="text-sm font-medium capitalize">{resource}</span>
+                      {["tools", "config", "admin"].map(resource => (
+                        <div
+                          key={resource}
+                          className="flex items-center justify-between"
+                        >
+                          <span className="text-sm font-medium capitalize">
+                            {resource}
+                          </span>
                           <div className="flex gap-2">
-                            {['read', 'write', 'execute'].map((action) => (
+                            {["read", "write", "execute"].map(action => (
                               <label
                                 key={action}
                                 className="flex items-center gap-1 text-xs"
                               >
                                 <Checkbox
-                                  checked={hasPermission(resource, action as 'read' | 'write' | 'execute')}
+                                  checked={hasPermission(
+                                    resource,
+                                    action as "read" | "write" | "execute"
+                                  )}
                                   onCheckedChange={() =>
-                                    togglePermission(resource, action as 'read' | 'write' | 'execute')
+                                    togglePermission(
+                                      resource,
+                                      action as "read" | "write" | "execute"
+                                    )
                                   }
                                 />
                                 {action}
@@ -231,17 +265,25 @@ export default function ApiKeys() {
                       type="number"
                       placeholder="Leave empty for no expiration"
                       value={newKeyExpiry || ""}
-                      onChange={(e) =>
-                        setNewKeyExpiry(e.target.value ? parseInt(e.target.value) : undefined)
+                      onChange={e =>
+                        setNewKeyExpiry(
+                          e.target.value ? parseInt(e.target.value) : undefined
+                        )
                       }
                     />
                   </div>
 
                   <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsCreateOpen(false)}
+                    >
                       Cancel
                     </Button>
-                    <Button onClick={handleCreate} disabled={createMutation.isPending}>
+                    <Button
+                      onClick={handleCreate}
+                      disabled={createMutation.isPending}
+                    >
                       {createMutation.isPending ? "Creating..." : "Create Key"}
                     </Button>
                   </DialogFooter>
@@ -263,7 +305,9 @@ export default function ApiKeys() {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-center py-8 text-muted-foreground">Loading...</div>
+              <div className="text-center py-8 text-muted-foreground">
+                Loading...
+              </div>
             ) : !apiKeys || apiKeys.length === 0 ? (
               <div className="text-center py-8">
                 <Key className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -295,8 +339,12 @@ export default function ApiKeys() {
                         </code>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={key.isActive === 'true' ? "default" : "secondary"}>
-                          {key.isActive === 'true' ? "Active" : "Revoked"}
+                        <Badge
+                          variant={
+                            key.isActive === "true" ? "default" : "secondary"
+                          }
+                        >
+                          {key.isActive === "true" ? "Active" : "Revoked"}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -317,14 +365,18 @@ export default function ApiKeys() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => rotateMutation.mutate({ id: key.id })}
+                              onClick={() =>
+                                rotateMutation.mutate({ id: key.id })
+                              }
                             >
                               <RefreshCw className="h-4 w-4 mr-2" />
                               Rotate Key
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-destructive"
-                              onClick={() => revokeMutation.mutate({ id: key.id })}
+                              onClick={() =>
+                                revokeMutation.mutate({ id: key.id })
+                              }
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Revoke Key

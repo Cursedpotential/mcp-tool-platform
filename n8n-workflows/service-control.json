@@ -154,16 +154,24 @@
   ],
   "connections": {
     "Webhook - Start Service": {
-      "main": [[{ "node": "Validate Start Request", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Validate Start Request", "type": "main", "index": 0 }]
+      ]
     },
     "Webhook - Stop Service": {
-      "main": [[{ "node": "Validate Stop Request", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Validate Stop Request", "type": "main", "index": 0 }]
+      ]
     },
     "Validate Start Request": {
-      "main": [[{ "node": "Start Docker Container", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Start Docker Container", "type": "main", "index": 0 }]
+      ]
     },
     "Validate Stop Request": {
-      "main": [[{ "node": "Stop Docker Container", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Stop Docker Container", "type": "main", "index": 0 }]
+      ]
     },
     "Start Docker Container": {
       "main": [[{ "node": "Respond - Started", "type": "main", "index": 0 }]]
@@ -178,10 +186,14 @@
       "main": [[{ "node": "Set Kasm Stop", "type": "main", "index": 0 }]]
     },
     "Set Kasm Start": {
-      "main": [[{ "node": "Start Kasm (Scheduled)", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Start Kasm (Scheduled)", "type": "main", "index": 0 }]
+      ]
     },
     "Set Kasm Stop": {
-      "main": [[{ "node": "Stop Kasm (Scheduled)", "type": "main", "index": 0 }]]
+      "main": [
+        [{ "node": "Stop Kasm (Scheduled)", "type": "main", "index": 0 }]
+      ]
     }
   },
   "settings": {},

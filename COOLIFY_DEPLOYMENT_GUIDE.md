@@ -9,6 +9,7 @@
 ## Architecture Overview
 
 **salem-nexus (116.203.199.238):**
+
 - Coolify master instance
 - PostgreSQL + FerretDB
 - Directus CMS
@@ -17,6 +18,7 @@
 - Block storage: salem-vault (60GB XFS) at `/mnt/salem-vault`
 
 **salem-forge (116.203.198.77):**
+
 - Coolify remote worker (clean Debian)
 - LiteLLM
 - MetaMCP
@@ -138,6 +140,7 @@ volumes:
 ### 4.2 Add PostgreSQL Service
 
 **Via Coolify UI:**
+
 1. Add Service → Database → PostgreSQL
 2. Name: `salem-postgres`
 3. Version: 16
@@ -209,7 +212,7 @@ services:
       STORAGE_LOCAL_ROOT: /directus/uploads
     volumes:
       - /mnt/salem-vault/directus:/directus/uploads
-      - /mnt/salem-vault/media:/media:ro  # Read-only access to shared media
+      - /mnt/salem-vault/media:/media:ro # Read-only access to shared media
     depends_on:
       - postgres
     labels:
@@ -289,7 +292,7 @@ services:
       N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
     volumes:
       - /mnt/salem-vault/n8n:/home/node/.n8n
-      - /mnt/salem-vault/media:/media  # Access to shared media for workflows
+      - /mnt/salem-vault/media:/media # Access to shared media for workflows
     depends_on:
       - postgres
     labels:
@@ -322,7 +325,7 @@ services:
       RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${R2_SECRET_KEY}
       RCLONE_CONFIG_R2_ENDPOINT: ${R2_ENDPOINT}
     volumes:
-      - /mnt/salem-vault:/mnt/salem-vault:shared  # Shared with all containers
+      - /mnt/salem-vault:/mnt/salem-vault:shared # Shared with all containers
     command: |
       bash -c "
         apt-get update && apt-get install -y curl rclone fuse &&
@@ -464,7 +467,7 @@ scp docker-compose.vps2-compute.yml root@116.203.198.77:/root/
 ### 12.2 Example Policy
 
 - **Application:** Salem Forensics Services
-- **Domains:** *.mitechconsult.com (exclude mail.*, mx.*, smtp.*)
+- **Domains:** _.mitechconsult.com (exclude mail._, mx._, smtp._)
 - **Policy:** Email must be matt.salem85@gmail.com
 - **Session duration:** 24 hours
 

@@ -1,20 +1,27 @@
 /**
  * NLP Plugin
- * 
+ *
  * Provider-agnostic NLP capabilities:
  * - Language detection
  * - Entity extraction
  * - Keyword extraction
  * - Sentiment analysis
  * - Sentence splitting
- * 
+ *
  * Supports multiple providers: spaCy, transformers, NLTK, compromise.js
  * with automatic fallback and provider routing via config.
  */
 
-import { getContentStore } from '../store/content-store';
-import type { Entity, EntityType, SentimentResult, KeywordResult, SentenceSpan, ContentRef } from '../../../shared/mcp-types';
-import * as pythonBridge from '../python-bridge';
+import { getContentStore } from "../store/content-store";
+import type {
+  Entity,
+  EntityType,
+  SentimentResult,
+  KeywordResult,
+  SentenceSpan,
+  ContentRef,
+} from "../../../shared/mcp-types";
+import * as pythonBridge from "../python-bridge";
 
 // ============================================================================
 // Provider Interface
@@ -22,7 +29,9 @@ import * as pythonBridge from '../python-bridge';
 
 interface NLPProvider {
   name: string;
-  detectLanguage(text: string): Promise<{ language: string; confidence: number }>;
+  detectLanguage(
+    text: string
+  ): Promise<{ language: string; confidence: number }>;
   extractEntities(text: string): Promise<Entity[]>;
   extractKeywords(text: string, topK: number): Promise<KeywordResult[]>;
   analyzeSentiment(text: string): Promise<SentimentResult>;
@@ -34,12 +43,14 @@ interface NLPProvider {
 // ============================================================================
 
 class JavaScriptNLPProvider implements NLPProvider {
-  name = 'javascript';
+  name = "javascript";
 
-  async detectLanguage(text: string): Promise<{ language: string; confidence: number }> {
+  async detectLanguage(
+    text: string
+  ): Promise<{ language: string; confidence: number }> {
     // Simple language detection based on character patterns
     const sample = text.slice(0, 1000).toLowerCase();
-    
+
     // Common word patterns for different languages
     const patterns: Record<string, RegExp[]> = {
       en: [/\bthe\b/, /\band\b/, /\bis\b/, /\bof\b/, /\bto\b/],
@@ -51,7 +62,7 @@ class JavaScriptNLPProvider implements NLPProvider {
       ko: [/[\uac00-\ud7af]/],
     };
 
-    let bestLang = 'en';
+    let bestLang = "en";
     let bestScore = 0;
 
     for (const [lang, regexes] of Object.entries(patterns)) {
@@ -75,25 +86,38 @@ class JavaScriptNLPProvider implements NLPProvider {
 
   async extractEntities(text: string): Promise<Entity[]> {
     const entities: Entity[] = [];
-    
+
     // Pattern-based entity extraction
     const patterns: Array<{ type: EntityType; regex: RegExp }> = [
       // Dates
-      { type: 'DATE', regex: /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g },
-      { type: 'DATE', regex: /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/gi },
+      { type: "DATE", regex: /\b\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}\b/g },
+      {
+        type: "DATE",
+        regex:
+          /\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},?\s+\d{4}\b/gi,
+      },
       // Times
-      { type: 'TIME', regex: /\b\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?\b/g },
+      {
+        type: "TIME",
+        regex: /\b\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM|am|pm)?\b/g,
+      },
       // Money
-      { type: 'MONEY', regex: /\$[\d,]+(?:\.\d{2})?(?:\s*(?:million|billion|trillion))?/gi },
-      { type: 'MONEY', regex: /[\d,]+(?:\.\d{2})?\s*(?:USD|EUR|GBP|JPY)/g },
+      {
+        type: "MONEY",
+        regex: /\$[\d,]+(?:\.\d{2})?(?:\s*(?:million|billion|trillion))?/gi,
+      },
+      { type: "MONEY", regex: /[\d,]+(?:\.\d{2})?\s*(?:USD|EUR|GBP|JPY)/g },
       // Percentages
-      { type: 'PERCENT', regex: /\b\d+(?:\.\d+)?%/g },
+      { type: "PERCENT", regex: /\b\d+(?:\.\d+)?%/g },
       // Emails (as ORG proxy)
-      { type: 'ORG', regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g },
+      {
+        type: "ORG",
+        regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
+      },
       // URLs
-      { type: 'PRODUCT', regex: /https?:\/\/[^\s]+/g },
+      { type: "PRODUCT", regex: /https?:\/\/[^\s]+/g },
       // Capitalized sequences (potential names/orgs)
-      { type: 'PERSON', regex: /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b/g },
+      { type: "PERSON", regex: /\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)+\b/g },
     ];
 
     for (const { type, regex } of patterns) {
@@ -113,15 +137,60 @@ class JavaScriptNLPProvider implements NLPProvider {
     return deduplicateEntities(entities);
   }
 
-  async extractKeywords(text: string, topK: number = 10): Promise<KeywordResult[]> {
+  async extractKeywords(
+    text: string,
+    topK: number = 10
+  ): Promise<KeywordResult[]> {
     // Simple TF-based keyword extraction
     const words = text.toLowerCase().match(/\b[a-z]{3,}\b/g) ?? [];
     const stopwords = new Set([
-      'the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had',
-      'her', 'was', 'one', 'our', 'out', 'has', 'have', 'been', 'were', 'they',
-      'this', 'that', 'with', 'from', 'will', 'would', 'there', 'their', 'what',
-      'about', 'which', 'when', 'make', 'like', 'time', 'just', 'know', 'take',
-      'into', 'year', 'your', 'some', 'could', 'them', 'other', 'than', 'then',
+      "the",
+      "and",
+      "for",
+      "are",
+      "but",
+      "not",
+      "you",
+      "all",
+      "can",
+      "had",
+      "her",
+      "was",
+      "one",
+      "our",
+      "out",
+      "has",
+      "have",
+      "been",
+      "were",
+      "they",
+      "this",
+      "that",
+      "with",
+      "from",
+      "will",
+      "would",
+      "there",
+      "their",
+      "what",
+      "about",
+      "which",
+      "when",
+      "make",
+      "like",
+      "time",
+      "just",
+      "know",
+      "take",
+      "into",
+      "year",
+      "your",
+      "some",
+      "could",
+      "them",
+      "other",
+      "than",
+      "then",
     ]);
 
     const freq: Map<string, { count: number; positions: number[] }> = new Map();
@@ -155,15 +224,49 @@ class JavaScriptNLPProvider implements NLPProvider {
   async analyzeSentiment(text: string): Promise<SentimentResult> {
     // Simple lexicon-based sentiment analysis
     const positiveWords = new Set([
-      'good', 'great', 'excellent', 'amazing', 'wonderful', 'fantastic', 'love',
-      'happy', 'joy', 'positive', 'best', 'perfect', 'beautiful', 'awesome',
-      'brilliant', 'outstanding', 'superb', 'delightful', 'pleasant', 'nice',
+      "good",
+      "great",
+      "excellent",
+      "amazing",
+      "wonderful",
+      "fantastic",
+      "love",
+      "happy",
+      "joy",
+      "positive",
+      "best",
+      "perfect",
+      "beautiful",
+      "awesome",
+      "brilliant",
+      "outstanding",
+      "superb",
+      "delightful",
+      "pleasant",
+      "nice",
     ]);
 
     const negativeWords = new Set([
-      'bad', 'terrible', 'awful', 'horrible', 'hate', 'worst', 'poor', 'sad',
-      'negative', 'ugly', 'disappointing', 'frustrating', 'annoying', 'boring',
-      'dreadful', 'disgusting', 'unpleasant', 'painful', 'miserable', 'angry',
+      "bad",
+      "terrible",
+      "awful",
+      "horrible",
+      "hate",
+      "worst",
+      "poor",
+      "sad",
+      "negative",
+      "ugly",
+      "disappointing",
+      "frustrating",
+      "annoying",
+      "boring",
+      "dreadful",
+      "disgusting",
+      "unpleasant",
+      "painful",
+      "miserable",
+      "angry",
     ]);
 
     const words = text.toLowerCase().match(/\b[a-z]+\b/g) ?? [];
@@ -177,11 +280,12 @@ class JavaScriptNLPProvider implements NLPProvider {
 
     const total = positive + negative;
     if (total === 0) {
-      return { label: 'neutral', score: 0, confidence: 0.5 };
+      return { label: "neutral", score: 0, confidence: 0.5 };
     }
 
     const score = (positive - negative) / total;
-    const label = score > 0.1 ? 'positive' : score < -0.1 ? 'negative' : 'neutral';
+    const label =
+      score > 0.1 ? "positive" : score < -0.1 ? "negative" : "neutral";
     const confidence = Math.min(Math.abs(score) + 0.5, 1);
 
     return { label, score, confidence };
@@ -215,9 +319,11 @@ class JavaScriptNLPProvider implements NLPProvider {
 // ============================================================================
 
 class PythonNLPProvider implements NLPProvider {
-  name = 'python';
+  name = "python";
 
-  async detectLanguage(text: string): Promise<{ language: string; confidence: number }> {
+  async detectLanguage(
+    text: string
+  ): Promise<{ language: string; confidence: number }> {
     const result = await pythonBridge.detectLanguage(text);
     return { language: result.language, confidence: result.confidence };
   }
@@ -274,13 +380,13 @@ let defaultProvider: NLPProvider;
 const pythonProvider = new PythonNLPProvider();
 const jsProvider = new JavaScriptNLPProvider();
 
-providers.set('python', pythonProvider);
-providers.set('javascript', jsProvider);
-providers.set('spacy', pythonProvider); // spaCy is accessed via Python
+providers.set("python", pythonProvider);
+providers.set("javascript", jsProvider);
+providers.set("spacy", pythonProvider); // spaCy is accessed via Python
 
 // Default to Python (will auto-fallback to JS if Python unavailable)
 defaultProvider = pythonProvider;
-providers.set('auto', defaultProvider);
+providers.set("auto", defaultProvider);
 
 /**
  * Register a custom NLP provider
@@ -304,7 +410,7 @@ export function setDefaultProvider(name: string): void {
  * Get a provider by name
  */
 function getProvider(name?: string): NLPProvider {
-  if (!name || name === 'auto') {
+  if (!name || name === "auto") {
     return defaultProvider;
   }
   const provider = providers.get(name);
@@ -382,13 +488,16 @@ export async function extractEntities(args: ExtractEntitiesArgs): Promise<{
   // Filter by types if specified
   if (args.types && args.types.length > 0) {
     const typeSet = new Set(args.types);
-    entities = entities.filter((e) => typeSet.has(e.type));
+    entities = entities.filter(e => typeSet.has(e.type));
   }
 
   // Store large results as reference
   let entitiesRef: ContentRef | undefined;
   if (entities.length > 50) {
-    const stored = await store.put(JSON.stringify(entities), 'application/json');
+    const stored = await store.put(
+      JSON.stringify(entities),
+      "application/json"
+    );
     entitiesRef = stored.ref;
     entities = entities.slice(0, 20); // Return preview
   }
@@ -417,7 +526,9 @@ export async function extractKeywords(args: ExtractKeywordsArgs): Promise<{
 /**
  * Analyze sentiment of text
  */
-export async function analyzeSentiment(args: AnalyzeSentimentArgs): Promise<SentimentResult> {
+export async function analyzeSentiment(
+  args: AnalyzeSentimentArgs
+): Promise<SentimentResult> {
   const store = await getContentStore();
   const text = await store.getString(args.textRef as ContentRef);
   if (!text) {
@@ -447,7 +558,10 @@ export async function splitSentences(args: SplitSentencesArgs): Promise<{
   // Store large results as reference
   let sentencesRef: ContentRef | undefined;
   if (sentences.length > 100) {
-    const stored = await store.put(JSON.stringify(sentences), 'application/json');
+    const stored = await store.put(
+      JSON.stringify(sentences),
+      "application/json"
+    );
     sentencesRef = stored.ref;
   }
 
@@ -466,7 +580,8 @@ export async function makeOutline(args: { textRef: string }): Promise<{
     throw new Error(`Content not found: ${args.textRef}`);
   }
 
-  const outline: Array<{ level: number; title: string; startOffset: number }> = [];
+  const outline: Array<{ level: number; title: string; startOffset: number }> =
+    [];
   const headingRegex = /^(#{1,6})\s+(.+)$/gm;
   let match;
 

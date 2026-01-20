@@ -24,6 +24,5 @@
       "@api/*": ["./server/api/*"],
       "@mcp/*": ["./server/mcp/*"]
     }
-
   }
 }

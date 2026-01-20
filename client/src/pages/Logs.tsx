@@ -1,17 +1,29 @@
-import { useState, useEffect, useRef } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { trpc } from '@/lib/trpc';
-import { 
-  RefreshCw, 
-  Download, 
-  Search, 
+import { useState, useEffect, useRef } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { trpc } from "@/lib/trpc";
+import {
+  RefreshCw,
+  Download,
+  Search,
   Filter,
   AlertCircle,
   AlertTriangle,
@@ -22,11 +34,11 @@ import {
   Activity,
   Zap,
   Server,
-  Database
-} from 'lucide-react';
-import { format } from 'date-fns';
+  Database,
+} from "lucide-react";
+import { format } from "date-fns";
 
-type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+type LogLevel = "debug" | "info" | "warn" | "error" | "fatal";
 
 const levelIcons: Record<LogLevel, React.ReactNode> = {
   debug: <Bug className="h-4 w-4 text-gray-400" />,
@@ -37,61 +49,74 @@ const levelIcons: Record<LogLevel, React.ReactNode> = {
 };
 
 const levelColors: Record<LogLevel, string> = {
-  debug: 'bg-gray-100 text-gray-700',
-  info: 'bg-blue-100 text-blue-700',
-  warn: 'bg-yellow-100 text-yellow-700',
-  error: 'bg-red-100 text-red-700',
-  fatal: 'bg-red-200 text-red-900',
+  debug: "bg-gray-100 text-gray-700",
+  info: "bg-blue-100 text-blue-700",
+  warn: "bg-yellow-100 text-yellow-700",
+  error: "bg-red-100 text-red-700",
+  fatal: "bg-red-200 text-red-900",
 };
 
 export default function Logs() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedLevels, setSelectedLevels] = useState<LogLevel[]>(['info', 'warn', 'error', 'fatal']);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedLevels, setSelectedLevels] = useState<LogLevel[]>([
+    "info",
+    "warn",
+    "error",
+    "fatal",
+  ]);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [refreshInterval, setRefreshInterval] = useState(2000);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const { data: logs, refetch, isLoading } = trpc.logs.recent.useQuery({
-    count: 200,
-    filter: {
-      levels: selectedLevels.length > 0 ? selectedLevels : undefined,
-      search: searchQuery || undefined,
+  const {
+    data: logs,
+    refetch,
+    isLoading,
+  } = trpc.logs.recent.useQuery(
+    {
+      count: 200,
+      filter: {
+        levels: selectedLevels.length > 0 ? selectedLevels : undefined,
+        search: searchQuery || undefined,
+      },
     },
-  }, {
-    refetchInterval: autoRefresh ? refreshInterval : false,
-  });
+    {
+      refetchInterval: autoRefresh ? refreshInterval : false,
+    }
+  );
 
   const { data: metrics } = trpc.logs.metrics.useQuery(undefined, {
     refetchInterval: autoRefresh ? refreshInterval : false,
   });
 
-  const exportMutation = trpc.logs.export.useQuery({
-    filter: {
-      levels: selectedLevels.length > 0 ? selectedLevels : undefined,
-      search: searchQuery || undefined,
+  const exportMutation = trpc.logs.export.useQuery(
+    {
+      filter: {
+        levels: selectedLevels.length > 0 ? selectedLevels : undefined,
+        search: searchQuery || undefined,
+      },
     },
-  }, {
-    enabled: false,
-  });
+    {
+      enabled: false,
+    }
+  );
 
   const handleExport = async () => {
     const result = await exportMutation.refetch();
     if (result.data) {
-      const blob = new Blob([result.data], { type: 'application/x-ndjson' });
+      const blob = new Blob([result.data], { type: "application/x-ndjson" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `logs-${format(new Date(), 'yyyy-MM-dd-HHmmss')}.ndjson`;
+      a.download = `logs-${format(new Date(), "yyyy-MM-dd-HHmmss")}.ndjson`;
       a.click();
       URL.revokeObjectURL(url);
     }
   };
 
   const toggleLevel = (level: LogLevel) => {
-    setSelectedLevels(prev => 
-      prev.includes(level) 
-        ? prev.filter(l => l !== level)
-        : [...prev, level]
+    setSelectedLevels(prev =>
+      prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]
     );
   };
 
@@ -118,10 +143,12 @@ export default function Logs() {
               variant="outline"
               size="sm"
               onClick={() => setAutoRefresh(!autoRefresh)}
-              className={autoRefresh ? 'bg-green-50' : ''}
+              className={autoRefresh ? "bg-green-50" : ""}
             >
-              <Activity className={`h-4 w-4 mr-2 ${autoRefresh ? 'animate-pulse text-green-500' : ''}`} />
-              {autoRefresh ? 'Live' : 'Paused'}
+              <Activity
+                className={`h-4 w-4 mr-2 ${autoRefresh ? "animate-pulse text-green-500" : ""}`}
+              />
+              {autoRefresh ? "Live" : "Paused"}
             </Button>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -141,9 +168,13 @@ export default function Logs() {
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <Server className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Connections</span>
+                  <span className="text-sm text-muted-foreground">
+                    Connections
+                  </span>
                 </div>
-                <p className="text-2xl font-bold">{metrics.activeConnections}</p>
+                <p className="text-2xl font-bold">
+                  {metrics.activeConnections}
+                </p>
               </CardContent>
             </Card>
             <Card>
@@ -152,14 +183,18 @@ export default function Logs() {
                   <Zap className="h-4 w-4 text-muted-foreground" />
                   <span className="text-sm text-muted-foreground">Req/sec</span>
                 </div>
-                <p className="text-2xl font-bold">{metrics.requestsPerSecond.toFixed(2)}</p>
+                <p className="text-2xl font-bold">
+                  {metrics.requestsPerSecond.toFixed(2)}
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Avg Latency</span>
+                  <span className="text-sm text-muted-foreground">
+                    Avg Latency
+                  </span>
                 </div>
                 <p className="text-2xl font-bold">{metrics.avgLatencyMs}ms</p>
               </CardContent>
@@ -168,16 +203,22 @@ export default function Logs() {
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Error Rate</span>
+                  <span className="text-sm text-muted-foreground">
+                    Error Rate
+                  </span>
                 </div>
-                <p className="text-2xl font-bold">{(metrics.errorRate * 100).toFixed(1)}%</p>
+                <p className="text-2xl font-bold">
+                  {(metrics.errorRate * 100).toFixed(1)}%
+                </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <Database className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Queue Depth</span>
+                  <span className="text-sm text-muted-foreground">
+                    Queue Depth
+                  </span>
                 </div>
                 <p className="text-2xl font-bold">{metrics.queueDepth}</p>
               </CardContent>
@@ -186,9 +227,13 @@ export default function Logs() {
               <CardContent className="pt-4">
                 <div className="flex items-center gap-2">
                   <Activity className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Cache Hit</span>
+                  <span className="text-sm text-muted-foreground">
+                    Cache Hit
+                  </span>
                 </div>
-                <p className="text-2xl font-bold">{(metrics.cacheHitRate * 100).toFixed(1)}%</p>
+                <p className="text-2xl font-bold">
+                  {(metrics.cacheHitRate * 100).toFixed(1)}%
+                </p>
               </CardContent>
             </Card>
           </div>
@@ -211,7 +256,7 @@ export default function Logs() {
                   <Input
                     placeholder="Search logs..."
                     value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onChange={e => setSearchQuery(e.target.value)}
                     className="pl-9"
                   />
                 </div>
@@ -219,11 +264,15 @@ export default function Logs() {
 
               {/* Level Filters */}
               <div className="flex items-center gap-2">
-                {(['debug', 'info', 'warn', 'error', 'fatal'] as LogLevel[]).map((level) => (
+                {(
+                  ["debug", "info", "warn", "error", "fatal"] as LogLevel[]
+                ).map(level => (
                   <label
                     key={level}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer transition-colors ${
-                      selectedLevels.includes(level) ? levelColors[level] : 'bg-gray-50 text-gray-400'
+                      selectedLevels.includes(level)
+                        ? levelColors[level]
+                        : "bg-gray-50 text-gray-400"
                     }`}
                   >
                     <Checkbox
@@ -232,7 +281,9 @@ export default function Logs() {
                       className="hidden"
                     />
                     {levelIcons[level]}
-                    <span className="text-xs font-medium capitalize">{level}</span>
+                    <span className="text-xs font-medium capitalize">
+                      {level}
+                    </span>
                   </label>
                 ))}
               </div>
@@ -240,7 +291,7 @@ export default function Logs() {
               {/* Refresh Interval */}
               <Select
                 value={refreshInterval.toString()}
-                onValueChange={(v) => setRefreshInterval(parseInt(v))}
+                onValueChange={v => setRefreshInterval(parseInt(v))}
               >
                 <SelectTrigger className="w-[130px]">
                   <SelectValue placeholder="Refresh rate" />
@@ -261,7 +312,8 @@ export default function Logs() {
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">Log Stream</CardTitle>
             <CardDescription>
-              {logs?.length || 0} entries • {autoRefresh ? 'Auto-refreshing' : 'Paused'}
+              {logs?.length || 0} entries •{" "}
+              {autoRefresh ? "Auto-refreshing" : "Paused"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -272,20 +324,25 @@ export default function Logs() {
                     Loading logs...
                   </div>
                 ) : logs && logs.length > 0 ? (
-                  logs.map((log) => (
+                  logs.map(log => (
                     <div
                       key={log.id}
                       className={`flex items-start gap-2 p-2 rounded hover:bg-muted/50 ${
-                        log.level === 'error' || log.level === 'fatal' ? 'bg-red-50/50' : ''
+                        log.level === "error" || log.level === "fatal"
+                          ? "bg-red-50/50"
+                          : ""
                       }`}
                     >
                       {/* Timestamp */}
                       <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {format(new Date(log.timestamp), 'HH:mm:ss.SSS')}
+                        {format(new Date(log.timestamp), "HH:mm:ss.SSS")}
                       </span>
 
                       {/* Level */}
-                      <Badge variant="outline" className={`${levelColors[log.level as LogLevel]} text-xs`}>
+                      <Badge
+                        variant="outline"
+                        className={`${levelColors[log.level as LogLevel]} text-xs`}
+                      >
                         {levelIcons[log.level as LogLevel]}
                       </Badge>
 
@@ -296,7 +353,10 @@ export default function Logs() {
 
                       {/* Tool (if present) */}
                       {log.tool && (
-                        <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700">
+                        <Badge
+                          variant="outline"
+                          className="text-xs bg-purple-50 text-purple-700"
+                        >
                           {log.tool}
                         </Badge>
                       )}

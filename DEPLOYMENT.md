@@ -18,6 +18,7 @@ Both VPS are connected via Tailscale for secure cross-VPS communication and prot
 ## Prerequisites
 
 ### Accounts & Services
+
 - [x] Hetzner Cloud account
 - [x] Cloudflare account with domain (mitechconsult.com)
 - [x] Tailscale account
@@ -26,6 +27,7 @@ Both VPS are connected via Tailscale for secure cross-VPS communication and prot
 - [x] LLM API keys (OpenAI, Anthropic, Gemini, etc.)
 
 ### Local Tools
+
 ```bash
 # Install required tools
 brew install jq curl git docker
@@ -316,11 +318,13 @@ export VPS2_IP=<vps2-ip>
 2. Create applications for each service:
 
 **VPS1 Services:**
+
 - `cms.mitechconsult.com` (Directus)
 - `photos.mitechconsult.com` (PhotoPrism)
 - `n8n.mitechconsult.com` (n8n)
 
 **VPS2 Services:**
+
 - `chat.mitechconsult.com` (LibreChat)
 - `ui.mitechconsult.com` (Open WebUI)
 - `desktop.mitechconsult.com` (Kasm - Backup access only)
@@ -343,6 +347,7 @@ dig chat.mitechconsult.com
 ### Test Service Access
 
 **Via Cloudflare (Public):**
+
 - https://cms.mitechconsult.com (Directus)
 - https://photos.mitechconsult.com (PhotoPrism)
 - https://n8n.mitechconsult.com (n8n)
@@ -350,6 +355,7 @@ dig chat.mitechconsult.com
 - https://ui.mitechconsult.com (Open WebUI)
 
 **Via Tailscale (Private):**
+
 ```bash
 # From any device on Tailnet
 curl http://salem-storage:8055  # Directus
@@ -468,6 +474,7 @@ ping salem-compute
 ## Cost Breakdown
 
 **Monthly Costs:**
+
 - Hetzner VPS1 (8c/16GB): $10.50
 - Hetzner VPS2 (8c/16GB): $10.50
 - Block storage (50GB): $3.00
@@ -495,6 +502,7 @@ ping salem-compute
 ## Support
 
 For issues or questions:
+
 - Check logs: `docker-compose logs`
 - Review documentation: `docs/`
 - Contact: your-email@example.com

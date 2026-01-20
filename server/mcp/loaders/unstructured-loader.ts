@@ -3,10 +3,14 @@
  * TypeScript wrapper for Python unstructured parser
  */
 
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import * as path from 'path';
-import type { LoadedDocument, DocumentChunk, DocumentMetadata } from './base-loader';
+import { exec } from "child_process";
+import { promisify } from "util";
+import * as path from "path";
+import type {
+  LoadedDocument,
+  DocumentChunk,
+  DocumentMetadata,
+} from "./base-loader";
 
 const execAsync = promisify(exec);
 
@@ -15,7 +19,7 @@ const execAsync = promisify(exec);
 // ============================================================================
 
 export interface UnstructuredParseOptions {
-  strategy?: 'auto' | 'fast' | 'hi_res';
+  strategy?: "auto" | "fast" | "hi_res";
   extractTables?: boolean;
   extractImages?: boolean;
   chunkSize?: number;
@@ -63,14 +67,14 @@ export interface UnstructuredResult {
 
 export class UnstructuredLoader {
   private pythonScript: string;
-  
+
   constructor() {
     this.pythonScript = path.join(
       __dirname,
-      '../../python-tools/unstructured_parser.py'
+      "../../python-tools/unstructured_parser.py"
     );
   }
-  
+
   /**
    * Parse document using Unstructured.io
    */
@@ -79,62 +83,72 @@ export class UnstructuredLoader {
     options: UnstructuredParseOptions = {}
   ): Promise<UnstructuredResult> {
     const {
-      strategy = 'auto',
+      strategy = "auto",
       extractTables = true,
       extractImages = false,
       chunkSize = 1000,
-      chunkOverlap = 200
+      chunkOverlap = 200,
     } = options;
-    
+
     // Build command
     const args = [
       filePath,
-      '--strategy', strategy,
-      '--chunk-size', chunkSize.toString(),
-      '--chunk-overlap', chunkOverlap.toString()
+      "--strategy",
+      strategy,
+      "--chunk-size",
+      chunkSize.toString(),
+      "--chunk-overlap",
+      chunkOverlap.toString(),
     ];
-    
+
     if (!extractTables) {
-      args.push('--no-tables');
+      args.push("--no-tables");
     }
-    
+
     if (extractImages) {
-      args.push('--extract-images');
+      args.push("--extract-images");
     }
-    
-    const command = `python3 ${this.pythonScript} ${args.join(' ')}`;
-    
+
+    const command = `python3 ${this.pythonScript} ${args.join(" ")}`;
+
     console.log(`[UnstructuredLoader] Parsing: ${filePath}`);
-    console.log(`[UnstructuredLoader] Strategy: ${strategy}, Chunks: ${chunkSize}/${chunkOverlap}`);
-    
+    console.log(
+      `[UnstructuredLoader] Strategy: ${strategy}, Chunks: ${chunkSize}/${chunkOverlap}`
+    );
+
     try {
       const { stdout, stderr } = await execAsync(command, {
-        maxBuffer: 50 * 1024 * 1024 // 50MB buffer for large documents
+        maxBuffer: 50 * 1024 * 1024, // 50MB buffer for large documents
       });
-      
-      if (stderr && !stderr.includes('UserWarning')) {
+
+      if (stderr && !stderr.includes("UserWarning")) {
         console.warn(`[UnstructuredLoader] Warning: ${stderr}`);
       }
-      
+
       const result: UnstructuredResult = JSON.parse(stdout);
-      
+
       if (!result.success) {
-        throw new Error(result.error || 'Parsing failed');
+        throw new Error(result.error || "Parsing failed");
       }
-      
-      console.log(`[UnstructuredLoader] Parsed ${result.element_count} elements, ${result.chunks.length} chunks, ${result.tables.length} tables`);
-      
+
+      console.log(
+        `[UnstructuredLoader] Parsed ${result.element_count} elements, ${result.chunks.length} chunks, ${result.tables.length} tables`
+      );
+
       return result;
     } catch (error: any) {
       console.error(`[UnstructuredLoader] Error:`, error.message);
       throw new Error(`Failed to parse document: ${error.message}`);
     }
   }
-  
+
   /**
    * Convert UnstructuredResult to LoadedDocument
    */
-  toLoadedDocument(result: UnstructuredResult, platform: string = 'generic'): LoadedDocument {
+  toLoadedDocument(
+    result: UnstructuredResult,
+    platform: string = "generic"
+  ): LoadedDocument {
     const chunks: DocumentChunk[] = result.chunks.map(chunk => ({
       chunk_id: `chunk_${result.filename}_${chunk.index}`,
       document_id: `doc_${result.filename}`,
@@ -145,10 +159,10 @@ export class UnstructuredLoader {
       metadata: {
         type: chunk.type,
         page_number: chunk.metadata.page_number,
-        ...chunk.metadata
-      }
+        ...chunk.metadata,
+      },
     }));
-    
+
     const metadata: DocumentMetadata = {
       filename: result.filename,
       source_path: result.file_path,
@@ -160,35 +174,36 @@ export class UnstructuredLoader {
         format: result.format,
         element_count: result.element_count,
         total_pages: result.metadata.total_pages,
-        statistics: result.statistics
-      }
+        statistics: result.statistics,
+      },
     };
-    
+
     return {
       id: `doc_${result.filename}_${Date.now()}`,
       platform: platform as any,
       content: result.full_text,
       metadata,
       chunks,
-      entities: []
+      entities: [],
     };
   }
-  
+
   /**
    * Get MIME type from file extension
    */
   private getMimeType(format: string): string {
     const mimeTypes: Record<string, string> = {
-      '.pdf': 'application/pdf',
-      '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      '.doc': 'application/msword',
-      '.html': 'text/html',
-      '.htm': 'text/html',
-      '.txt': 'text/plain',
-      '.md': 'text/markdown'
+      ".pdf": "application/pdf",
+      ".docx":
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ".doc": "application/msword",
+      ".html": "text/html",
+      ".htm": "text/html",
+      ".txt": "text/plain",
+      ".md": "text/markdown",
     };
-    
-    return mimeTypes[format] || 'application/octet-stream';
+
+    return mimeTypes[format] || "application/octet-stream";
   }
 }
 
@@ -211,7 +226,9 @@ export async function parseDocument(
 /**
  * Parse document and extract tables
  */
-export async function extractTables(filePath: string): Promise<UnstructuredResult['tables']> {
+export async function extractTables(
+  filePath: string
+): Promise<UnstructuredResult["tables"]> {
   const loader = new UnstructuredLoader();
   const result = await loader.parseDocument(filePath, { extractTables: true });
   return result.tables;
@@ -226,11 +243,11 @@ export async function parseLargeDocument(
 ): Promise<LoadedDocument> {
   const loader = new UnstructuredLoader();
   const result = await loader.parseDocument(filePath, {
-    strategy: 'fast', // Faster for large documents
+    strategy: "fast", // Faster for large documents
     chunkSize,
     chunkOverlap: 400,
     extractTables: true,
-    extractImages: false
+    extractImages: false,
   });
   return loader.toLoadedDocument(result);
 }

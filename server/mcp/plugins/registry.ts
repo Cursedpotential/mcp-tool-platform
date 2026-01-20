@@ -1,11 +1,15 @@
 /**
  * Plugin Registry
- * 
+ *
  * Manages tool registration, discovery, and permission checking.
  * Supports dynamic tool loading and search with minimal token overhead.
  */
 
-import type { ToolCard, ToolSpec, ToolPermission } from '../../../shared/mcp-types';
+import type {
+  ToolCard,
+  ToolSpec,
+  ToolPermission,
+} from "../../../shared/mcp-types";
 
 export interface SearchOptions {
   topK?: number;
@@ -68,7 +72,7 @@ export class PluginRegistry {
 
     const scored: Array<{ tool: ToolSpec; score: number }> = [];
 
-    this.tools.forEach((tool) => {
+    this.tools.forEach(tool => {
       // Filter by category if specified
       if (category && tool.category !== category) {
         return;
@@ -77,7 +81,9 @@ export class PluginRegistry {
       // Filter by tags if specified
       if (tags && tags.length > 0) {
         const toolTags = this.extractTags(tool);
-        const hasAllTags = tags.every((tag) => toolTags.includes(tag.toLowerCase()));
+        const hasAllTags = tags.every(tag =>
+          toolTags.includes(tag.toLowerCase())
+        );
         if (!hasAllTags) {
           return;
         }
@@ -103,7 +109,7 @@ export class PluginRegistry {
         }
         // Tag match
         const toolTags = this.extractTags(tool);
-        if (toolTags.some((t) => t.includes(term))) {
+        if (toolTags.some(t => t.includes(term))) {
           score += 25;
         }
       }
@@ -115,7 +121,7 @@ export class PluginRegistry {
 
     // Sort by score and return top K
     scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, topK).map((s) => s.tool);
+    return scored.slice(0, topK).map(s => s.tool);
   }
 
   /**
@@ -151,7 +157,7 @@ export class PluginRegistry {
    */
   getToolsByCategory(category: string): ToolSpec[] {
     const result: ToolSpec[] = [];
-    this.tools.forEach((tool) => {
+    this.tools.forEach(tool => {
       if (tool.category === category) {
         result.push(tool);
       }
@@ -166,7 +172,7 @@ export class PluginRegistry {
     const tags: string[] = [];
 
     // Add explicit tags if present
-    if ('tags' in tool && Array.isArray((tool as ToolCard).tags)) {
+    if ("tags" in tool && Array.isArray((tool as ToolCard).tags)) {
       tags.push(...(tool as ToolCard).tags);
     }
 
@@ -175,7 +181,7 @@ export class PluginRegistry {
 
     // Add name parts
     const nameParts = tool.name.split(/[._-]/).filter(Boolean);
-    tags.push(...nameParts.map((p) => p.toLowerCase()));
+    tags.push(...nameParts.map(p => p.toLowerCase()));
 
     return Array.from(new Set(tags));
   }
@@ -201,259 +207,289 @@ export async function getPluginRegistry(): Promise<PluginRegistry> {
 async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
   // Search tools
   registry.registerTool({
-    name: 'search.ripgrep',
-    category: 'search',
-    description: 'Fast regex search using ripgrep with JSON output',
-    version: '1.0.0',
-    tags: ['search', 'regex', 'ripgrep', 'grep', 'text'],
+    name: "search.ripgrep",
+    category: "search",
+    description: "Fast regex search using ripgrep with JSON output",
+    version: "1.0.0",
+    tags: ["search", "regex", "ripgrep", "grep", "text"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        root: { type: 'string', description: 'Root directory to search' },
-        query: { type: 'string', description: 'Search pattern (regex)' },
-        glob: { type: 'string', description: 'File glob pattern' },
-        maxResults: { type: 'number', description: 'Maximum results to return' },
-        contextLines: { type: 'number', description: 'Lines of context around matches' },
+        root: { type: "string", description: "Root directory to search" },
+        query: { type: "string", description: "Search pattern (regex)" },
+        glob: { type: "string", description: "File glob pattern" },
+        maxResults: {
+          type: "number",
+          description: "Maximum results to return",
+        },
+        contextLines: {
+          type: "number",
+          description: "Lines of context around matches",
+        },
       },
-      required: ['root', 'query'],
+      required: ["root", "query"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        matches: { type: 'array' },
-        totalMatches: { type: 'number' },
-        ref: { type: 'string' },
+        matches: { type: "array" },
+        totalMatches: { type: "number" },
+        ref: { type: "string" },
       },
     },
-    permissions: ['read:filesystem'],
+    permissions: ["read:filesystem"],
   });
 
   registry.registerTool({
-    name: 'search.ugrep',
-    category: 'search',
-    description: 'Universal grep with advanced filtering and JSON output',
-    version: '1.0.0',
-    tags: ['search', 'grep', 'ugrep', 'filter', 'text'],
+    name: "search.ugrep",
+    category: "search",
+    description: "Universal grep with advanced filtering and JSON output",
+    version: "1.0.0",
+    tags: ["search", "grep", "ugrep", "filter", "text"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        root: { type: 'string', description: 'Root directory to search' },
-        query: { type: 'string', description: 'Search pattern' },
-        include: { type: 'string', description: 'Include file pattern' },
-        exclude: { type: 'string', description: 'Exclude pattern' },
-        maxResults: { type: 'number', description: 'Maximum results' },
+        root: { type: "string", description: "Root directory to search" },
+        query: { type: "string", description: "Search pattern" },
+        include: { type: "string", description: "Include file pattern" },
+        exclude: { type: "string", description: "Exclude pattern" },
+        maxResults: { type: "number", description: "Maximum results" },
       },
-      required: ['root', 'query'],
+      required: ["root", "query"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        matches: { type: 'array' },
-        totalMatches: { type: 'number' },
+        matches: { type: "array" },
+        totalMatches: { type: "number" },
       },
     },
-    permissions: ['read:filesystem'],
+    permissions: ["read:filesystem"],
   });
 
   // Document tools
   registry.registerTool({
-    name: 'doc.convert_to_markdown',
-    category: 'document',
-    description: 'Convert documents to markdown using Pandoc',
-    version: '1.0.0',
-    tags: ['document', 'markdown', 'pandoc', 'convert', 'format'],
+    name: "doc.convert_to_markdown",
+    category: "document",
+    description: "Convert documents to markdown using Pandoc",
+    version: "1.0.0",
+    tags: ["document", "markdown", "pandoc", "convert", "format"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        path: { type: 'string', description: 'Path to document or content ref' },
-        format: { type: 'string', description: 'Input format (auto-detected if not specified)' },
-        extractMetadata: { type: 'boolean', description: 'Extract document metadata' },
+        path: {
+          type: "string",
+          description: "Path to document or content ref",
+        },
+        format: {
+          type: "string",
+          description: "Input format (auto-detected if not specified)",
+        },
+        extractMetadata: {
+          type: "boolean",
+          description: "Extract document metadata",
+        },
       },
-      required: ['path'],
+      required: ["path"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        markdownRef: { type: 'string' },
-        metadata: { type: 'object' },
-        preview: { type: 'string' },
+        markdownRef: { type: "string" },
+        metadata: { type: "object" },
+        preview: { type: "string" },
       },
     },
-    permissions: ['read:filesystem', 'execute:process'],
+    permissions: ["read:filesystem", "execute:process"],
   });
 
   registry.registerTool({
-    name: 'doc.ocr_image_or_pdf',
-    category: 'document',
-    description: 'Extract text from images/PDFs using Tesseract OCR',
-    version: '1.0.0',
-    tags: ['document', 'ocr', 'tesseract', 'pdf', 'image', 'extract'],
+    name: "doc.ocr_image_or_pdf",
+    category: "document",
+    description: "Extract text from images/PDFs using Tesseract OCR",
+    version: "1.0.0",
+    tags: ["document", "ocr", "tesseract", "pdf", "image", "extract"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        path: { type: 'string', description: 'Path to image or PDF' },
-        language: { type: 'string', description: 'OCR language (default: eng)' },
-        psm: { type: 'number', description: 'Page segmentation mode' },
-        dpi: { type: 'number', description: 'DPI for processing' },
+        path: { type: "string", description: "Path to image or PDF" },
+        language: {
+          type: "string",
+          description: "OCR language (default: eng)",
+        },
+        psm: { type: "number", description: "Page segmentation mode" },
+        dpi: { type: "number", description: "DPI for processing" },
       },
-      required: ['path'],
+      required: ["path"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        textRef: { type: 'string' },
-        pages: { type: 'number' },
-        confidence: { type: 'number' },
+        textRef: { type: "string" },
+        pages: { type: "number" },
+        confidence: { type: "number" },
       },
     },
-    permissions: ['read:filesystem', 'execute:process'],
+    permissions: ["read:filesystem", "execute:process"],
   });
 
   registry.registerTool({
-    name: 'doc.segment',
-    category: 'document',
-    description: 'Segment text into sections and chunks with offsets',
-    version: '1.0.0',
-    tags: ['document', 'segment', 'chunk', 'split', 'section'],
+    name: "doc.segment",
+    category: "document",
+    description: "Segment text into sections and chunks with offsets",
+    version: "1.0.0",
+    tags: ["document", "segment", "chunk", "split", "section"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        textRef: { type: 'string', description: 'Content reference to text' },
-        strategy: { type: 'string', enum: ['heading', 'paragraph', 'sentence', 'fixed'] },
-        chunkSize: { type: 'number', description: 'Target chunk size for fixed strategy' },
-        overlap: { type: 'number', description: 'Overlap between chunks' },
+        textRef: { type: "string", description: "Content reference to text" },
+        strategy: {
+          type: "string",
+          enum: ["heading", "paragraph", "sentence", "fixed"],
+        },
+        chunkSize: {
+          type: "number",
+          description: "Target chunk size for fixed strategy",
+        },
+        overlap: { type: "number", description: "Overlap between chunks" },
       },
-      required: ['textRef'],
+      required: ["textRef"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        chunksRef: { type: 'string' },
-        chunkCount: { type: 'number' },
-        sections: { type: 'array' },
+        chunksRef: { type: "string" },
+        chunkCount: { type: "number" },
+        sections: { type: "array" },
       },
     },
-    permissions: ['read:filesystem'],
+    permissions: ["read:filesystem"],
   });
 
   // NLP tools
   registry.registerTool({
-    name: 'nlp.detect_language',
-    category: 'nlp',
-    description: 'Detect the language of text',
-    version: '1.0.0',
-    tags: ['nlp', 'language', 'detect', 'identify'],
+    name: "nlp.detect_language",
+    category: "nlp",
+    description: "Detect the language of text",
+    version: "1.0.0",
+    tags: ["nlp", "language", "detect", "identify"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        textRef: { type: 'string', description: 'Content reference to text' },
+        textRef: { type: "string", description: "Content reference to text" },
       },
-      required: ['textRef'],
+      required: ["textRef"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        language: { type: 'string' },
-        confidence: { type: 'number' },
-        alternatives: { type: 'array' },
+        language: { type: "string" },
+        confidence: { type: "number" },
+        alternatives: { type: "array" },
       },
     },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'nlp.extract_entities',
-    category: 'nlp',
-    description: 'Extract named entities with offsets and types',
-    version: '1.0.0',
-    tags: ['nlp', 'entity', 'ner', 'extract', 'named-entity'],
+    name: "nlp.extract_entities",
+    category: "nlp",
+    description: "Extract named entities with offsets and types",
+    version: "1.0.0",
+    tags: ["nlp", "entity", "ner", "extract", "named-entity"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        textRef: { type: 'string', description: 'Content reference to text' },
-        provider: { type: 'string', enum: ['auto', 'spacy', 'transformers', 'compromise'] },
-        types: { type: 'array', description: 'Entity types to extract' },
+        textRef: { type: "string", description: "Content reference to text" },
+        provider: {
+          type: "string",
+          enum: ["auto", "spacy", "transformers", "compromise"],
+        },
+        types: { type: "array", description: "Entity types to extract" },
       },
-      required: ['textRef'],
+      required: ["textRef"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        entities: { type: 'array' },
-        entitiesRef: { type: 'string' },
+        entities: { type: "array" },
+        entitiesRef: { type: "string" },
       },
     },
-    permissions: ['access:llm'],
+    permissions: ["access:llm"],
   });
 
   registry.registerTool({
-    name: 'nlp.extract_keywords',
-    category: 'nlp',
-    description: 'Extract keywords using TextRank or TF-IDF',
-    version: '1.0.0',
-    tags: ['nlp', 'keyword', 'textrank', 'tfidf', 'extract'],
+    name: "nlp.extract_keywords",
+    category: "nlp",
+    description: "Extract keywords using TextRank or TF-IDF",
+    version: "1.0.0",
+    tags: ["nlp", "keyword", "textrank", "tfidf", "extract"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        textRef: { type: 'string', description: 'Content reference to text' },
-        method: { type: 'string', enum: ['textrank', 'tfidf', 'rake'] },
-        topK: { type: 'number', description: 'Number of keywords to extract' },
+        textRef: { type: "string", description: "Content reference to text" },
+        method: { type: "string", enum: ["textrank", "tfidf", "rake"] },
+        topK: { type: "number", description: "Number of keywords to extract" },
       },
-      required: ['textRef'],
+      required: ["textRef"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        keywords: { type: 'array' },
+        keywords: { type: "array" },
       },
     },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'nlp.analyze_sentiment',
-    category: 'nlp',
-    description: 'Analyze sentiment of text',
-    version: '1.0.0',
-    tags: ['nlp', 'sentiment', 'analyze', 'emotion', 'opinion'],
+    name: "nlp.analyze_sentiment",
+    category: "nlp",
+    description: "Analyze sentiment of text",
+    version: "1.0.0",
+    tags: ["nlp", "sentiment", "analyze", "emotion", "opinion"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        textRef: { type: 'string', description: 'Content reference to text' },
-        provider: { type: 'string', enum: ['auto', 'vader', 'transformers'] },
+        textRef: { type: "string", description: "Content reference to text" },
+        provider: { type: "string", enum: ["auto", "vader", "transformers"] },
       },
-      required: ['textRef'],
+      required: ["textRef"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        label: { type: 'string' },
-        score: { type: 'number' },
-        confidence: { type: 'number' },
+        label: { type: "string" },
+        score: { type: "number" },
+        confidence: { type: "number" },
       },
     },
-    permissions: ['access:llm'],
+    permissions: ["access:llm"],
   });
 
   registry.registerTool({
-    name: 'nlp.split_sentences',
-    category: 'nlp',
-    description: 'Split text into sentences with offsets',
-    version: '1.0.0',
-    tags: ['nlp', 'sentence', 'split', 'tokenize'],
+    name: "nlp.split_sentences",
+    category: "nlp",
+    description: "Split text into sentences with offsets",
+    version: "1.0.0",
+    tags: ["nlp", "sentence", "split", "tokenize"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        textRef: { type: 'string', description: 'Content reference to text' },
-        provider: { type: 'string', enum: ['auto', 'spacy', 'nltk', 'compromise'] },
+        textRef: { type: "string", description: "Content reference to text" },
+        provider: {
+          type: "string",
+          enum: ["auto", "spacy", "nltk", "compromise"],
+        },
       },
-      required: ['textRef'],
+      required: ["textRef"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        sentences: { type: 'array' },
-        sentencesRef: { type: 'string' },
+        sentences: { type: "array" },
+        sentencesRef: { type: "string" },
       },
     },
     permissions: [],
@@ -461,77 +497,83 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
 
   // ML tools (optional)
   registry.registerTool({
-    name: 'ml.embed',
-    category: 'ml',
-    description: 'Generate embeddings for text (stored server-side)',
-    version: '1.0.0',
-    tags: ['ml', 'embedding', 'vector', 'semantic'],
+    name: "ml.embed",
+    category: "ml",
+    description: "Generate embeddings for text (stored server-side)",
+    version: "1.0.0",
+    tags: ["ml", "embedding", "vector", "semantic"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        textRef: { type: 'string', description: 'Content reference to text' },
-        model: { type: 'string', description: 'Embedding model to use' },
-        chunkSize: { type: 'number', description: 'Chunk size for long text' },
+        textRef: { type: "string", description: "Content reference to text" },
+        model: { type: "string", description: "Embedding model to use" },
+        chunkSize: { type: "number", description: "Chunk size for long text" },
       },
-      required: ['textRef'],
+      required: ["textRef"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        embeddingIds: { type: 'array' },
-        dimensions: { type: 'number' },
-        model: { type: 'string' },
+        embeddingIds: { type: "array" },
+        dimensions: { type: "number" },
+        model: { type: "string" },
       },
     },
-    permissions: ['access:llm', 'access:vectordb'],
+    permissions: ["access:llm", "access:vectordb"],
   });
 
   registry.registerTool({
-    name: 'ml.semantic_search',
-    category: 'ml',
-    description: 'Semantic search over embedded documents',
-    version: '1.0.0',
-    tags: ['ml', 'semantic', 'search', 'vector', 'similarity'],
+    name: "ml.semantic_search",
+    category: "ml",
+    description: "Semantic search over embedded documents",
+    version: "1.0.0",
+    tags: ["ml", "semantic", "search", "vector", "similarity"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        query: { type: 'string', description: 'Search query' },
-        scopeRefs: { type: 'array', description: 'Content refs to search within' },
-        topK: { type: 'number', description: 'Number of results' },
-        threshold: { type: 'number', description: 'Minimum similarity score' },
+        query: { type: "string", description: "Search query" },
+        scopeRefs: {
+          type: "array",
+          description: "Content refs to search within",
+        },
+        topK: { type: "number", description: "Number of results" },
+        threshold: { type: "number", description: "Minimum similarity score" },
       },
-      required: ['query'],
+      required: ["query"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        results: { type: 'array' },
-        resultsRef: { type: 'string' },
+        results: { type: "array" },
+        resultsRef: { type: "string" },
       },
     },
-    permissions: ['access:vectordb'],
+    permissions: ["access:vectordb"],
   });
 
   // Rules engine tools
   registry.registerTool({
-    name: 'rules.evaluate',
-    category: 'rules',
-    description: 'Evaluate rule sets against content',
-    version: '1.0.0',
-    tags: ['rules', 'evaluate', 'pattern', 'match', 'action'],
+    name: "rules.evaluate",
+    category: "rules",
+    description: "Evaluate rule sets against content",
+    version: "1.0.0",
+    tags: ["rules", "evaluate", "pattern", "match", "action"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        textRef: { type: 'string', description: 'Content reference to evaluate' },
-        ruleSetId: { type: 'string', description: 'Rule set to apply' },
+        textRef: {
+          type: "string",
+          description: "Content reference to evaluate",
+        },
+        ruleSetId: { type: "string", description: "Rule set to apply" },
       },
-      required: ['textRef', 'ruleSetId'],
+      required: ["textRef", "ruleSetId"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        matches: { type: 'array' },
-        proposedActions: { type: 'array' },
+        matches: { type: "array" },
+        proposedActions: { type: "array" },
       },
     },
     permissions: [],
@@ -539,161 +581,177 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
 
   // Diff/merge tools
   registry.registerTool({
-    name: 'diff.text',
-    category: 'diff',
-    description: 'Compute diff between two text contents',
-    version: '1.0.0',
-    tags: ['diff', 'compare', 'text', 'similarity', 'merge'],
+    name: "diff.text",
+    category: "diff",
+    description: "Compute diff between two text contents",
+    version: "1.0.0",
+    tags: ["diff", "compare", "text", "similarity", "merge"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        refA: { type: 'string', description: 'First content reference' },
-        refB: { type: 'string', description: 'Second content reference' },
-        format: { type: 'string', enum: ['unified', 'json', 'inline'] },
+        refA: { type: "string", description: "First content reference" },
+        refB: { type: "string", description: "Second content reference" },
+        format: { type: "string", enum: ["unified", "json", "inline"] },
       },
-      required: ['refA', 'refB'],
+      required: ["refA", "refB"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        diffRef: { type: 'string' },
-        additions: { type: 'number' },
-        deletions: { type: 'number' },
-        similarity: { type: 'number' },
+        diffRef: { type: "string" },
+        additions: { type: "number" },
+        deletions: { type: "number" },
+        similarity: { type: "number" },
       },
     },
-    permissions: ['read:filesystem'],
+    permissions: ["read:filesystem"],
   });
 
   // Filesystem tools
   registry.registerTool({
-    name: 'fs.list_dir',
-    category: 'filesystem',
-    description: 'List directory contents with metadata',
-    version: '1.0.0',
-    tags: ['filesystem', 'directory', 'list', 'ls'],
+    name: "fs.list_dir",
+    category: "filesystem",
+    description: "List directory contents with metadata",
+    version: "1.0.0",
+    tags: ["filesystem", "directory", "list", "ls"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        path: { type: 'string', description: 'Directory path' },
-        recursive: { type: 'boolean', description: 'Include subdirectories' },
-        glob: { type: 'string', description: 'Filter pattern' },
+        path: { type: "string", description: "Directory path" },
+        recursive: { type: "boolean", description: "Include subdirectories" },
+        glob: { type: "string", description: "Filter pattern" },
       },
-      required: ['path'],
+      required: ["path"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        entries: { type: 'array' },
-        totalSize: { type: 'number' },
-        fileCount: { type: 'number' },
+        entries: { type: "array" },
+        totalSize: { type: "number" },
+        fileCount: { type: "number" },
       },
     },
-    permissions: ['read:filesystem'],
+    permissions: ["read:filesystem"],
   });
 
   registry.registerTool({
-    name: 'fs.read_file',
-    category: 'filesystem',
-    description: 'Read file contents into content store',
-    version: '1.0.0',
-    tags: ['filesystem', 'file', 'read', 'content'],
+    name: "fs.read_file",
+    category: "filesystem",
+    description: "Read file contents into content store",
+    version: "1.0.0",
+    tags: ["filesystem", "file", "read", "content"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        path: { type: 'string', description: 'File path' },
-        encoding: { type: 'string', description: 'Text encoding' },
+        path: { type: "string", description: "File path" },
+        encoding: { type: "string", description: "Text encoding" },
       },
-      required: ['path'],
+      required: ["path"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        ref: { type: 'string' },
-        size: { type: 'number' },
-        mime: { type: 'string' },
+        ref: { type: "string" },
+        size: { type: "number" },
+        mime: { type: "string" },
       },
     },
-    permissions: ['read:filesystem'],
+    permissions: ["read:filesystem"],
   });
 
   registry.registerTool({
-    name: 'fs.write_file',
-    category: 'filesystem',
-    description: 'Write content to file (requires approval)',
-    version: '1.0.0',
-    tags: ['filesystem', 'file', 'write', 'save'],
+    name: "fs.write_file",
+    category: "filesystem",
+    description: "Write content to file (requires approval)",
+    version: "1.0.0",
+    tags: ["filesystem", "file", "write", "save"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        path: { type: 'string', description: 'File path' },
-        contentRef: { type: 'string', description: 'Content reference to write' },
-        createDirs: { type: 'boolean', description: 'Create parent directories' },
+        path: { type: "string", description: "File path" },
+        contentRef: {
+          type: "string",
+          description: "Content reference to write",
+        },
+        createDirs: {
+          type: "boolean",
+          description: "Create parent directories",
+        },
       },
-      required: ['path', 'contentRef'],
+      required: ["path", "contentRef"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        success: { type: 'boolean' },
-        approvalId: { type: 'string' },
+        success: { type: "boolean" },
+        approvalId: { type: "string" },
       },
     },
-    permissions: ['write:filesystem'],
+    permissions: ["write:filesystem"],
   });
 
   // Summarization tools
   registry.registerTool({
-    name: 'summarize.hierarchical',
-    category: 'summarization',
-    description: 'Hierarchical map-reduce summarization for large documents',
-    version: '1.0.0',
-    tags: ['summarization', 'map-reduce', 'document', 'compression'],
+    name: "summarize.hierarchical",
+    category: "summarization",
+    description: "Hierarchical map-reduce summarization for large documents",
+    version: "1.0.0",
+    tags: ["summarization", "map-reduce", "document", "compression"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        textRef: { type: 'string', description: 'Content reference to summarize' },
-        maxLength: { type: 'number', description: 'Target summary length' },
-        style: { type: 'string', enum: ['concise', 'detailed', 'bullet'] },
-        preserveCitations: { type: 'boolean', description: 'Include source citations' },
+        textRef: {
+          type: "string",
+          description: "Content reference to summarize",
+        },
+        maxLength: { type: "number", description: "Target summary length" },
+        style: { type: "string", enum: ["concise", "detailed", "bullet"] },
+        preserveCitations: {
+          type: "boolean",
+          description: "Include source citations",
+        },
       },
-      required: ['textRef'],
+      required: ["textRef"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        summaryRef: { type: 'string' },
-        citations: { type: 'array' },
-        compressionRatio: { type: 'number' },
+        summaryRef: { type: "string" },
+        citations: { type: "array" },
+        compressionRatio: { type: "number" },
       },
     },
-    permissions: ['access:llm'],
+    permissions: ["access:llm"],
   });
 
   registry.registerTool({
-    name: 'retrieve.supporting_spans',
-    category: 'retrieval',
-    description: 'Retrieve supporting spans for a question using BM25 + embeddings',
-    version: '1.0.0',
-    tags: ['retrieval', 'bm25', 'semantic', 'qa', 'search'],
+    name: "retrieve.supporting_spans",
+    category: "retrieval",
+    description:
+      "Retrieve supporting spans for a question using BM25 + embeddings",
+    version: "1.0.0",
+    tags: ["retrieval", "bm25", "semantic", "qa", "search"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        question: { type: 'string', description: 'Question to find support for' },
-        docRef: { type: 'string', description: 'Document content reference' },
-        topK: { type: 'number', description: 'Number of spans to retrieve' },
-        useEmbeddings: { type: 'boolean', description: 'Use semantic search' },
+        question: {
+          type: "string",
+          description: "Question to find support for",
+        },
+        docRef: { type: "string", description: "Document content reference" },
+        topK: { type: "number", description: "Number of spans to retrieve" },
+        useEmbeddings: { type: "boolean", description: "Use semantic search" },
       },
-      required: ['question', 'docRef'],
+      required: ["question", "docRef"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        spans: { type: 'array' },
-        citations: { type: 'array' },
+        spans: { type: "array" },
+        citations: { type: "array" },
       },
     },
-    permissions: ['access:vectordb'],
+    permissions: ["access:vectordb"],
   });
 
   // ============================================================================
@@ -702,137 +760,166 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
 
   // Vector DB Tools
   registry.registerTool({
-    name: 'vector.store',
-    category: 'database',
-    description: 'Store embeddings in vector database (Qdrant, pgvector, or Chroma)',
-    version: '1.0.0',
-    tags: ['vector', 'embedding', 'store', 'database'],
+    name: "vector.store",
+    category: "database",
+    description:
+      "Store embeddings in vector database (Qdrant, pgvector, or Chroma)",
+    version: "1.0.0",
+    tags: ["vector", "embedding", "store", "database"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        collection: { type: 'string', description: 'Collection name' },
-        vectors: { type: 'array', description: 'Array of {id, vector, metadata}' },
-        provider: { type: 'string', enum: ['qdrant', 'pgvector', 'chroma'], description: 'Vector DB provider' },
+        collection: { type: "string", description: "Collection name" },
+        vectors: {
+          type: "array",
+          description: "Array of {id, vector, metadata}",
+        },
+        provider: {
+          type: "string",
+          enum: ["qdrant", "pgvector", "chroma"],
+          description: "Vector DB provider",
+        },
       },
-      required: ['collection', 'vectors'],
+      required: ["collection", "vectors"],
     },
-    outputSchema: { type: 'object', properties: { stored: { type: 'number' } } },
-    permissions: ['access:vectordb'],
+    outputSchema: {
+      type: "object",
+      properties: { stored: { type: "number" } },
+    },
+    permissions: ["access:vectordb"],
   });
 
   registry.registerTool({
-    name: 'vector.search',
-    category: 'database',
-    description: 'Semantic search in vector database',
-    version: '1.0.0',
-    tags: ['vector', 'search', 'semantic', 'database'],
+    name: "vector.search",
+    category: "database",
+    description: "Semantic search in vector database",
+    version: "1.0.0",
+    tags: ["vector", "search", "semantic", "database"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        collection: { type: 'string' },
-        query: { type: 'string', description: 'Text query or vector' },
-        topK: { type: 'number', default: 10 },
-        filter: { type: 'object', description: 'Metadata filter' },
+        collection: { type: "string" },
+        query: { type: "string", description: "Text query or vector" },
+        topK: { type: "number", default: 10 },
+        filter: { type: "object", description: "Metadata filter" },
       },
-      required: ['collection', 'query'],
+      required: ["collection", "query"],
     },
-    outputSchema: { type: 'object', properties: { results: { type: 'array' } } },
-    permissions: ['access:vectordb'],
+    outputSchema: {
+      type: "object",
+      properties: { results: { type: "array" } },
+    },
+    permissions: ["access:vectordb"],
   });
 
   registry.registerTool({
-    name: 'vector.delete',
-    category: 'database',
-    description: 'Delete vectors from database',
-    version: '1.0.0',
-    tags: ['vector', 'delete', 'database'],
+    name: "vector.delete",
+    category: "database",
+    description: "Delete vectors from database",
+    version: "1.0.0",
+    tags: ["vector", "delete", "database"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        collection: { type: 'string' },
-        ids: { type: 'array', items: { type: 'string' } },
+        collection: { type: "string" },
+        ids: { type: "array", items: { type: "string" } },
       },
-      required: ['collection', 'ids'],
+      required: ["collection", "ids"],
     },
-    outputSchema: { type: 'object', properties: { deleted: { type: 'number' } } },
-    permissions: ['access:vectordb', 'write'],
+    outputSchema: {
+      type: "object",
+      properties: { deleted: { type: "number" } },
+    },
+    permissions: ["access:vectordb", "write"],
   });
 
   // Graph DB Tools
   registry.registerTool({
-    name: 'graph.create_entity',
-    category: 'database',
-    description: 'Create entity in graph database (Graphiti/Neo4j)',
-    version: '1.0.0',
-    tags: ['graph', 'entity', 'create', 'neo4j'],
+    name: "graph.create_entity",
+    category: "database",
+    description: "Create entity in graph database (Graphiti/Neo4j)",
+    version: "1.0.0",
+    tags: ["graph", "entity", "create", "neo4j"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        type: { type: 'string', description: 'Entity type' },
-        name: { type: 'string' },
-        properties: { type: 'object' },
+        type: { type: "string", description: "Entity type" },
+        name: { type: "string" },
+        properties: { type: "object" },
       },
-      required: ['type', 'name'],
+      required: ["type", "name"],
     },
-    outputSchema: { type: 'object', properties: { entity: { type: 'object' }, created: { type: 'boolean' } } },
-    permissions: ['access:graphdb', 'write'],
+    outputSchema: {
+      type: "object",
+      properties: { entity: { type: "object" }, created: { type: "boolean" } },
+    },
+    permissions: ["access:graphdb", "write"],
   });
 
   registry.registerTool({
-    name: 'graph.create_relationship',
-    category: 'database',
-    description: 'Create relationship between entities',
-    version: '1.0.0',
-    tags: ['graph', 'relationship', 'create', 'neo4j'],
+    name: "graph.create_relationship",
+    category: "database",
+    description: "Create relationship between entities",
+    version: "1.0.0",
+    tags: ["graph", "relationship", "create", "neo4j"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        fromId: { type: 'string' },
-        toId: { type: 'string' },
-        type: { type: 'string', description: 'Relationship type' },
-        properties: { type: 'object' },
+        fromId: { type: "string" },
+        toId: { type: "string" },
+        type: { type: "string", description: "Relationship type" },
+        properties: { type: "object" },
       },
-      required: ['fromId', 'toId', 'type'],
+      required: ["fromId", "toId", "type"],
     },
-    outputSchema: { type: 'object', properties: { relationship: { type: 'object' } } },
-    permissions: ['access:graphdb', 'write'],
+    outputSchema: {
+      type: "object",
+      properties: { relationship: { type: "object" } },
+    },
+    permissions: ["access:graphdb", "write"],
   });
 
   registry.registerTool({
-    name: 'graph.query',
-    category: 'database',
-    description: 'Execute Cypher query on graph database',
-    version: '1.0.0',
-    tags: ['graph', 'query', 'cypher', 'neo4j'],
+    name: "graph.query",
+    category: "database",
+    description: "Execute Cypher query on graph database",
+    version: "1.0.0",
+    tags: ["graph", "query", "cypher", "neo4j"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        cypher: { type: 'string', description: 'Cypher query' },
-        params: { type: 'object' },
+        cypher: { type: "string", description: "Cypher query" },
+        params: { type: "object" },
       },
-      required: ['cypher'],
+      required: ["cypher"],
     },
-    outputSchema: { type: 'object', properties: { records: { type: 'array' } } },
-    permissions: ['access:graphdb'],
+    outputSchema: {
+      type: "object",
+      properties: { records: { type: "array" } },
+    },
+    permissions: ["access:graphdb"],
   });
 
   registry.registerTool({
-    name: 'graph.search',
-    category: 'database',
-    description: 'Search entities in graph database',
-    version: '1.0.0',
-    tags: ['graph', 'search', 'entity', 'neo4j'],
+    name: "graph.search",
+    category: "database",
+    description: "Search entities in graph database",
+    version: "1.0.0",
+    tags: ["graph", "search", "entity", "neo4j"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        type: { type: 'string' },
-        query: { type: 'string' },
-        properties: { type: 'object' },
-        limit: { type: 'number', default: 10 },
+        type: { type: "string" },
+        query: { type: "string" },
+        properties: { type: "object" },
+        limit: { type: "number", default: 10 },
       },
     },
-    outputSchema: { type: 'object', properties: { entities: { type: 'array' } } },
-    permissions: ['access:graphdb'],
+    outputSchema: {
+      type: "object",
+      properties: { entities: { type: "array" } },
+    },
+    permissions: ["access:graphdb"],
   });
 
   // ============================================================================
@@ -840,67 +927,73 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
   // ============================================================================
 
   registry.registerTool({
-    name: 'mem0.add',
-    category: 'memory',
-    description: 'Add memory to shared context store (mem0)',
-    version: '1.0.0',
-    tags: ['memory', 'context', 'store', 'mem0'],
+    name: "mem0.add",
+    category: "memory",
+    description: "Add memory to shared context store (mem0)",
+    version: "1.0.0",
+    tags: ["memory", "context", "store", "mem0"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        content: { type: 'string' },
-        metadata: { type: 'object' },
-        userId: { type: 'string' },
-        agentId: { type: 'string' },
-        projectId: { type: 'string' },
-        scope: { type: 'string', enum: ['agent', 'project', 'user', 'global'] },
+        content: { type: "string" },
+        metadata: { type: "object" },
+        userId: { type: "string" },
+        agentId: { type: "string" },
+        projectId: { type: "string" },
+        scope: { type: "string", enum: ["agent", "project", "user", "global"] },
       },
-      required: ['content'],
+      required: ["content"],
     },
-    outputSchema: { type: 'object', properties: { memory: { type: 'object' } } },
-    permissions: ['access:mem0', 'write'],
+    outputSchema: {
+      type: "object",
+      properties: { memory: { type: "object" } },
+    },
+    permissions: ["access:mem0", "write"],
   });
 
   registry.registerTool({
-    name: 'mem0.search',
-    category: 'memory',
-    description: 'Search memories semantically',
-    version: '1.0.0',
-    tags: ['memory', 'search', 'semantic', 'mem0'],
+    name: "mem0.search",
+    category: "memory",
+    description: "Search memories semantically",
+    version: "1.0.0",
+    tags: ["memory", "search", "semantic", "mem0"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        query: { type: 'string' },
-        userId: { type: 'string' },
-        agentId: { type: 'string' },
-        projectId: { type: 'string' },
-        scope: { type: 'string' },
-        limit: { type: 'number', default: 10 },
+        query: { type: "string" },
+        userId: { type: "string" },
+        agentId: { type: "string" },
+        projectId: { type: "string" },
+        scope: { type: "string" },
+        limit: { type: "number", default: 10 },
       },
-      required: ['query'],
+      required: ["query"],
     },
-    outputSchema: { type: 'object', properties: { memories: { type: 'array' } } },
-    permissions: ['access:mem0'],
+    outputSchema: {
+      type: "object",
+      properties: { memories: { type: "array" } },
+    },
+    permissions: ["access:mem0"],
   });
 
   registry.registerTool({
-    name: 'mem0.share_context',
-    category: 'memory',
-    description: 'Share context between agents',
-    version: '1.0.0',
-    tags: ['memory', 'context', 'share', 'agent'],
+    name: "mem0.share_context",
+    category: "memory",
+    description: "Share context between agents",
+    version: "1.0.0",
+    tags: ["memory", "context", "share", "agent"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        fromAgentId: { type: 'string' },
-        toAgentId: { type: 'string' },
-        query: { type: 'string' },
-        limit: { type: 'number' },
+        fromAgentId: { type: "string" },
+        toAgentId: { type: "string" },
+        query: { type: "string" },
+        limit: { type: "number" },
       },
-      required: ['fromAgentId', 'toAgentId', 'query'],
+      required: ["fromAgentId", "toAgentId", "query"],
     },
-    outputSchema: { type: 'object', properties: { shared: { type: 'array' } } },
-    permissions: ['access:mem0', 'write'],
+    outputSchema: { type: "object", properties: { shared: { type: "array" } } },
+    permissions: ["access:mem0", "write"],
   });
 
   // ============================================================================
@@ -908,38 +1001,44 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
   // ============================================================================
 
   registry.registerTool({
-    name: 'n8n.trigger',
-    category: 'workflow',
-    description: 'Trigger n8n workflow execution',
-    version: '1.0.0',
-    tags: ['workflow', 'n8n', 'automation', 'trigger'],
+    name: "n8n.trigger",
+    category: "workflow",
+    description: "Trigger n8n workflow execution",
+    version: "1.0.0",
+    tags: ["workflow", "n8n", "automation", "trigger"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        workflowId: { type: 'string' },
-        data: { type: 'object' },
+        workflowId: { type: "string" },
+        data: { type: "object" },
       },
-      required: ['workflowId'],
+      required: ["workflowId"],
     },
-    outputSchema: { type: 'object', properties: { executionId: { type: 'string' } } },
-    permissions: ['access:n8n'],
+    outputSchema: {
+      type: "object",
+      properties: { executionId: { type: "string" } },
+    },
+    permissions: ["access:n8n"],
   });
 
   registry.registerTool({
-    name: 'n8n.status',
-    category: 'workflow',
-    description: 'Check workflow execution status',
-    version: '1.0.0',
-    tags: ['workflow', 'n8n', 'status'],
+    name: "n8n.status",
+    category: "workflow",
+    description: "Check workflow execution status",
+    version: "1.0.0",
+    tags: ["workflow", "n8n", "status"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        executionId: { type: 'string' },
+        executionId: { type: "string" },
       },
-      required: ['executionId'],
+      required: ["executionId"],
     },
-    outputSchema: { type: 'object', properties: { status: { type: 'string' }, data: { type: 'object' } } },
-    permissions: ['access:n8n'],
+    outputSchema: {
+      type: "object",
+      properties: { status: { type: "string" }, data: { type: "object" } },
+    },
+    permissions: ["access:n8n"],
   });
 
   // ============================================================================
@@ -947,154 +1046,187 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
   // ============================================================================
 
   registry.registerTool({
-    name: 'search.web',
-    category: 'search',
-    description: 'LLM-optimized web search (Tavily, Perplexity, SerpAPI)',
-    version: '1.0.0',
-    tags: ['search', 'web', 'tavily', 'perplexity'],
+    name: "search.web",
+    category: "search",
+    description: "LLM-optimized web search (Tavily, Perplexity, SerpAPI)",
+    version: "1.0.0",
+    tags: ["search", "web", "tavily", "perplexity"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        query: { type: 'string' },
-        type: { type: 'string', enum: ['web', 'news', 'research'] },
-        maxResults: { type: 'number', default: 10 },
-        provider: { type: 'string', enum: ['tavily', 'perplexity', 'serpapi'] },
+        query: { type: "string" },
+        type: { type: "string", enum: ["web", "news", "research"] },
+        maxResults: { type: "number", default: 10 },
+        provider: { type: "string", enum: ["tavily", "perplexity", "serpapi"] },
       },
-      required: ['query'],
+      required: ["query"],
     },
-    outputSchema: { type: 'object', properties: { results: { type: 'array' }, answer: { type: 'string' } } },
-    permissions: ['network'],
+    outputSchema: {
+      type: "object",
+      properties: { results: { type: "array" }, answer: { type: "string" } },
+    },
+    permissions: ["network"],
   });
 
   registry.registerTool({
-    name: 'search.news',
-    category: 'search',
-    description: 'Search recent news articles',
-    version: '1.0.0',
-    tags: ['search', 'news', 'current'],
+    name: "search.news",
+    category: "search",
+    description: "Search recent news articles",
+    version: "1.0.0",
+    tags: ["search", "news", "current"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        query: { type: 'string' },
-        maxResults: { type: 'number', default: 10 },
+        query: { type: "string" },
+        maxResults: { type: "number", default: 10 },
       },
-      required: ['query'],
+      required: ["query"],
     },
-    outputSchema: { type: 'object', properties: { results: { type: 'array' } } },
-    permissions: ['network'],
+    outputSchema: {
+      type: "object",
+      properties: { results: { type: "array" } },
+    },
+    permissions: ["network"],
   });
 
   registry.registerTool({
-    name: 'search.research',
-    category: 'search',
-    description: 'Search academic/research content',
-    version: '1.0.0',
-    tags: ['search', 'academic', 'research', 'scholar'],
+    name: "search.research",
+    category: "search",
+    description: "Search academic/research content",
+    version: "1.0.0",
+    tags: ["search", "academic", "research", "scholar"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        query: { type: 'string' },
-        maxResults: { type: 'number', default: 10 },
+        query: { type: "string" },
+        maxResults: { type: "number", default: 10 },
       },
-      required: ['query'],
+      required: ["query"],
     },
-    outputSchema: { type: 'object', properties: { results: { type: 'array' } } },
-    permissions: ['network'],
+    outputSchema: {
+      type: "object",
+      properties: { results: { type: "array" } },
+    },
+    permissions: ["network"],
   });
 
   registry.registerTool({
-    name: 'browser.navigate',
-    category: 'browser',
-    description: 'Navigate to URL and extract content',
-    version: '1.0.0',
-    tags: ['browser', 'navigate', 'scrape', 'extract'],
+    name: "browser.navigate",
+    category: "browser",
+    description: "Navigate to URL and extract content",
+    version: "1.0.0",
+    tags: ["browser", "navigate", "scrape", "extract"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        url: { type: 'string' },
-        waitFor: { type: 'string', description: 'CSS selector to wait for' },
-        javascript: { type: 'boolean', default: false },
+        url: { type: "string" },
+        waitFor: { type: "string", description: "CSS selector to wait for" },
+        javascript: { type: "boolean", default: false },
       },
-      required: ['url'],
+      required: ["url"],
     },
-    outputSchema: { type: 'object', properties: { content: { type: 'object' } } },
-    permissions: ['network'],
+    outputSchema: {
+      type: "object",
+      properties: { content: { type: "object" } },
+    },
+    permissions: ["network"],
   });
 
   registry.registerTool({
-    name: 'browser.screenshot',
-    category: 'browser',
-    description: 'Take screenshot of webpage',
-    version: '1.0.0',
-    tags: ['browser', 'screenshot', 'capture'],
+    name: "browser.screenshot",
+    category: "browser",
+    description: "Take screenshot of webpage",
+    version: "1.0.0",
+    tags: ["browser", "screenshot", "capture"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        url: { type: 'string' },
-        fullPage: { type: 'boolean', default: false },
-        selector: { type: 'string' },
+        url: { type: "string" },
+        fullPage: { type: "boolean", default: false },
+        selector: { type: "string" },
       },
-      required: ['url'],
+      required: ["url"],
     },
-    outputSchema: { type: 'object', properties: { screenshot: { type: 'string' }, format: { type: 'string' } } },
-    permissions: ['network'],
+    outputSchema: {
+      type: "object",
+      properties: {
+        screenshot: { type: "string" },
+        format: { type: "string" },
+      },
+    },
+    permissions: ["network"],
   });
 
   registry.registerTool({
-    name: 'browser.extract',
-    category: 'browser',
-    description: 'Extract structured content from a webpage',
-    version: '1.0.0',
-    tags: ['browser', 'extract', 'scrape', 'content'],
+    name: "browser.extract",
+    category: "browser",
+    description: "Extract structured content from a webpage",
+    version: "1.0.0",
+    tags: ["browser", "extract", "scrape", "content"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        url: { type: 'string' },
-        selectors: { type: 'object', description: 'Map of field name to CSS selector' },
-        format: { type: 'string', enum: ['text', 'html', 'markdown'] },
+        url: { type: "string" },
+        selectors: {
+          type: "object",
+          description: "Map of field name to CSS selector",
+        },
+        format: { type: "string", enum: ["text", "html", "markdown"] },
       },
-      required: ['url'],
+      required: ["url"],
     },
-    outputSchema: { type: 'object', properties: { extracted: { type: 'object' } } },
-    permissions: ['network'],
+    outputSchema: {
+      type: "object",
+      properties: { extracted: { type: "object" } },
+    },
+    permissions: ["network"],
   });
 
   registry.registerTool({
-    name: 'browser.click',
-    category: 'browser',
-    description: 'Click an element on a webpage',
-    version: '1.0.0',
-    tags: ['browser', 'click', 'interaction'],
+    name: "browser.click",
+    category: "browser",
+    description: "Click an element on a webpage",
+    version: "1.0.0",
+    tags: ["browser", "click", "interaction"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        url: { type: 'string' },
-        selector: { type: 'string' },
-        waitForNavigation: { type: 'boolean', default: true },
+        url: { type: "string" },
+        selector: { type: "string" },
+        waitForNavigation: { type: "boolean", default: true },
       },
-      required: ['url', 'selector'],
+      required: ["url", "selector"],
     },
-    outputSchema: { type: 'object', properties: { success: { type: 'boolean' }, newUrl: { type: 'string' } } },
-    permissions: ['network'],
+    outputSchema: {
+      type: "object",
+      properties: { success: { type: "boolean" }, newUrl: { type: "string" } },
+    },
+    permissions: ["network"],
   });
 
   registry.registerTool({
-    name: 'browser.fill',
-    category: 'browser',
-    description: 'Fill and optionally submit a form on a webpage',
-    version: '1.0.0',
-    tags: ['browser', 'form', 'fill', 'interaction'],
+    name: "browser.fill",
+    category: "browser",
+    description: "Fill and optionally submit a form on a webpage",
+    version: "1.0.0",
+    tags: ["browser", "form", "fill", "interaction"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        url: { type: 'string' },
-        fields: { type: 'object', description: 'Map of CSS selector to value' },
-        submitSelector: { type: 'string' },
+        url: { type: "string" },
+        fields: { type: "object", description: "Map of CSS selector to value" },
+        submitSelector: { type: "string" },
       },
-      required: ['url', 'fields'],
+      required: ["url", "fields"],
     },
-    outputSchema: { type: 'object', properties: { success: { type: 'boolean' }, resultUrl: { type: 'string' } } },
-    permissions: ['network'],
+    outputSchema: {
+      type: "object",
+      properties: {
+        success: { type: "boolean" },
+        resultUrl: { type: "string" },
+      },
+    },
+    permissions: ["network"],
   });
 
   // ============================================================================
@@ -1102,57 +1234,85 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
   // ============================================================================
 
   registry.registerTool({
-    name: 'forensics.analyze_patterns',
-    category: 'forensics',
-    description: 'Analyze communication for behavioral patterns (manipulation, gaslighting, love-bombing)',
-    version: '1.0.0',
-    tags: ['forensics', 'patterns', 'manipulation', 'abuse', 'analysis'],
+    name: "forensics.analyze_patterns",
+    category: "forensics",
+    description:
+      "Analyze communication for behavioral patterns (manipulation, gaslighting, love-bombing)",
+    version: "1.0.0",
+    tags: ["forensics", "patterns", "manipulation", "abuse", "analysis"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        text: { type: 'string' },
-        modules: { type: 'array', items: { type: 'string' }, description: 'Analysis modules to enable' },
-        includePositive: { type: 'boolean', default: true },
+        text: { type: "string" },
+        modules: {
+          type: "array",
+          items: { type: "string" },
+          description: "Analysis modules to enable",
+        },
+        includePositive: { type: "boolean", default: true },
       },
-      required: ['text'],
+      required: ["text"],
     },
-    outputSchema: { type: 'object', properties: { matches: { type: 'array' }, severity: { type: 'object' }, timeline: { type: 'array' } } },
+    outputSchema: {
+      type: "object",
+      properties: {
+        matches: { type: "array" },
+        severity: { type: "object" },
+        timeline: { type: "array" },
+      },
+    },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'forensics.detect_hurtlex',
-    category: 'forensics',
-    description: 'Detect HurtLex offensive/abusive terms',
-    version: '1.0.0',
-    tags: ['forensics', 'hurtlex', 'offensive', 'abuse'],
+    name: "forensics.detect_hurtlex",
+    category: "forensics",
+    description: "Detect HurtLex offensive/abusive terms",
+    version: "1.0.0",
+    tags: ["forensics", "hurtlex", "offensive", "abuse"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        text: { type: 'string' },
-        categories: { type: 'array', items: { type: 'string' } },
-        language: { type: 'string', default: 'en' },
+        text: { type: "string" },
+        categories: { type: "array", items: { type: "string" } },
+        language: { type: "string", default: "en" },
       },
-      required: ['text'],
+      required: ["text"],
     },
-    outputSchema: { type: 'object', properties: { matches: { type: 'array' }, categories: { type: 'object' } } },
+    outputSchema: {
+      type: "object",
+      properties: {
+        matches: { type: "array" },
+        categories: { type: "object" },
+      },
+    },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'forensics.score_severity',
-    category: 'forensics',
-    description: 'Score severity with MCL 722.23 factor mapping',
-    version: '1.0.0',
-    tags: ['forensics', 'severity', 'legal', 'mcl'],
+    name: "forensics.score_severity",
+    category: "forensics",
+    description: "Score severity with MCL 722.23 factor mapping",
+    version: "1.0.0",
+    tags: ["forensics", "severity", "legal", "mcl"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        matches: { type: 'array', description: 'Pattern matches from analyze_patterns' },
+        matches: {
+          type: "array",
+          description: "Pattern matches from analyze_patterns",
+        },
       },
-      required: ['matches'],
+      required: ["matches"],
     },
-    outputSchema: { type: 'object', properties: { score: { type: 'number' }, factors: { type: 'object' }, level: { type: 'string' } } },
+    outputSchema: {
+      type: "object",
+      properties: {
+        score: { type: "number" },
+        factors: { type: "object" },
+        level: { type: "string" },
+      },
+    },
     permissions: [],
   });
 
@@ -1161,81 +1321,113 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
   // ============================================================================
 
   registry.registerTool({
-    name: 'text.mine',
-    category: 'etl',
-    description: 'Text mining with smart ugrep/ripgrep selection',
-    version: '1.0.0',
-    tags: ['text', 'mining', 'search', 'grep', 'ripgrep', 'ugrep'],
+    name: "text.mine",
+    category: "etl",
+    description: "Text mining with smart ugrep/ripgrep selection",
+    version: "1.0.0",
+    tags: ["text", "mining", "search", "grep", "ripgrep", "ugrep"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        pattern: { type: 'string' },
-        path: { type: 'string' },
-        contentType: { type: 'string', enum: ['code', 'conversation', 'document', 'auto'] },
-        options: { type: 'object' },
+        pattern: { type: "string" },
+        path: { type: "string" },
+        contentType: {
+          type: "string",
+          enum: ["code", "conversation", "document", "auto"],
+        },
+        options: { type: "object" },
       },
-      required: ['pattern', 'path'],
+      required: ["pattern", "path"],
     },
-    outputSchema: { type: 'object', properties: { matches: { type: 'array' }, engine: { type: 'string' } } },
-    permissions: ['fs_read'],
+    outputSchema: {
+      type: "object",
+      properties: { matches: { type: "array" }, engine: { type: "string" } },
+    },
+    permissions: ["fs_read"],
   });
 
   registry.registerTool({
-    name: 'format.convert',
-    category: 'etl',
-    description: 'Convert between document formats (PDF, DOCX, HTML, Markdown, etc.)',
-    version: '1.0.0',
-    tags: ['format', 'convert', 'document', 'pandoc'],
+    name: "format.convert",
+    category: "etl",
+    description:
+      "Convert between document formats (PDF, DOCX, HTML, Markdown, etc.)",
+    version: "1.0.0",
+    tags: ["format", "convert", "document", "pandoc"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        input: { type: 'string', description: 'Input file path or content' },
-        fromFormat: { type: 'string' },
-        toFormat: { type: 'string' },
-        options: { type: 'object' },
+        input: { type: "string", description: "Input file path or content" },
+        fromFormat: { type: "string" },
+        toFormat: { type: "string" },
+        options: { type: "object" },
       },
-      required: ['input', 'toFormat'],
+      required: ["input", "toFormat"],
     },
-    outputSchema: { type: 'object', properties: { output: { type: 'string' }, format: { type: 'string' } } },
-    permissions: ['fs_read', 'fs_write'],
+    outputSchema: {
+      type: "object",
+      properties: { output: { type: "string" }, format: { type: "string" } },
+    },
+    permissions: ["fs_read", "fs_write"],
   });
 
   registry.registerTool({
-    name: 'schema.resolve',
-    category: 'etl',
-    description: 'AI-powered schema detection and field mapping',
-    version: '1.0.0',
-    tags: ['schema', 'mapping', 'ai', 'detection'],
+    name: "schema.resolve",
+    category: "etl",
+    description: "AI-powered schema detection and field mapping",
+    version: "1.0.0",
+    tags: ["schema", "mapping", "ai", "detection"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        sample: { type: 'string', description: 'Sample data' },
-        targetSchema: { type: 'object', description: 'Target schema to map to' },
-        platform: { type: 'string', description: 'Source platform hint' },
+        sample: { type: "string", description: "Sample data" },
+        targetSchema: {
+          type: "object",
+          description: "Target schema to map to",
+        },
+        platform: { type: "string", description: "Source platform hint" },
       },
-      required: ['sample'],
+      required: ["sample"],
     },
-    outputSchema: { type: 'object', properties: { schema: { type: 'object' }, mappings: { type: 'array' }, confidence: { type: 'number' } } },
-    permissions: ['access:llm'],
+    outputSchema: {
+      type: "object",
+      properties: {
+        schema: { type: "object" },
+        mappings: { type: "array" },
+        confidence: { type: "number" },
+      },
+    },
+    permissions: ["access:llm"],
   });
 
   registry.registerTool({
-    name: 'evidence.hash',
-    category: 'etl',
-    description: 'Generate cryptographic hash for chain of custody',
-    version: '1.0.0',
-    tags: ['evidence', 'hash', 'custody', 'forensics'],
+    name: "evidence.hash",
+    category: "etl",
+    description: "Generate cryptographic hash for chain of custody",
+    version: "1.0.0",
+    tags: ["evidence", "hash", "custody", "forensics"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        input: { type: 'string', description: 'File path or content' },
-        algorithm: { type: 'string', enum: ['sha256', 'sha512', 'blake3'], default: 'sha256' },
-        includeMetadata: { type: 'boolean', default: true },
+        input: { type: "string", description: "File path or content" },
+        algorithm: {
+          type: "string",
+          enum: ["sha256", "sha512", "blake3"],
+          default: "sha256",
+        },
+        includeMetadata: { type: "boolean", default: true },
       },
-      required: ['input'],
+      required: ["input"],
     },
-    outputSchema: { type: 'object', properties: { hash: { type: 'string' }, algorithm: { type: 'string' }, timestamp: { type: 'string' }, metadata: { type: 'object' } } },
-    permissions: ['fs_read'],
+    outputSchema: {
+      type: "object",
+      properties: {
+        hash: { type: "string" },
+        algorithm: { type: "string" },
+        timestamp: { type: "string" },
+        metadata: { type: "object" },
+      },
+    },
+    permissions: ["fs_read"],
   });
 
   // ============================================================================
@@ -1243,122 +1435,147 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
   // ============================================================================
 
   registry.registerTool({
-    name: 'notebooklm.ask',
-    category: 'integration',
-    description: 'Query NotebookLM knowledge base',
-    version: '1.0.0',
-    tags: ['notebooklm', 'knowledge', 'query', 'google'],
+    name: "notebooklm.ask",
+    category: "integration",
+    description: "Query NotebookLM knowledge base",
+    version: "1.0.0",
+    tags: ["notebooklm", "knowledge", "query", "google"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        question: { type: 'string' },
-        notebook_url: { type: 'string' },
+        question: { type: "string" },
+        notebook_url: { type: "string" },
       },
-      required: ['question'],
+      required: ["question"],
     },
-    outputSchema: { type: 'object', properties: { answer: { type: 'string' }, sources: { type: 'array' } } },
-    permissions: ['access:notebooklm'],
+    outputSchema: {
+      type: "object",
+      properties: { answer: { type: "string" }, sources: { type: "array" } },
+    },
+    permissions: ["access:notebooklm"],
   });
 
   registry.registerTool({
-    name: 'notebooklm.add',
-    category: 'integration',
-    description: 'Add content to NotebookLM',
-    version: '1.0.0',
-    tags: ['notebooklm', 'add', 'knowledge'],
+    name: "notebooklm.add",
+    category: "integration",
+    description: "Add content to NotebookLM",
+    version: "1.0.0",
+    tags: ["notebooklm", "add", "knowledge"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        url: { type: 'string' },
-        name: { type: 'string' },
-        tags: { type: 'string', description: 'Comma-separated tags' },
-        description: { type: 'string' },
+        url: { type: "string" },
+        name: { type: "string" },
+        tags: { type: "string", description: "Comma-separated tags" },
+        description: { type: "string" },
       },
-      required: ['url', 'name'],
+      required: ["url", "name"],
     },
-    outputSchema: { type: 'object', properties: { added: { type: 'boolean' }, sourceId: { type: 'string' } } },
-    permissions: ['access:notebooklm', 'write'],
+    outputSchema: {
+      type: "object",
+      properties: { added: { type: "boolean" }, sourceId: { type: "string" } },
+    },
+    permissions: ["access:notebooklm", "write"],
   });
 
   registry.registerTool({
-    name: 'notebooklm.list',
-    category: 'integration',
-    description: 'List notebooks in the NotebookLM library',
-    version: '1.0.0',
-    tags: ['notebooklm', 'list', 'knowledge'],
+    name: "notebooklm.list",
+    category: "integration",
+    description: "List notebooks in the NotebookLM library",
+    version: "1.0.0",
+    tags: ["notebooklm", "list", "knowledge"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {},
       required: [],
     },
-    outputSchema: { type: 'object', properties: { notebooks: { type: 'array' } } },
-    permissions: ['access:notebooklm'],
-  });
-
-  registry.registerTool({
-    name: 'notebooklm.select',
-    category: 'integration',
-    description: 'Select a notebook by name or URL',
-    version: '1.0.0',
-    tags: ['notebooklm', 'select', 'knowledge'],
-    inputSchema: {
-      type: 'object',
-      properties: {
-        identifier: { type: 'string' },
-      },
-      required: ['identifier'],
+    outputSchema: {
+      type: "object",
+      properties: { notebooks: { type: "array" } },
     },
-    outputSchema: { type: 'object', properties: { success: { type: 'boolean' } } },
-    permissions: ['access:notebooklm'],
+    permissions: ["access:notebooklm"],
   });
 
   registry.registerTool({
-    name: 'notebooklm.search',
-    category: 'integration',
-    description: 'Search notebooks by tags or name',
-    version: '1.0.0',
-    tags: ['notebooklm', 'search', 'knowledge'],
+    name: "notebooklm.select",
+    category: "integration",
+    description: "Select a notebook by name or URL",
+    version: "1.0.0",
+    tags: ["notebooklm", "select", "knowledge"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        query: { type: 'string' },
+        identifier: { type: "string" },
       },
-      required: ['query'],
+      required: ["identifier"],
     },
-    outputSchema: { type: 'object', properties: { notebooks: { type: 'array' } } },
-    permissions: ['access:notebooklm'],
+    outputSchema: {
+      type: "object",
+      properties: { success: { type: "boolean" } },
+    },
+    permissions: ["access:notebooklm"],
   });
 
   registry.registerTool({
-    name: 'notebooklm.remove',
-    category: 'integration',
-    description: 'Remove a notebook from the library',
-    version: '1.0.0',
-    tags: ['notebooklm', 'remove', 'knowledge'],
+    name: "notebooklm.search",
+    category: "integration",
+    description: "Search notebooks by tags or name",
+    version: "1.0.0",
+    tags: ["notebooklm", "search", "knowledge"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        identifier: { type: 'string' },
+        query: { type: "string" },
       },
-      required: ['identifier'],
+      required: ["query"],
     },
-    outputSchema: { type: 'object', properties: { success: { type: 'boolean' } } },
-    permissions: ['access:notebooklm', 'write'],
+    outputSchema: {
+      type: "object",
+      properties: { notebooks: { type: "array" } },
+    },
+    permissions: ["access:notebooklm"],
   });
 
   registry.registerTool({
-    name: 'notebooklm.stats',
-    category: 'integration',
-    description: 'Get NotebookLM library stats',
-    version: '1.0.0',
-    tags: ['notebooklm', 'stats', 'knowledge'],
+    name: "notebooklm.remove",
+    category: "integration",
+    description: "Remove a notebook from the library",
+    version: "1.0.0",
+    tags: ["notebooklm", "remove", "knowledge"],
     inputSchema: {
-      type: 'object',
+      type: "object",
+      properties: {
+        identifier: { type: "string" },
+      },
+      required: ["identifier"],
+    },
+    outputSchema: {
+      type: "object",
+      properties: { success: { type: "boolean" } },
+    },
+    permissions: ["access:notebooklm", "write"],
+  });
+
+  registry.registerTool({
+    name: "notebooklm.stats",
+    category: "integration",
+    description: "Get NotebookLM library stats",
+    version: "1.0.0",
+    tags: ["notebooklm", "stats", "knowledge"],
+    inputSchema: {
+      type: "object",
       properties: {},
       required: [],
     },
-    outputSchema: { type: 'object', properties: { totalNotebooks: { type: 'number' }, totalQueries: { type: 'number' }, tagCounts: { type: 'object' } } },
-    permissions: ['access:notebooklm'],
+    outputSchema: {
+      type: "object",
+      properties: {
+        totalNotebooks: { type: "number" },
+        totalQueries: { type: "number" },
+        tagCounts: { type: "object" },
+      },
+    },
+    permissions: ["access:notebooklm"],
   });
 
   // ============================================================================
@@ -1366,25 +1583,25 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
   // ============================================================================
 
   registry.registerTool({
-    name: 'llamaindex.chunk_text',
-    category: 'llamaindex',
-    description: 'Chunk text with LlamaIndex sentence splitter',
-    version: '1.0.0',
-    tags: ['llamaindex', 'chunk', 'split', 'document'],
+    name: "llamaindex.chunk_text",
+    category: "llamaindex",
+    description: "Chunk text with LlamaIndex sentence splitter",
+    version: "1.0.0",
+    tags: ["llamaindex", "chunk", "split", "document"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        text: { type: 'string' },
-        chunkSize: { type: 'number' },
-        chunkOverlap: { type: 'number' },
+        text: { type: "string" },
+        chunkSize: { type: "number" },
+        chunkOverlap: { type: "number" },
       },
-      required: ['text'],
+      required: ["text"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        chunks: { type: 'array' },
-        count: { type: 'number' },
+        chunks: { type: "array" },
+        count: { type: "number" },
       },
     },
     permissions: [],
@@ -1395,73 +1612,74 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
   // ============================================================================
 
   registry.registerTool({
-    name: 'langchain.format_prompt',
-    category: 'langchain',
-    description: 'Format a prompt template with variables using LangChain',
-    version: '1.0.0',
-    tags: ['langchain', 'prompt', 'template', 'format'],
+    name: "langchain.format_prompt",
+    category: "langchain",
+    description: "Format a prompt template with variables using LangChain",
+    version: "1.0.0",
+    tags: ["langchain", "prompt", "template", "format"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        template: { type: 'string' },
-        variables: { type: 'object', additionalProperties: { type: 'string' } },
+        template: { type: "string" },
+        variables: { type: "object", additionalProperties: { type: "string" } },
       },
-      required: ['template'],
+      required: ["template"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        prompt: { type: 'string' },
+        prompt: { type: "string" },
       },
     },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'langchain.split_text',
-    category: 'langchain',
-    description: 'Split text into chunks using LangChain text splitters',
-    version: '1.0.0',
-    tags: ['langchain', 'split', 'chunk', 'text'],
+    name: "langchain.split_text",
+    category: "langchain",
+    description: "Split text into chunks using LangChain text splitters",
+    version: "1.0.0",
+    tags: ["langchain", "split", "chunk", "text"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        text: { type: 'string' },
-        chunkSize: { type: 'number' },
-        chunkOverlap: { type: 'number' },
-        separator: { type: 'string' },
+        text: { type: "string" },
+        chunkSize: { type: "number" },
+        chunkOverlap: { type: "number" },
+        separator: { type: "string" },
       },
-      required: ['text'],
+      required: ["text"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        chunks: { type: 'array', items: { type: 'string' } },
+        chunks: { type: "array", items: { type: "string" } },
       },
     },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'langgraph.run',
-    category: 'langgraph',
-    description: 'Run a simple flow using LangGraph (fallback to linear execution)',
-    version: '1.0.0',
-    tags: ['langgraph', 'workflow', 'graph', 'execute'],
+    name: "langgraph.run",
+    category: "langgraph",
+    description:
+      "Run a simple flow using LangGraph (fallback to linear execution)",
+    version: "1.0.0",
+    tags: ["langgraph", "workflow", "graph", "execute"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        states: { type: 'array', items: { type: 'object' } },
-        edges: { type: 'array', items: { type: 'object' } },
-        start: { type: 'string' },
-        end: { type: 'string' },
+        states: { type: "array", items: { type: "object" } },
+        edges: { type: "array", items: { type: "object" } },
+        start: { type: "string" },
+        end: { type: "string" },
       },
-      required: ['states', 'edges', 'start', 'end'],
+      required: ["states", "edges", "start", "end"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        trace: { type: 'array' },
+        trace: { type: "array" },
       },
     },
     permissions: [],
@@ -1472,168 +1690,189 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
   // ============================================================================
 
   registry.registerTool({
-    name: 'js.cheerio',
-    category: 'library',
-    description: 'Parse and manipulate HTML/XML with Cheerio (jQuery-like)',
-    version: '1.0.0',
-    tags: ['javascript', 'html', 'xml', 'parse', 'cheerio'],
+    name: "js.cheerio",
+    category: "library",
+    description: "Parse and manipulate HTML/XML with Cheerio (jQuery-like)",
+    version: "1.0.0",
+    tags: ["javascript", "html", "xml", "parse", "cheerio"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        html: { type: 'string' },
-        selector: { type: 'string' },
-        operation: { type: 'string', enum: ['text', 'html', 'attr', 'find', 'each'] },
-        attribute: { type: 'string' },
+        html: { type: "string" },
+        selector: { type: "string" },
+        operation: {
+          type: "string",
+          enum: ["text", "html", "attr", "find", "each"],
+        },
+        attribute: { type: "string" },
       },
-      required: ['html'],
+      required: ["html"],
     },
-    outputSchema: { type: 'object', properties: { result: {} } },
+    outputSchema: { type: "object", properties: { result: {} } },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'js.xml_parse',
-    category: 'library',
-    description: 'Fast XML parsing with fast-xml-parser',
-    version: '1.0.0',
-    tags: ['javascript', 'xml', 'parse', 'fast'],
+    name: "js.xml_parse",
+    category: "library",
+    description: "Fast XML parsing with fast-xml-parser",
+    version: "1.0.0",
+    tags: ["javascript", "xml", "parse", "fast"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        xml: { type: 'string' },
-        options: { type: 'object' },
+        xml: { type: "string" },
+        options: { type: "object" },
       },
-      required: ['xml'],
+      required: ["xml"],
     },
-    outputSchema: { type: 'object', properties: { data: { type: 'object' } } },
+    outputSchema: { type: "object", properties: { data: { type: "object" } } },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'js.json5',
-    category: 'library',
-    description: 'Parse JSON5 (comments, trailing commas)',
-    version: '1.0.0',
-    tags: ['javascript', 'json', 'json5', 'parse'],
+    name: "js.json5",
+    category: "library",
+    description: "Parse JSON5 (comments, trailing commas)",
+    version: "1.0.0",
+    tags: ["javascript", "json", "json5", "parse"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        text: { type: 'string' },
+        text: { type: "string" },
       },
-      required: ['text'],
+      required: ["text"],
     },
-    outputSchema: { type: 'object', properties: { data: {} } },
+    outputSchema: { type: "object", properties: { data: {} } },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'js.yaml',
-    category: 'library',
-    description: 'Parse and stringify YAML',
-    version: '1.0.0',
-    tags: ['javascript', 'yaml', 'parse'],
+    name: "js.yaml",
+    category: "library",
+    description: "Parse and stringify YAML",
+    version: "1.0.0",
+    tags: ["javascript", "yaml", "parse"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        input: { type: 'string' },
-        operation: { type: 'string', enum: ['parse', 'stringify'] },
+        input: { type: "string" },
+        operation: { type: "string", enum: ["parse", "stringify"] },
       },
-      required: ['input'],
+      required: ["input"],
     },
-    outputSchema: { type: 'object', properties: { result: {} } },
+    outputSchema: { type: "object", properties: { result: {} } },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'js.csv',
-    category: 'library',
-    description: 'Parse and generate CSV',
-    version: '1.0.0',
-    tags: ['javascript', 'csv', 'parse', 'tabular'],
+    name: "js.csv",
+    category: "library",
+    description: "Parse and generate CSV",
+    version: "1.0.0",
+    tags: ["javascript", "csv", "parse", "tabular"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        input: { type: 'string' },
-        operation: { type: 'string', enum: ['parse', 'stringify'] },
-        options: { type: 'object' },
+        input: { type: "string" },
+        operation: { type: "string", enum: ["parse", "stringify"] },
+        options: { type: "object" },
       },
-      required: ['input'],
+      required: ["input"],
     },
-    outputSchema: { type: 'object', properties: { data: { type: 'array' } } },
+    outputSchema: { type: "object", properties: { data: { type: "array" } } },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'js.natural',
-    category: 'library',
-    description: 'NLP with Natural.js (tokenize, stem, classify, phonetics)',
-    version: '1.0.0',
-    tags: ['javascript', 'nlp', 'natural', 'tokenize', 'stem'],
+    name: "js.natural",
+    category: "library",
+    description: "NLP with Natural.js (tokenize, stem, classify, phonetics)",
+    version: "1.0.0",
+    tags: ["javascript", "nlp", "natural", "tokenize", "stem"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        text: { type: 'string' },
-        operation: { type: 'string', enum: ['tokenize', 'stem', 'phonetics', 'sentiment', 'classify'] },
-        options: { type: 'object' },
+        text: { type: "string" },
+        operation: {
+          type: "string",
+          enum: ["tokenize", "stem", "phonetics", "sentiment", "classify"],
+        },
+        options: { type: "object" },
       },
-      required: ['text', 'operation'],
+      required: ["text", "operation"],
     },
-    outputSchema: { type: 'object', properties: { result: {} } },
+    outputSchema: { type: "object", properties: { result: {} } },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'js.compromise',
-    category: 'library',
-    description: 'NLP with Compromise.js (tagging, extraction)',
-    version: '1.0.0',
-    tags: ['javascript', 'nlp', 'compromise', 'tagging', 'extraction'],
+    name: "js.compromise",
+    category: "library",
+    description: "NLP with Compromise.js (tagging, extraction)",
+    version: "1.0.0",
+    tags: ["javascript", "nlp", "compromise", "tagging", "extraction"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        text: { type: 'string' },
-        operation: { type: 'string', enum: ['nouns', 'verbs', 'people', 'places', 'dates', 'topics'] },
+        text: { type: "string" },
+        operation: {
+          type: "string",
+          enum: ["nouns", "verbs", "people", "places", "dates", "topics"],
+        },
       },
-      required: ['text', 'operation'],
+      required: ["text", "operation"],
     },
-    outputSchema: { type: 'object', properties: { result: { type: 'array' } } },
+    outputSchema: { type: "object", properties: { result: { type: "array" } } },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'js.franc',
-    category: 'library',
-    description: 'Language detection with Franc',
-    version: '1.0.0',
-    tags: ['javascript', 'language', 'detection', 'franc'],
+    name: "js.franc",
+    category: "library",
+    description: "Language detection with Franc",
+    version: "1.0.0",
+    tags: ["javascript", "language", "detection", "franc"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        text: { type: 'string' },
-        minLength: { type: 'number', default: 10 },
+        text: { type: "string" },
+        minLength: { type: "number", default: 10 },
       },
-      required: ['text'],
+      required: ["text"],
     },
-    outputSchema: { type: 'object', properties: { language: { type: 'string' }, confidence: { type: 'number' } } },
+    outputSchema: {
+      type: "object",
+      properties: {
+        language: { type: "string" },
+        confidence: { type: "number" },
+      },
+    },
     permissions: [],
   });
 
   registry.registerTool({
-    name: 'js.string_similarity',
-    category: 'library',
-    description: 'String similarity comparison',
-    version: '1.0.0',
-    tags: ['javascript', 'string', 'similarity', 'fuzzy'],
+    name: "js.string_similarity",
+    category: "library",
+    description: "String similarity comparison",
+    version: "1.0.0",
+    tags: ["javascript", "string", "similarity", "fuzzy"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        string1: { type: 'string' },
-        string2: { type: 'string' },
-        algorithm: { type: 'string', enum: ['dice', 'levenshtein', 'jaro-winkler'] },
+        string1: { type: "string" },
+        string2: { type: "string" },
+        algorithm: {
+          type: "string",
+          enum: ["dice", "levenshtein", "jaro-winkler"],
+        },
       },
-      required: ['string1', 'string2'],
+      required: ["string1", "string2"],
     },
-    outputSchema: { type: 'object', properties: { similarity: { type: 'number' } } },
+    outputSchema: {
+      type: "object",
+      properties: { similarity: { type: "number" } },
+    },
     permissions: [],
   });
 
@@ -1642,139 +1881,176 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
   // ============================================================================
 
   registry.registerTool({
-    name: 'py.spacy',
-    category: 'library',
-    description: 'Full NLP pipeline with spaCy',
-    version: '1.0.0',
-    tags: ['python', 'nlp', 'spacy', 'ner', 'pos', 'dependency'],
+    name: "py.spacy",
+    category: "library",
+    description: "Full NLP pipeline with spaCy",
+    version: "1.0.0",
+    tags: ["python", "nlp", "spacy", "ner", "pos", "dependency"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        text: { type: 'string' },
-        operations: { type: 'array', items: { type: 'string' }, description: 'tokenize, pos, ner, dependency, lemma' },
-        model: { type: 'string', default: 'en_core_web_sm' },
+        text: { type: "string" },
+        operations: {
+          type: "array",
+          items: { type: "string" },
+          description: "tokenize, pos, ner, dependency, lemma",
+        },
+        model: { type: "string", default: "en_core_web_sm" },
       },
-      required: ['text'],
-    },
-    outputSchema: { type: 'object', properties: { tokens: { type: 'array' }, entities: { type: 'array' }, dependencies: { type: 'array' } } },
-    permissions: [],
-  });
-
-  registry.registerTool({
-    name: 'py.nltk',
-    category: 'library',
-    description: 'NLP toolkit with NLTK',
-    version: '1.0.0',
-    tags: ['python', 'nlp', 'nltk', 'tokenize', 'stem', 'wordnet'],
-    inputSchema: {
-      type: 'object',
-      properties: {
-        text: { type: 'string' },
-        operation: { type: 'string', enum: ['tokenize', 'stem', 'lemmatize', 'chunk', 'wordnet'] },
-        options: { type: 'object' },
-      },
-      required: ['text', 'operation'],
-    },
-    outputSchema: { type: 'object', properties: { result: {} } },
-    permissions: [],
-  });
-
-  registry.registerTool({
-    name: 'py.transformers',
-    category: 'library',
-    description: 'BERT/Transformers for encoding, similarity, classification',
-    version: '1.0.0',
-    tags: ['python', 'bert', 'transformers', 'embedding', 'classification'],
-    inputSchema: {
-      type: 'object',
-      properties: {
-        text: { type: 'string' },
-        operation: { type: 'string', enum: ['encode', 'similarity', 'classify', 'qa'] },
-        model: { type: 'string' },
-        options: { type: 'object' },
-      },
-      required: ['text', 'operation'],
-    },
-    outputSchema: { type: 'object', properties: { result: {} } },
-    permissions: [],
-  });
-
-  registry.registerTool({
-    name: 'py.beautifulsoup',
-    category: 'library',
-    description: 'HTML parsing with BeautifulSoup',
-    version: '1.0.0',
-    tags: ['python', 'html', 'parse', 'beautifulsoup'],
-    inputSchema: {
-      type: 'object',
-      properties: {
-        html: { type: 'string' },
-        selector: { type: 'string' },
-        operation: { type: 'string', enum: ['find', 'find_all', 'select', 'text', 'attrs'] },
-      },
-      required: ['html'],
-    },
-    outputSchema: { type: 'object', properties: { result: {} } },
-    permissions: [],
-  });
-
-  registry.registerTool({
-    name: 'py.pdfplumber',
-    category: 'library',
-    description: 'PDF text and table extraction with pdfplumber',
-    version: '1.0.0',
-    tags: ['python', 'pdf', 'extract', 'pdfplumber', 'tables'],
-    inputSchema: {
-      type: 'object',
-      properties: {
-        path: { type: 'string' },
-        pages: { type: 'array', items: { type: 'number' } },
-        extractTables: { type: 'boolean', default: false },
-      },
-      required: ['path'],
-    },
-    outputSchema: { type: 'object', properties: { text: { type: 'string' }, tables: { type: 'array' }, pages: { type: 'number' } } },
-    permissions: ['fs_read'],
-  });
-
-  registry.registerTool({
-    name: 'py.pandas',
-    category: 'library',
-    description: 'DataFrame operations with Pandas',
-    version: '1.0.0',
-    tags: ['python', 'pandas', 'dataframe', 'csv', 'excel'],
-    inputSchema: {
-      type: 'object',
-      properties: {
-        input: { type: 'string', description: 'File path or JSON data' },
-        operation: { type: 'string', enum: ['read', 'filter', 'groupby', 'merge', 'pivot', 'describe'] },
-        options: { type: 'object' },
-      },
-      required: ['input', 'operation'],
-    },
-    outputSchema: { type: 'object', properties: { data: { type: 'array' }, columns: { type: 'array' }, shape: { type: 'array' } } },
-    permissions: ['fs_read'],
-  });
-
-  registry.registerTool({
-    name: 'py.llamaindex',
-    category: 'library',
-    description: 'Chunk text with LlamaIndex (Python)',
-    version: '1.0.0',
-    tags: ['python', 'llamaindex', 'chunk', 'split'],
-    inputSchema: {
-      type: 'object',
-      properties: {
-        text: { type: 'string' },
-        chunkSize: { type: 'number' },
-        chunkOverlap: { type: 'number' },
-      },
-      required: ['text'],
+      required: ["text"],
     },
     outputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        chunks: { type: 'array' },
+        tokens: { type: "array" },
+        entities: { type: "array" },
+        dependencies: { type: "array" },
+      },
+    },
+    permissions: [],
+  });
+
+  registry.registerTool({
+    name: "py.nltk",
+    category: "library",
+    description: "NLP toolkit with NLTK",
+    version: "1.0.0",
+    tags: ["python", "nlp", "nltk", "tokenize", "stem", "wordnet"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        text: { type: "string" },
+        operation: {
+          type: "string",
+          enum: ["tokenize", "stem", "lemmatize", "chunk", "wordnet"],
+        },
+        options: { type: "object" },
+      },
+      required: ["text", "operation"],
+    },
+    outputSchema: { type: "object", properties: { result: {} } },
+    permissions: [],
+  });
+
+  registry.registerTool({
+    name: "py.transformers",
+    category: "library",
+    description: "BERT/Transformers for encoding, similarity, classification",
+    version: "1.0.0",
+    tags: ["python", "bert", "transformers", "embedding", "classification"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        text: { type: "string" },
+        operation: {
+          type: "string",
+          enum: ["encode", "similarity", "classify", "qa"],
+        },
+        model: { type: "string" },
+        options: { type: "object" },
+      },
+      required: ["text", "operation"],
+    },
+    outputSchema: { type: "object", properties: { result: {} } },
+    permissions: [],
+  });
+
+  registry.registerTool({
+    name: "py.beautifulsoup",
+    category: "library",
+    description: "HTML parsing with BeautifulSoup",
+    version: "1.0.0",
+    tags: ["python", "html", "parse", "beautifulsoup"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        html: { type: "string" },
+        selector: { type: "string" },
+        operation: {
+          type: "string",
+          enum: ["find", "find_all", "select", "text", "attrs"],
+        },
+      },
+      required: ["html"],
+    },
+    outputSchema: { type: "object", properties: { result: {} } },
+    permissions: [],
+  });
+
+  registry.registerTool({
+    name: "py.pdfplumber",
+    category: "library",
+    description: "PDF text and table extraction with pdfplumber",
+    version: "1.0.0",
+    tags: ["python", "pdf", "extract", "pdfplumber", "tables"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        path: { type: "string" },
+        pages: { type: "array", items: { type: "number" } },
+        extractTables: { type: "boolean", default: false },
+      },
+      required: ["path"],
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        text: { type: "string" },
+        tables: { type: "array" },
+        pages: { type: "number" },
+      },
+    },
+    permissions: ["fs_read"],
+  });
+
+  registry.registerTool({
+    name: "py.pandas",
+    category: "library",
+    description: "DataFrame operations with Pandas",
+    version: "1.0.0",
+    tags: ["python", "pandas", "dataframe", "csv", "excel"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        input: { type: "string", description: "File path or JSON data" },
+        operation: {
+          type: "string",
+          enum: ["read", "filter", "groupby", "merge", "pivot", "describe"],
+        },
+        options: { type: "object" },
+      },
+      required: ["input", "operation"],
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        data: { type: "array" },
+        columns: { type: "array" },
+        shape: { type: "array" },
+      },
+    },
+    permissions: ["fs_read"],
+  });
+
+  registry.registerTool({
+    name: "py.llamaindex",
+    category: "library",
+    description: "Chunk text with LlamaIndex (Python)",
+    version: "1.0.0",
+    tags: ["python", "llamaindex", "chunk", "split"],
+    inputSchema: {
+      type: "object",
+      properties: {
+        text: { type: "string" },
+        chunkSize: { type: "number" },
+        chunkOverlap: { type: "number" },
+      },
+      required: ["text"],
+    },
+    outputSchema: {
+      type: "object",
+      properties: {
+        chunks: { type: "array" },
       },
     },
     permissions: [],
@@ -1785,80 +2061,106 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
   // ============================================================================
 
   registry.registerTool({
-    name: 'pandoc.convert',
-    category: 'document',
-    description: 'Universal document conversion with Pandoc',
-    version: '1.0.0',
-    tags: ['pandoc', 'convert', 'document', 'markdown', 'html', 'pdf', 'docx'],
+    name: "pandoc.convert",
+    category: "document",
+    description: "Universal document conversion with Pandoc",
+    version: "1.0.0",
+    tags: ["pandoc", "convert", "document", "markdown", "html", "pdf", "docx"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        input: { type: 'string' },
-        from: { type: 'string' },
-        to: { type: 'string' },
-        options: { type: 'array', items: { type: 'string' } },
+        input: { type: "string" },
+        from: { type: "string" },
+        to: { type: "string" },
+        options: { type: "array", items: { type: "string" } },
       },
-      required: ['input', 'to'],
+      required: ["input", "to"],
     },
-    outputSchema: { type: 'object', properties: { output: { type: 'string' } } },
-    permissions: ['fs_read', 'fs_write'],
+    outputSchema: {
+      type: "object",
+      properties: { output: { type: "string" } },
+    },
+    permissions: ["fs_read", "fs_write"],
   });
 
   registry.registerTool({
-    name: 'tesseract.ocr',
-    category: 'document',
-    description: 'OCR with Tesseract',
-    version: '1.0.0',
-    tags: ['tesseract', 'ocr', 'image', 'text', 'extraction'],
+    name: "tesseract.ocr",
+    category: "document",
+    description: "OCR with Tesseract",
+    version: "1.0.0",
+    tags: ["tesseract", "ocr", "image", "text", "extraction"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        image: { type: 'string', description: 'Image path or base64' },
-        language: { type: 'string', default: 'eng' },
-        psm: { type: 'number', description: 'Page segmentation mode' },
+        image: { type: "string", description: "Image path or base64" },
+        language: { type: "string", default: "eng" },
+        psm: { type: "number", description: "Page segmentation mode" },
       },
-      required: ['image'],
+      required: ["image"],
     },
-    outputSchema: { type: 'object', properties: { text: { type: 'string' }, confidence: { type: 'number' } } },
-    permissions: ['fs_read'],
+    outputSchema: {
+      type: "object",
+      properties: { text: { type: "string" }, confidence: { type: "number" } },
+    },
+    permissions: ["fs_read"],
   });
 
   registry.registerTool({
-    name: 'stirlingpdf.process',
-    category: 'document',
-    description: 'Advanced PDF processing with StirlingPDF',
-    version: '1.0.0',
-    tags: ['stirlingpdf', 'pdf', 'merge', 'split', 'compress', 'ocr'],
+    name: "stirlingpdf.process",
+    category: "document",
+    description: "Advanced PDF processing with StirlingPDF",
+    version: "1.0.0",
+    tags: ["stirlingpdf", "pdf", "merge", "split", "compress", "ocr"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        operation: { type: 'string', enum: ['merge', 'split', 'compress', 'ocr', 'rotate', 'watermark', 'extract_images'] },
-        files: { type: 'array', items: { type: 'string' } },
-        options: { type: 'object' },
+        operation: {
+          type: "string",
+          enum: [
+            "merge",
+            "split",
+            "compress",
+            "ocr",
+            "rotate",
+            "watermark",
+            "extract_images",
+          ],
+        },
+        files: { type: "array", items: { type: "string" } },
+        options: { type: "object" },
       },
-      required: ['operation', 'files'],
+      required: ["operation", "files"],
     },
-    outputSchema: { type: 'object', properties: { output: { type: 'string' }, pages: { type: 'number' } } },
-    permissions: ['fs_read', 'fs_write', 'network'],
+    outputSchema: {
+      type: "object",
+      properties: { output: { type: "string" }, pages: { type: "number" } },
+    },
+    permissions: ["fs_read", "fs_write", "network"],
   });
 
   registry.registerTool({
-    name: 'unstructured.partition',
-    category: 'document',
-    description: 'Document partitioning with Unstructured',
-    version: '1.0.0',
-    tags: ['unstructured', 'partition', 'document', 'extract'],
+    name: "unstructured.partition",
+    category: "document",
+    description: "Document partitioning with Unstructured",
+    version: "1.0.0",
+    tags: ["unstructured", "partition", "document", "extract"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        file: { type: 'string' },
-        strategy: { type: 'string', enum: ['auto', 'fast', 'hi_res', 'ocr_only'] },
-        extractImages: { type: 'boolean', default: false },
+        file: { type: "string" },
+        strategy: {
+          type: "string",
+          enum: ["auto", "fast", "hi_res", "ocr_only"],
+        },
+        extractImages: { type: "boolean", default: false },
       },
-      required: ['file'],
+      required: ["file"],
     },
-    outputSchema: { type: 'object', properties: { elements: { type: 'array' }, metadata: { type: 'object' } } },
-    permissions: ['fs_read'],
+    outputSchema: {
+      type: "object",
+      properties: { elements: { type: "array" }, metadata: { type: "object" } },
+    },
+    permissions: ["fs_read"],
   });
 
   // ============================================================================
@@ -1866,21 +2168,24 @@ async function registerBuiltinTools(registry: PluginRegistry): Promise<void> {
   // ============================================================================
 
   registry.registerTool({
-    name: 'ml.classify',
-    category: 'ml',
-    description: 'Text classification (zero-shot or trained)',
-    version: '1.0.0',
-    tags: ['ml', 'classify', 'classification', 'text'],
+    name: "ml.classify",
+    category: "ml",
+    description: "Text classification (zero-shot or trained)",
+    version: "1.0.0",
+    tags: ["ml", "classify", "classification", "text"],
     inputSchema: {
-      type: 'object',
+      type: "object",
       properties: {
-        text: { type: 'string' },
-        labels: { type: 'array', items: { type: 'string' } },
-        multiLabel: { type: 'boolean', default: false },
+        text: { type: "string" },
+        labels: { type: "array", items: { type: "string" } },
+        multiLabel: { type: "boolean", default: false },
       },
-      required: ['text', 'labels'],
+      required: ["text", "labels"],
     },
-    outputSchema: { type: 'object', properties: { label: { type: 'string' }, scores: { type: 'object' } } },
+    outputSchema: {
+      type: "object",
+      properties: { label: { type: "string" }, scores: { type: "object" } },
+    },
     permissions: [],
   });
 }

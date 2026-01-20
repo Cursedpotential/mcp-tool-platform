@@ -1,7 +1,13 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -35,7 +41,7 @@ export default function Wiki() {
               <Input
                 placeholder="Search documentation..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
                 className="pl-9"
               />
             </div>
@@ -52,7 +58,9 @@ export default function Wiki() {
                     {searchResults.map((page: any) => (
                       <Button
                         key={page.slug}
-                        variant={selectedSlug === page.slug ? "secondary" : "ghost"}
+                        variant={
+                          selectedSlug === page.slug ? "secondary" : "ghost"
+                        }
                         className="w-full justify-start text-left h-auto py-2"
                         onClick={() => {
                           setSelectedSlug(page.slug);
@@ -81,13 +89,17 @@ export default function Wiki() {
                       {category.pages.map((slug: any) => (
                         <Button
                           key={slug}
-                          variant={selectedSlug === slug ? "secondary" : "ghost"}
+                          variant={
+                            selectedSlug === slug ? "secondary" : "ghost"
+                          }
                           size="sm"
                           className="w-full justify-start"
                           onClick={() => setSelectedSlug(slug)}
                         >
                           <ChevronRight className="h-3 w-3 mr-1" />
-                          {slug.replace(/-/g, " ").replace(/\b\w/g, (l: any) => l.toUpperCase())}
+                          {slug
+                            .replace(/-/g, " ")
+                            .replace(/\b\w/g, (l: any) => l.toUpperCase())}
                         </Button>
                       ))}
                     </div>
@@ -145,7 +157,8 @@ export default function Wiki() {
                 <CardHeader>
                   <CardTitle>Welcome to the Documentation</CardTitle>
                   <CardDescription>
-                    Select a page from the sidebar to get started, or use the search to find what you're looking for.
+                    Select a page from the sidebar to get started, or use the
+                    search to find what you're looking for.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>

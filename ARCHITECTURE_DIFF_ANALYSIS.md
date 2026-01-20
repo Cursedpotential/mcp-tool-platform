@@ -17,11 +17,11 @@ The conversation ingestion system design (uploaded document) represents a **Pyth
 
 ### 1.1 Language & Runtime
 
-| Aspect | Conversation Ingestion Design | Current Platform | Resolution |
-|--------|------------------------------|------------------|------------|
-| **Primary Language** | Python (CLI tool) | Node.js/TypeScript (web app) | ✅ **Compatible** - Use Python for preprocessing, Node.js for web UI/API |
-| **Execution Model** | CLI with interactive prompts | Web-based tRPC procedures | ✅ **Complementary** - CLI for bulk, web for interactive |
-| **File Processing** | Batch processing with chunking | Stream processing via LlamaIndex | ⚠️ **Overlap** - Need to unify chunking strategy |
+| Aspect               | Conversation Ingestion Design  | Current Platform                 | Resolution                                                               |
+| -------------------- | ------------------------------ | -------------------------------- | ------------------------------------------------------------------------ |
+| **Primary Language** | Python (CLI tool)              | Node.js/TypeScript (web app)     | ✅ **Compatible** - Use Python for preprocessing, Node.js for web UI/API |
+| **Execution Model**  | CLI with interactive prompts   | Web-based tRPC procedures        | ✅ **Complementary** - CLI for bulk, web for interactive                 |
+| **File Processing**  | Batch processing with chunking | Stream processing via LlamaIndex | ⚠️ **Overlap** - Need to unify chunking strategy                         |
 
 **Recommendation:** Keep both. Use conversation ingestion CLI for bulk preprocessing (1000+ files), use platform web UI for interactive analysis (1-10 files).
 
@@ -29,13 +29,13 @@ The conversation ingestion system design (uploaded document) represents a **Pyth
 
 ### 1.2 Directory Structure
 
-| Component | Conversation Ingestion | Current Platform | Conflict? |
-|-----------|----------------------|------------------|-----------|
-| **Chunking** | `src/core/chunker/` (Python) | `server/python-tools/` (ad-hoc) | ⚠️ **Overlap** |
-| **Validation** | `src/core/validation/` (Python) | Not implemented | ✅ **Missing** - Adopt from ingestion design |
-| **Schema Matching** | `src/core/schema_matching/` | Not implemented | ✅ **Missing** - Adopt from ingestion design |
-| **Transformers** | `src/transformers/` (modular) | Inline in parsers | ⚠️ **Conflict** - Refactor platform to use modular transformers |
-| **Preview System** | `src/core/preview/` | Not implemented | ✅ **Missing** - Critical feature, adopt immediately |
+| Component           | Conversation Ingestion          | Current Platform                | Conflict?                                                       |
+| ------------------- | ------------------------------- | ------------------------------- | --------------------------------------------------------------- |
+| **Chunking**        | `src/core/chunker/` (Python)    | `server/python-tools/` (ad-hoc) | ⚠️ **Overlap**                                                  |
+| **Validation**      | `src/core/validation/` (Python) | Not implemented                 | ✅ **Missing** - Adopt from ingestion design                    |
+| **Schema Matching** | `src/core/schema_matching/`     | Not implemented                 | ✅ **Missing** - Adopt from ingestion design                    |
+| **Transformers**    | `src/transformers/` (modular)   | Inline in parsers               | ⚠️ **Conflict** - Refactor platform to use modular transformers |
+| **Preview System**  | `src/core/preview/`             | Not implemented                 | ✅ **Missing** - Critical feature, adopt immediately            |
 
 **Recommendation:** Merge directory structures. Move conversation ingestion system into `server/python-tools/conversation-ingester/` as a standalone module.
 
@@ -88,50 +88,50 @@ CREATE TABLE slack_messages (
 
 ```typescript
 // drizzle/schema.ts (existing)
-export const documents = sqliteTable('documents', {
-  id: text('id').primaryKey(),
-  caseId: text('case_id').notNull(),
-  filename: text('filename').notNull(),
-  fileType: text('file_type').notNull(),
-  uploadedAt: integer('uploaded_at', { mode: 'timestamp' }).notNull(),
-  processedAt: integer('processed_at', { mode: 'timestamp' }),
-  status: text('status').notNull(), // 'pending', 'processing', 'completed', 'failed'
-  metadata: text('metadata', { mode: 'json' }),
+export const documents = sqliteTable("documents", {
+  id: text("id").primaryKey(),
+  caseId: text("case_id").notNull(),
+  filename: text("filename").notNull(),
+  fileType: text("file_type").notNull(),
+  uploadedAt: integer("uploaded_at", { mode: "timestamp" }).notNull(),
+  processedAt: integer("processed_at", { mode: "timestamp" }),
+  status: text("status").notNull(), // 'pending', 'processing', 'completed', 'failed'
+  metadata: text("metadata", { mode: "json" }),
 });
 
-export const chunks = sqliteTable('chunks', {
-  id: text('id').primaryKey(),
-  documentId: text('document_id').references(() => documents.id),
-  content: text('content').notNull(),
-  chunkIndex: integer('chunk_index').notNull(),
-  embedding: text('embedding', { mode: 'json' }), // pgvector in Supabase
-  metadata: text('metadata', { mode: 'json' }),
+export const chunks = sqliteTable("chunks", {
+  id: text("id").primaryKey(),
+  documentId: text("document_id").references(() => documents.id),
+  content: text("content").notNull(),
+  chunkIndex: integer("chunk_index").notNull(),
+  embedding: text("embedding", { mode: "json" }), // pgvector in Supabase
+  metadata: text("metadata", { mode: "json" }),
 });
 
-export const messages = sqliteTable('messages', {
-  id: text('id').primaryKey(),
-  documentId: text('document_id').references(() => documents.id),
-  platform: text('platform').notNull(), // 'sms', 'facebook', 'imessage', etc.
-  timestamp: integer('timestamp', { mode: 'timestamp' }).notNull(),
-  sender: text('sender').notNull(),
-  recipient: text('recipient'),
-  content: text('content').notNull(),
-  sentiment: text('sentiment'), // 'positive', 'negative', 'neutral', 'hostile'
-  severity: integer('severity'), // 1-10
-  metadata: text('metadata', { mode: 'json' }),
+export const messages = sqliteTable("messages", {
+  id: text("id").primaryKey(),
+  documentId: text("document_id").references(() => documents.id),
+  platform: text("platform").notNull(), // 'sms', 'facebook', 'imessage', etc.
+  timestamp: integer("timestamp", { mode: "timestamp" }).notNull(),
+  sender: text("sender").notNull(),
+  recipient: text("recipient"),
+  content: text("content").notNull(),
+  sentiment: text("sentiment"), // 'positive', 'negative', 'neutral', 'hostile'
+  severity: integer("severity"), // 1-10
+  metadata: text("metadata", { mode: "json" }),
 });
 ```
 
 #### Conflicts & Gaps
 
-| Feature | Ingestion Design | Current Platform | Resolution |
-|---------|-----------------|------------------|------------|
-| **Ingestion Tracking** | `ingestion_runs` table | Missing | ✅ **Add** - Critical for audit trail |
-| **Chunk Metadata** | `chunk_metadata` table | Partial in `chunks` | ⚠️ **Merge** - Add validation/repair fields |
-| **Transformation Log** | `transformations_applied` JSONB | Missing | ✅ **Add** - Court admissibility requirement |
-| **Timezone Fields** | Multiple timezone columns | Single `timestamp` | ⚠️ **Conflict** - Adopt multi-timezone approach |
-| **Derived Fields** | `message_length`, `business_hours_flag` | Missing | ✅ **Add** - Useful for analysis |
-| **ID Enrichment** | `user_name` (resolved from `user_id`) | Missing | ✅ **Add** - Critical for readability |
+| Feature                | Ingestion Design                        | Current Platform    | Resolution                                      |
+| ---------------------- | --------------------------------------- | ------------------- | ----------------------------------------------- |
+| **Ingestion Tracking** | `ingestion_runs` table                  | Missing             | ✅ **Add** - Critical for audit trail           |
+| **Chunk Metadata**     | `chunk_metadata` table                  | Partial in `chunks` | ⚠️ **Merge** - Add validation/repair fields     |
+| **Transformation Log** | `transformations_applied` JSONB         | Missing             | ✅ **Add** - Court admissibility requirement    |
+| **Timezone Fields**    | Multiple timezone columns               | Single `timestamp`  | ⚠️ **Conflict** - Adopt multi-timezone approach |
+| **Derived Fields**     | `message_length`, `business_hours_flag` | Missing             | ✅ **Add** - Useful for analysis                |
+| **ID Enrichment**      | `user_name` (resolved from `user_id`)   | Missing             | ✅ **Add** - Critical for readability           |
 
 **Recommendation:** Adopt ingestion design schema as the canonical structure. Migrate existing `documents`/`chunks`/`messages` tables to match.
 
@@ -141,27 +141,27 @@ export const messages = sqliteTable('messages', {
 
 ### 2.1 Missing from Current Platform (Present in Ingestion Design)
 
-| Feature | Ingestion Design | Current Platform | Priority |
-|---------|-----------------|------------------|----------|
-| **Chunk Validation** | Full validation + repair system | None | 🔴 **Critical** |
-| **Schema Matching** | Library of known schemas with 85% similarity matching | None | 🔴 **Critical** |
-| **Preview Mode** | Interactive preview of first 10 records before full processing | None | 🔴 **Critical** |
-| **Transformation Pipeline** | Modular transformers (timezone, code decoder, ID enricher) | Inline, ad-hoc | 🟡 **Important** |
-| **Interactive Validation** | Fix issues on-the-fly during preview | None | 🟡 **Important** |
-| **Chunk Naming Strategy** | User-prompted or timestamp-based | Auto-generated UUIDs | 🟢 **Nice-to-have** |
-| **Repair Strategies** | JSON/CSV/XML/Log repair without data loss | None | 🔴 **Critical** |
+| Feature                     | Ingestion Design                                               | Current Platform     | Priority            |
+| --------------------------- | -------------------------------------------------------------- | -------------------- | ------------------- |
+| **Chunk Validation**        | Full validation + repair system                                | None                 | 🔴 **Critical**     |
+| **Schema Matching**         | Library of known schemas with 85% similarity matching          | None                 | 🔴 **Critical**     |
+| **Preview Mode**            | Interactive preview of first 10 records before full processing | None                 | 🔴 **Critical**     |
+| **Transformation Pipeline** | Modular transformers (timezone, code decoder, ID enricher)     | Inline, ad-hoc       | 🟡 **Important**    |
+| **Interactive Validation**  | Fix issues on-the-fly during preview                           | None                 | 🟡 **Important**    |
+| **Chunk Naming Strategy**   | User-prompted or timestamp-based                               | Auto-generated UUIDs | 🟢 **Nice-to-have** |
+| **Repair Strategies**       | JSON/CSV/XML/Log repair without data loss                      | None                 | 🔴 **Critical**     |
 
 ### 2.2 Missing from Ingestion Design (Present in Current Platform)
 
-| Feature | Current Platform | Ingestion Design | Priority |
-|---------|-----------------|------------------|----------|
-| **Web UI** | Full React dashboard with tRPC | CLI only (web UI planned) | 🔴 **Critical** |
-| **Real-time Processing** | Streaming via LlamaIndex | Batch only | 🟡 **Important** |
-| **LLM Integration** | LiteLLM, multi-pass NLP, sentiment analysis | Not mentioned | 🔴 **Critical** |
-| **Vector Embeddings** | Chroma + pgvector | Not mentioned | 🔴 **Critical** |
-| **Neo4j Graph** | Entity relationships, timeline analysis | Not mentioned | 🟡 **Important** |
-| **Agent Coordination** | LangGraph workflows, sub-agents | Not mentioned | 🟡 **Important** |
-| **Authentication** | Manus OAuth, role-based access | Not mentioned | 🔴 **Critical** |
+| Feature                  | Current Platform                            | Ingestion Design          | Priority         |
+| ------------------------ | ------------------------------------------- | ------------------------- | ---------------- |
+| **Web UI**               | Full React dashboard with tRPC              | CLI only (web UI planned) | 🔴 **Critical**  |
+| **Real-time Processing** | Streaming via LlamaIndex                    | Batch only                | 🟡 **Important** |
+| **LLM Integration**      | LiteLLM, multi-pass NLP, sentiment analysis | Not mentioned             | 🔴 **Critical**  |
+| **Vector Embeddings**    | Chroma + pgvector                           | Not mentioned             | 🔴 **Critical**  |
+| **Neo4j Graph**          | Entity relationships, timeline analysis     | Not mentioned             | 🟡 **Important** |
+| **Agent Coordination**   | LangGraph workflows, sub-agents             | Not mentioned             | 🟡 **Important** |
+| **Authentication**       | Manus OAuth, role-based access              | Not mentioned             | 🔴 **Critical**  |
 
 ---
 
@@ -169,11 +169,11 @@ export const messages = sqliteTable('messages', {
 
 ### 3.1 Chunking Strategy
 
-| Aspect | Ingestion Design | Current Platform | Unified Approach |
-|--------|-----------------|------------------|------------------|
-| **Method** | Line-based, size-based, smart chunking | Semantic chunking via LlamaIndex | **Hybrid:** Use ingestion design for format-agnostic chunking, LlamaIndex for semantic |
-| **Validation** | Post-chunk validation + repair | None | **Adopt ingestion design** |
-| **Metadata** | `chunk_metadata` table with validation status | Inline in `chunks` table | **Merge schemas** |
+| Aspect         | Ingestion Design                              | Current Platform                 | Unified Approach                                                                       |
+| -------------- | --------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------- |
+| **Method**     | Line-based, size-based, smart chunking        | Semantic chunking via LlamaIndex | **Hybrid:** Use ingestion design for format-agnostic chunking, LlamaIndex for semantic |
+| **Validation** | Post-chunk validation + repair                | None                             | **Adopt ingestion design**                                                             |
+| **Metadata**   | `chunk_metadata` table with validation status | Inline in `chunks` table         | **Merge schemas**                                                                      |
 
 **Recommendation:** Use ingestion design chunking for initial file splitting, then apply LlamaIndex semantic chunking for embedding generation.
 
@@ -181,11 +181,11 @@ export const messages = sqliteTable('messages', {
 
 ### 3.2 Schema Discovery
 
-| Aspect | Ingestion Design | Current Platform | Unified Approach |
-|--------|-----------------|------------------|------------------|
-| **Method** | Fingerprinting + similarity matching against known schemas | Manual schema definition in code | **Adopt ingestion design** - Auto-detect schemas |
-| **Storage** | `config/known_schemas/` JSON files | Hardcoded in parsers | **Migrate to database** - Store in `schemas` table |
-| **Versioning** | Not mentioned | Not implemented | **Add schema versioning** |
+| Aspect         | Ingestion Design                                           | Current Platform                 | Unified Approach                                   |
+| -------------- | ---------------------------------------------------------- | -------------------------------- | -------------------------------------------------- |
+| **Method**     | Fingerprinting + similarity matching against known schemas | Manual schema definition in code | **Adopt ingestion design** - Auto-detect schemas   |
+| **Storage**    | `config/known_schemas/` JSON files                         | Hardcoded in parsers             | **Migrate to database** - Store in `schemas` table |
+| **Versioning** | Not mentioned                                              | Not implemented                  | **Add schema versioning**                          |
 
 **Recommendation:** Implement schema library in PostgreSQL, expose via tRPC for web UI management.
 
@@ -193,11 +193,11 @@ export const messages = sqliteTable('messages', {
 
 ### 3.3 Transformation System
 
-| Aspect | Ingestion Design | Current Platform | Unified Approach |
-|--------|-----------------|------------------|------------------|
-| **Architecture** | Modular transformers with detection + configuration | Inline in parsers | **Adopt modular approach** |
-| **Types** | Timezone, Code Decoder, ID Enricher, Privacy, Text Normalizer | Multi-pass NLP (sentiment, entities, patterns) | **Merge:** Use ingestion transformers for data prep, platform NLP for analysis |
-| **Configuration** | Interactive CLI prompts | Hardcoded | **Add web UI** for transformer configuration |
+| Aspect            | Ingestion Design                                              | Current Platform                               | Unified Approach                                                               |
+| ----------------- | ------------------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------ |
+| **Architecture**  | Modular transformers with detection + configuration           | Inline in parsers                              | **Adopt modular approach**                                                     |
+| **Types**         | Timezone, Code Decoder, ID Enricher, Privacy, Text Normalizer | Multi-pass NLP (sentiment, entities, patterns) | **Merge:** Use ingestion transformers for data prep, platform NLP for analysis |
+| **Configuration** | Interactive CLI prompts                                       | Hardcoded                                      | **Add web UI** for transformer configuration                                   |
 
 **Recommendation:** Refactor platform to use modular transformer architecture from ingestion design. Add NLP transformers as additional modules.
 
@@ -309,6 +309,7 @@ export const messages = sqliteTable('messages', {
 ### 4.2 Data Flow
 
 **Bulk Upload (1000+ files):**
+
 1. User uploads files to Directus (VPS1)
 2. n8n workflow triggers conversation ingestion CLI
 3. CLI chunks, validates, repairs, matches schema, transforms
@@ -316,6 +317,7 @@ export const messages = sqliteTable('messages', {
 5. Platform post-processing (NLP, embeddings, graph) runs asynchronously
 
 **Interactive Upload (1-10 files):**
+
 1. User uploads file via platform web UI
 2. Platform calls Python ingestion system via bridge
 3. Ingestion system returns preview (first 10 records)
@@ -395,6 +397,7 @@ ALTER TABLE documents ADD COLUMN transformers_applied JSONB;
 ## 6. Implementation Roadmap
 
 ### Phase 1: Foundation (Week 1)
+
 - [ ] Create `server/python-tools/conversation-ingester/` directory structure
 - [ ] Copy ingestion system design into project
 - [ ] Create PostgreSQL schema migrations (ingestion_runs, schemas, transformers)
@@ -402,6 +405,7 @@ ALTER TABLE documents ADD COLUMN transformers_applied JSONB;
 - [ ] Add tRPC procedures for ingestion (uploadFile, previewChunks, processFile)
 
 ### Phase 2: Core Ingestion System (Week 2)
+
 - [ ] Implement chunker (line-based, size-based, smart)
 - [ ] Implement validator + repairer (JSON, CSV, XML, Log)
 - [ ] Implement schema matcher with fingerprinting
@@ -409,6 +413,7 @@ ALTER TABLE documents ADD COLUMN transformers_applied JSONB;
 - [ ] Create schema library seeder (Slack, Discord, SMS, Facebook)
 
 ### Phase 3: Transformation Pipeline (Week 3)
+
 - [ ] Implement timezone transformer
 - [ ] Implement code decoder transformer
 - [ ] Implement ID enricher transformer
@@ -417,6 +422,7 @@ ALTER TABLE documents ADD COLUMN transformers_applied JSONB;
 - [ ] Create transformation pipeline orchestrator
 
 ### Phase 4: Preview & Interactive Validation (Week 4)
+
 - [ ] Implement preview manager (first 10 records)
 - [ ] Create web UI for preview display
 - [ ] Implement interactive validation (fix issues on-the-fly)
@@ -424,6 +430,7 @@ ALTER TABLE documents ADD COLUMN transformers_applied JSONB;
 - [ ] Add schema mapping UI
 
 ### Phase 5: Integration & Testing (Week 5)
+
 - [ ] Integrate with Directus upload flow
 - [ ] Integrate with n8n workflows
 - [ ] Add ingestion monitoring dashboard
@@ -431,6 +438,7 @@ ALTER TABLE documents ADD COLUMN transformers_applied JSONB;
 - [ ] Performance testing (1000+ files)
 
 ### Phase 6: Post-Processing (Week 6)
+
 - [ ] Wire ingested data to LlamaIndex semantic chunking
 - [ ] Wire to multi-pass NLP classification
 - [ ] Wire to vector embedding generation
@@ -444,6 +452,7 @@ ALTER TABLE documents ADD COLUMN transformers_applied JSONB;
 ### 7.1 Schema Storage Location
 
 **Options:**
+
 1. **JSON files** (ingestion design approach) - Simple, version-controllable
 2. **PostgreSQL table** (platform approach) - Queryable, manageable via UI
 3. **Hybrid** - JSON for defaults, PostgreSQL for user-created
@@ -455,6 +464,7 @@ ALTER TABLE documents ADD COLUMN transformers_applied JSONB;
 ### 7.2 Chunking Strategy
 
 **Options:**
+
 1. **Ingestion design only** - Format-agnostic chunking, no semantic awareness
 2. **LlamaIndex only** - Semantic chunking, but requires format detection first
 3. **Two-stage** - Ingestion design for initial split, LlamaIndex for embedding chunks
@@ -466,6 +476,7 @@ ALTER TABLE documents ADD COLUMN transformers_applied JSONB;
 ### 7.3 CLI vs Web UI
 
 **Options:**
+
 1. **CLI only** (ingestion design) - Fast, scriptable, but not user-friendly
 2. **Web UI only** (platform) - User-friendly, but slower for bulk operations
 3. **Both** - CLI for bulk, web for interactive
@@ -477,6 +488,7 @@ ALTER TABLE documents ADD COLUMN transformers_applied JSONB;
 ### 7.4 Transformation Configuration
 
 **Options:**
+
 1. **Interactive prompts** (ingestion design) - CLI-based, step-by-step
 2. **Web forms** (platform) - GUI-based, more accessible
 3. **Both** - CLI for automation, web for manual

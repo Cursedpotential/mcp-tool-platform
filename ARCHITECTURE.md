@@ -70,6 +70,7 @@ The platform operates as a **three-layer architecture**:
 **Solution**: Pre-process data through specialized tools that extract structure, entities, relationships, and summaries before final consumption.
 
 **Target**: 85%+ token reduction through:
+
 - Document chunking and summarization
 - Entity extraction and relationship mapping
 - Semantic deduplication
@@ -81,6 +82,7 @@ The platform operates as a **three-layer architecture**:
 **Problem**: Agents struggle to find the right tool for a given task without exhaustive search or prior knowledge.
 
 **Solution**: Multi-modal discovery mechanisms:
+
 - **Semantic routing** - Match natural language intent to best tool
 - **Category browsing** - Group tools by function (forensics, NLP, document, ML)
 - **Workflow templates** - Pre-built tool chains for common tasks
@@ -91,6 +93,7 @@ The platform operates as a **three-layer architecture**:
 **Problem**: Standard knowledge graphs lack temporal context—can't track how relationships evolve over time or detect contradictions across timelines.
 
 **Solution**: Graphiti-powered temporal graph in Neo4j Aura:
+
 - Track entity relationships with timestamps
 - Detect contradictions across time periods
 - Support "as of" queries for historical state
@@ -101,6 +104,7 @@ The platform operates as a **three-layer architecture**:
 **Problem**: Monolithic systems are hard to extend and maintain.
 
 **Solution**: Plugin-based architecture:
+
 - Each tool is a self-contained module with schema, handler, and tests
 - Python bridge for heavy NLP/ML operations
 - MCP server proxy for external tool aggregation
@@ -112,38 +116,38 @@ The platform operates as a **three-layer architecture**:
 
 ### Implemented Features (✅)
 
-| Feature | Status | Description |
-|---------|--------|-------------|
-| MCP Gateway | ✅ | 7 core endpoints (search, describe, invoke, list, categories, semantic, related) |
-| Tool Registry | ✅ | 65 tools registered with full schemas |
-| Task Executor | ✅ | 39 handlers wired (forensics, text-miner, format-converter, schema-resolver, evidence-hasher, document, NLP, search, ML, retrieval, summarization) |
-| Workflow Templates | ✅ | 6 pre-built workflows (document analysis, evidence chain, entity extraction, timeline forensics, semantic search, batch processing) |
-| Content Store | ✅ | Reference-based storage for large outputs (>1MB) |
-| Database Schema | ✅ | Document intelligence tables (documents, sections, chunks, spans, summaries, entities, evidenceChains) |
-| Frontend Pages | ✅ | 13 pages (Home, Tools, Settings, ApiKeys, McpConfig, Proxy, Stats, Logs, Wiki, Forks, Config, ComponentShowcase, NotFound) |
-| MCP Server Proxy | ✅ | Aggregate tools from remote MCP servers |
-| LLM Integration | ✅ | Preconfigured helpers for chat, structured output, tool calling |
-| Auth System | ✅ | Manus OAuth with session management |
+| Feature            | Status | Description                                                                                                                                        |
+| ------------------ | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| MCP Gateway        | ✅     | 7 core endpoints (search, describe, invoke, list, categories, semantic, related)                                                                   |
+| Tool Registry      | ✅     | 65 tools registered with full schemas                                                                                                              |
+| Task Executor      | ✅     | 39 handlers wired (forensics, text-miner, format-converter, schema-resolver, evidence-hasher, document, NLP, search, ML, retrieval, summarization) |
+| Workflow Templates | ✅     | 6 pre-built workflows (document analysis, evidence chain, entity extraction, timeline forensics, semantic search, batch processing)                |
+| Content Store      | ✅     | Reference-based storage for large outputs (>1MB)                                                                                                   |
+| Database Schema    | ✅     | Document intelligence tables (documents, sections, chunks, spans, summaries, entities, evidenceChains)                                             |
+| Frontend Pages     | ✅     | 13 pages (Home, Tools, Settings, ApiKeys, McpConfig, Proxy, Stats, Logs, Wiki, Forks, Config, ComponentShowcase, NotFound)                         |
+| MCP Server Proxy   | ✅     | Aggregate tools from remote MCP servers                                                                                                            |
+| LLM Integration    | ✅     | Preconfigured helpers for chat, structured output, tool calling                                                                                    |
+| Auth System        | ✅     | Manus OAuth with session management                                                                                                                |
 
 ### Partially Implemented (⚠️)
 
-| Feature | Status | Blocker |
-|---------|--------|---------|
-| Database Connection UI | ⚠️ | Forms exist but no backend procedures to save/test connections |
-| Graph DB Plugin | ⚠️ | Code exists but uses HTTP API fallback, not neo4j-driver |
-| Vector DB Plugin | ⚠️ | Only Chroma in-memory implemented, Qdrant/pgvector are stubs |
-| Redis Queue | ⚠️ | Code exists but not integrated into gateway |
+| Feature                | Status | Blocker                                                        |
+| ---------------------- | ------ | -------------------------------------------------------------- |
+| Database Connection UI | ⚠️     | Forms exist but no backend procedures to save/test connections |
+| Graph DB Plugin        | ⚠️     | Code exists but uses HTTP API fallback, not neo4j-driver       |
+| Vector DB Plugin       | ⚠️     | Only Chroma in-memory implemented, Qdrant/pgvector are stubs   |
+| Redis Queue            | ⚠️     | Code exists but not integrated into gateway                    |
 
 ### Missing Critical Infrastructure (❌)
 
-| Feature | Status | Priority |
-|---------|--------|----------|
-| Chroma Persistent Storage | ❌ | P0 - Currently in-memory only |
-| Graphiti Python Integration | ❌ | P0 - Needed for temporal awareness |
-| pgvector/Supabase Wiring | ❌ | P0 - Persistent embeddings |
-| Docker Compose | ❌ | P1 - Self-hosting |
-| Workflow Execution UI | ❌ | P1 - No page to run workflows |
-| Local MCP Bridge | ❌ | P2 - Can't connect to user's local tools |
+| Feature                     | Status | Priority                                 |
+| --------------------------- | ------ | ---------------------------------------- |
+| Chroma Persistent Storage   | ❌     | P0 - Currently in-memory only            |
+| Graphiti Python Integration | ❌     | P0 - Needed for temporal awareness       |
+| pgvector/Supabase Wiring    | ❌     | P0 - Persistent embeddings               |
+| Docker Compose              | ❌     | P1 - Self-hosting                        |
+| Workflow Execution UI       | ❌     | P1 - No page to run workflows            |
+| Local MCP Bridge            | ❌     | P2 - Can't connect to user's local tools |
 
 ---
 
@@ -172,7 +176,7 @@ Every tool follows a strict schema:
 Handlers are registered in `server/mcp/workers/executor.ts`:
 
 ```typescript
-this.registerHandler('tool.name', async (args) => {
+this.registerHandler("tool.name", async args => {
   // 1. Validate input
   // 2. Call implementation (local or Python bridge)
   // 3. Return structured output
@@ -203,11 +207,11 @@ Agents retrieve via `get_ref` endpoint with pagination support.
 Heavy NLP/ML operations delegate to Python:
 
 ```typescript
-import { callPython } from './server/mcp/python-bridge';
+import { callPython } from "./server/mcp/python-bridge";
 
-const result = await callPython('spacy_ner', {
+const result = await callPython("spacy_ner", {
   text: input.text,
-  model: 'en_core_web_sm'
+  model: "en_core_web_sm",
 });
 ```
 
@@ -238,11 +242,13 @@ Workflows are declarative tool chains:
 **Purpose**: Fast, ephemeral working memory for embeddings during preprocessing.
 
 **Configuration**:
+
 - Path: `./data/chroma`
 - TTL: 72 hours (configurable)
 - Retention: Automatic cleanup job
 
 **Use Cases**:
+
 - Semantic deduplication during batch processing
 - Similarity search within a single session
 - Temporary embedding cache
@@ -254,11 +260,13 @@ Workflows are declarative tool chains:
 **Purpose**: Track entity relationships with temporal awareness.
 
 **Architecture**:
+
 - Graphiti Python SDK via python-bridge
 - Neo4j Aura connection string from env
 - Temporal queries via Cypher
 
 **Use Cases**:
+
 - Forensic timeline reconstruction
 - Contradiction detection across time periods
 - "As of" queries for historical state
@@ -271,11 +279,13 @@ Workflows are declarative tool chains:
 **Purpose**: Long-term vector storage for semantic search.
 
 **Architecture**:
+
 - Supabase Postgres with pgvector extension
 - Connection string from env
 - Metadata stored in MySQL, vectors in Supabase
 
 **Use Cases**:
+
 - Persistent document embeddings
 - Cross-session semantic search
 - Knowledge base retrieval
@@ -287,11 +297,13 @@ Workflows are declarative tool chains:
 **Purpose**: Distribute heavy preprocessing tasks across workers.
 
 **Architecture**:
+
 - In-memory fallback for single-instance
 - Redis connection for multi-worker
 - Priority queue support
 
 **Use Cases**:
+
 - Batch document processing
 - Parallel tool execution
 - Background jobs
@@ -390,45 +402,45 @@ Workflows are declarative tool chains:
 
 ### Backend
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Runtime | Node.js 22 | Server execution |
-| Framework | Express 4 + tRPC 11 | API layer |
-| Database | MySQL/TiDB | Structured data |
-| ORM | Drizzle | Type-safe queries |
-| Auth | Manus OAuth | User management |
-| Queue | Redis (optional) | Task distribution |
-| Python | 3.11+ | NLP/ML operations |
+| Component | Technology          | Purpose           |
+| --------- | ------------------- | ----------------- |
+| Runtime   | Node.js 22          | Server execution  |
+| Framework | Express 4 + tRPC 11 | API layer         |
+| Database  | MySQL/TiDB          | Structured data   |
+| ORM       | Drizzle             | Type-safe queries |
+| Auth      | Manus OAuth         | User management   |
+| Queue     | Redis (optional)    | Task distribution |
+| Python    | 3.11+               | NLP/ML operations |
 
 ### Frontend
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Framework | React 19 | UI library |
-| Styling | Tailwind 4 | CSS framework |
-| Components | shadcn/ui | UI primitives |
-| Router | wouter | Client-side routing |
-| State | tRPC hooks | Data fetching |
+| Component  | Technology | Purpose             |
+| ---------- | ---------- | ------------------- |
+| Framework  | React 19   | UI library          |
+| Styling    | Tailwind 4 | CSS framework       |
+| Components | shadcn/ui  | UI primitives       |
+| Router     | wouter     | Client-side routing |
+| State      | tRPC hooks | Data fetching       |
 
 ### Storage
 
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| Vector DB | Chroma (in-process) | Working memory |
-| Vector DB | pgvector (Supabase) | Persistent embeddings |
-| Graph DB | Neo4j Aura | Temporal relationships |
-| Object Storage | S3-compatible | File storage |
+| Component      | Technology          | Purpose                |
+| -------------- | ------------------- | ---------------------- |
+| Vector DB      | Chroma (in-process) | Working memory         |
+| Vector DB      | pgvector (Supabase) | Persistent embeddings  |
+| Graph DB       | Neo4j Aura          | Temporal relationships |
+| Object Storage | S3-compatible       | File storage           |
 
 ### Python Dependencies
 
-| Package | Purpose |
-|---------|---------|
-| graphiti-core | Temporal graph operations |
-| neo4j | Neo4j driver |
-| spacy | NLP (NER, POS, dependencies) |
-| transformers | Embeddings, classification |
-| sentence-transformers | Semantic similarity |
-| nltk | Text processing |
+| Package               | Purpose                      |
+| --------------------- | ---------------------------- |
+| graphiti-core         | Temporal graph operations    |
+| neo4j                 | Neo4j driver                 |
+| spacy                 | NLP (NER, POS, dependencies) |
+| transformers          | Embeddings, classification   |
+| sentence-transformers | Semantic similarity          |
+| nltk                  | Text processing              |
 
 ---
 
@@ -464,13 +476,13 @@ Tools declare required permissions:
 
 ### Latency Targets
 
-| Operation | Target | Notes |
-|-----------|--------|-------|
-| Tool discovery | <100ms | Cached in memory |
-| Simple tool execution | <500ms | Pure JS operations |
-| Python bridge call | <2s | Subprocess overhead |
-| Document parsing | <5s | Depends on size |
-| Embedding generation | <10s | Depends on model |
+| Operation             | Target | Notes               |
+| --------------------- | ------ | ------------------- |
+| Tool discovery        | <100ms | Cached in memory    |
+| Simple tool execution | <500ms | Pure JS operations  |
+| Python bridge call    | <2s    | Subprocess overhead |
+| Document parsing      | <5s    | Depends on size     |
+| Embedding generation  | <10s   | Depends on model    |
 
 ### Scalability
 
@@ -577,17 +589,17 @@ Tools declare required permissions:
 
 ## Glossary
 
-| Term | Definition |
-|------|------------|
-| **MCP** | Model Context Protocol - Standard for tool discovery and invocation |
-| **Tool** | A single preprocessing operation (e.g., `document.parse`) |
-| **Handler** | Implementation of a tool's logic |
-| **Workflow** | Chain of tools executed in sequence |
-| **ContentRef** | Reference to large output stored in ContentStore |
-| **Chroma** | In-process vector database for working memory |
-| **Graphiti** | Temporal graph framework for Neo4j |
-| **pgvector** | Postgres extension for vector similarity search |
-| **Token Efficiency** | Reducing LLM context consumption through preprocessing |
+| Term                 | Definition                                                          |
+| -------------------- | ------------------------------------------------------------------- |
+| **MCP**              | Model Context Protocol - Standard for tool discovery and invocation |
+| **Tool**             | A single preprocessing operation (e.g., `document.parse`)           |
+| **Handler**          | Implementation of a tool's logic                                    |
+| **Workflow**         | Chain of tools executed in sequence                                 |
+| **ContentRef**       | Reference to large output stored in ContentStore                    |
+| **Chroma**           | In-process vector database for working memory                       |
+| **Graphiti**         | Temporal graph framework for Neo4j                                  |
+| **pgvector**         | Postgres extension for vector similarity search                     |
+| **Token Efficiency** | Reducing LLM context consumption through preprocessing              |
 
 ---
 

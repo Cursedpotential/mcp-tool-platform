@@ -2,7 +2,13 @@
 import { useAuth } from "@/core/hooks/useAuth";
 
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { toast } from "sonner";
-import { 
+import {
   Settings as SettingsIcon,
   Key,
   Cloud,
@@ -29,57 +35,145 @@ import {
   Zap,
   Globe,
   Server,
-  Rocket
+  Rocket,
 } from "lucide-react";
 
-
-const PROVIDER_INFO: Record<string, { name: string; icon: React.ReactNode; description: string; type: 'local' | 'cloud' | 'cli' }> = {
-  ollama: { name: 'Ollama', icon: <Cpu className="h-4 w-4" />, description: 'Local LLM server (CPU-friendly)', type: 'local' },
-  lmstudio: { name: 'LM Studio', icon: <Cpu className="h-4 w-4" />, description: 'Local model runner', type: 'local' },
-  llamacpp: { name: 'llama.cpp', icon: <Cpu className="h-4 w-4" />, description: 'Native C++ inference', type: 'local' },
-  openai: { name: 'OpenAI', icon: <Cloud className="h-4 w-4" />, description: 'GPT-4, GPT-4o, embeddings', type: 'cloud' },
-  anthropic: { name: 'Anthropic', icon: <Cloud className="h-4 w-4" />, description: 'Claude 3 models', type: 'cloud' },
-  google: { name: 'Google Gemini', icon: <Cloud className="h-4 w-4" />, description: 'Gemini Pro, Flash', type: 'cloud' },
-  groq: { name: 'Groq', icon: <Zap className="h-4 w-4" />, description: 'Ultra-fast inference', type: 'cloud' },
-  openrouter: { name: 'OpenRouter', icon: <Globe className="h-4 w-4" />, description: 'Multi-model gateway', type: 'cloud' },
-  perplexity: { name: 'Perplexity', icon: <Cloud className="h-4 w-4" />, description: 'Search-augmented LLM', type: 'cloud' },
-  together: { name: 'Together AI', icon: <Cloud className="h-4 w-4" />, description: 'Open model hosting', type: 'cloud' },
-  mistral: { name: 'Mistral', icon: <Cloud className="h-4 w-4" />, description: 'Mistral models', type: 'cloud' },
-  cohere: { name: 'Cohere', icon: <Cloud className="h-4 w-4" />, description: 'Command, embeddings', type: 'cloud' },
-  'claude-cli': { name: 'Claude CLI', icon: <Terminal className="h-4 w-4" />, description: 'Use your Claude subscription', type: 'cli' },
-  'gemini-cli': { name: 'Gemini CLI', icon: <Terminal className="h-4 w-4" />, description: 'Use your Gemini subscription', type: 'cli' },
-  aider: { name: 'Aider', icon: <Terminal className="h-4 w-4" />, description: 'AI pair programming', type: 'cli' },
+const PROVIDER_INFO: Record<
+  string,
+  {
+    name: string;
+    icon: React.ReactNode;
+    description: string;
+    type: "local" | "cloud" | "cli";
+  }
+> = {
+  ollama: {
+    name: "Ollama",
+    icon: <Cpu className="h-4 w-4" />,
+    description: "Local LLM server (CPU-friendly)",
+    type: "local",
+  },
+  lmstudio: {
+    name: "LM Studio",
+    icon: <Cpu className="h-4 w-4" />,
+    description: "Local model runner",
+    type: "local",
+  },
+  llamacpp: {
+    name: "llama.cpp",
+    icon: <Cpu className="h-4 w-4" />,
+    description: "Native C++ inference",
+    type: "local",
+  },
+  openai: {
+    name: "OpenAI",
+    icon: <Cloud className="h-4 w-4" />,
+    description: "GPT-4, GPT-4o, embeddings",
+    type: "cloud",
+  },
+  anthropic: {
+    name: "Anthropic",
+    icon: <Cloud className="h-4 w-4" />,
+    description: "Claude 3 models",
+    type: "cloud",
+  },
+  google: {
+    name: "Google Gemini",
+    icon: <Cloud className="h-4 w-4" />,
+    description: "Gemini Pro, Flash",
+    type: "cloud",
+  },
+  groq: {
+    name: "Groq",
+    icon: <Zap className="h-4 w-4" />,
+    description: "Ultra-fast inference",
+    type: "cloud",
+  },
+  openrouter: {
+    name: "OpenRouter",
+    icon: <Globe className="h-4 w-4" />,
+    description: "Multi-model gateway",
+    type: "cloud",
+  },
+  perplexity: {
+    name: "Perplexity",
+    icon: <Cloud className="h-4 w-4" />,
+    description: "Search-augmented LLM",
+    type: "cloud",
+  },
+  together: {
+    name: "Together AI",
+    icon: <Cloud className="h-4 w-4" />,
+    description: "Open model hosting",
+    type: "cloud",
+  },
+  mistral: {
+    name: "Mistral",
+    icon: <Cloud className="h-4 w-4" />,
+    description: "Mistral models",
+    type: "cloud",
+  },
+  cohere: {
+    name: "Cohere",
+    icon: <Cloud className="h-4 w-4" />,
+    description: "Command, embeddings",
+    type: "cloud",
+  },
+  "claude-cli": {
+    name: "Claude CLI",
+    icon: <Terminal className="h-4 w-4" />,
+    description: "Use your Claude subscription",
+    type: "cli",
+  },
+  "gemini-cli": {
+    name: "Gemini CLI",
+    icon: <Terminal className="h-4 w-4" />,
+    description: "Use your Gemini subscription",
+    type: "cli",
+  },
+  aider: {
+    name: "Aider",
+    icon: <Terminal className="h-4 w-4" />,
+    description: "AI pair programming",
+    type: "cli",
+  },
 };
 
 export default function Settings() {
   const { user, loading: authLoading } = useAuth();
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
-  
-  const { data: providers, isLoading, refetch } = trpc.llm.listProviders.useQuery();
+
+  const {
+    data: providers,
+    isLoading,
+    refetch,
+  } = trpc.llm.listProviders.useQuery();
   const { data: available } = trpc.llm.detectAvailable.useQuery();
   const { data: configExport } = trpc.config.exportAll.useQuery();
 
   const [colabConfig, setColabConfig] = useState({
-    projectId: '',
-    region: '',
-    runtimeTemplate: '',
-    serviceAccountJson: '',
-    notebookPath: '',
-    syncBucket: '',
+    projectId: "",
+    region: "",
+    runtimeTemplate: "",
+    serviceAccountJson: "",
+    notebookPath: "",
+    syncBucket: "",
   });
-  
+
   const configureMutation = trpc.llm.configureProvider.useMutation({
     onSuccess: () => {
-      toast.success('Provider configured');
+      toast.success("Provider configured");
       refetch();
     },
-    onError: (err) => toast.error(err.message),
+    onError: err => toast.error(err.message),
   });
 
   const testMutation = trpc.llm.testProvider.useMutation({
-    onSuccess: (result) => {
+    onSuccess: result => {
       if (result.success) {
-        toast.success(`Provider working! Response: "${result.response}" (${result.latency}ms)`);
+        toast.success(
+          `Provider working! Response: "${result.response}" (${result.latency}ms)`
+        );
       } else {
         toast.error(`Test failed: ${result.error}`);
       }
@@ -87,15 +181,14 @@ export default function Settings() {
   });
 
   const testColab = trpc.settings.testColab.useMutation({
-    onSuccess: (res) => toast.success(res.message),
-    onError: (err) => toast.error(err.message),
+    onSuccess: res => toast.success(res.message),
+    onError: err => toast.error(err.message),
   });
 
   const saveColab = trpc.settings.saveColabConfig.useMutation({
-    onSuccess: (res) => toast.success(res.message),
-    onError: (err) => toast.error(err.message),
+    onSuccess: res => toast.success(res.message),
+    onError: err => toast.error(err.message),
   });
-
 
   if (authLoading || isLoading) {
     return (
@@ -111,7 +204,9 @@ export default function Settings() {
     return (
       <DashboardLayout>
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">Please log in to access settings</p>
+          <p className="text-muted-foreground">
+            Please log in to access settings
+          </p>
         </div>
       </DashboardLayout>
     );
@@ -129,20 +224,25 @@ export default function Settings() {
 
   const handleExport = () => {
     if (configExport) {
-      const blob = new Blob([JSON.stringify(configExport, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(configExport, null, 2)], {
+        type: "application/json",
+      });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `mcp-config-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `mcp-config-${new Date().toISOString().split("T")[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('Configuration exported');
+      toast.success("Configuration exported");
     }
   };
 
-  const localProviders = providers?.filter(p => PROVIDER_INFO[p.type]?.type === 'local') || [];
-  const cloudProviders = providers?.filter(p => PROVIDER_INFO[p.type]?.type === 'cloud') || [];
-  const cliProviders = providers?.filter(p => PROVIDER_INFO[p.type]?.type === 'cli') || [];
+  const localProviders =
+    providers?.filter(p => PROVIDER_INFO[p.type]?.type === "local") || [];
+  const cloudProviders =
+    providers?.filter(p => PROVIDER_INFO[p.type]?.type === "cloud") || [];
+  const cliProviders =
+    providers?.filter(p => PROVIDER_INFO[p.type]?.type === "cli") || [];
 
   return (
     <DashboardLayout>
@@ -151,7 +251,9 @@ export default function Settings() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Settings</h1>
-            <p className="text-muted-foreground">Configure LLM providers, API keys, and system settings</p>
+            <p className="text-muted-foreground">
+              Configure LLM providers, API keys, and system settings
+            </p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={handleExport}>
@@ -182,12 +284,18 @@ export default function Settings() {
                     <CheckCircle className="h-5 w-5" />
                     Detected Local Services
                   </CardTitle>
-                  <CardDescription>These services are running on your machine</CardDescription>
+                  <CardDescription>
+                    These services are running on your machine
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
                     {available.map(p => (
-                      <Badge key={p} variant="secondary" className="bg-green-500/10 text-green-600">
+                      <Badge
+                        key={p}
+                        variant="secondary"
+                        className="bg-green-500/10 text-green-600"
+                      >
                         {PROVIDER_INFO[p]?.name || p}
                       </Badge>
                     ))}
@@ -203,7 +311,9 @@ export default function Settings() {
                   <Cpu className="h-5 w-5" />
                   Local Providers
                 </CardTitle>
-                <CardDescription>Free, private, runs on your machine (CPU-friendly for i7-7700)</CardDescription>
+                <CardDescription>
+                  Free, private, runs on your machine (CPU-friendly for i7-7700)
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -211,28 +321,46 @@ export default function Settings() {
                     const info = PROVIDER_INFO[provider.type];
                     const isAvailable = available?.includes(provider.type);
                     return (
-                      <div key={provider.type} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div
+                        key={provider.type}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
                         <div className="flex items-center gap-4">
-                          <div className={`p-2 rounded-lg ${isAvailable ? 'bg-green-500/10' : 'bg-muted'}`}>
+                          <div
+                            className={`p-2 rounded-lg ${isAvailable ? "bg-green-500/10" : "bg-muted"}`}
+                          >
                             {info?.icon}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
                               <p className="font-medium">{info?.name}</p>
-                              {isAvailable && <Badge variant="outline" className="text-green-600">Running</Badge>}
+                              {isAvailable && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-green-600"
+                                >
+                                  Running
+                                </Badge>
+                              )}
                             </div>
-                            <p className="text-sm text-muted-foreground">{info?.description}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {info?.description}
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          <Switch 
+                          <Switch
                             checked={provider.enabled}
-                            onCheckedChange={(enabled) => handleSaveProvider(provider.type, enabled)}
+                            onCheckedChange={enabled =>
+                              handleSaveProvider(provider.type, enabled)
+                            }
                           />
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
-                            onClick={() => testMutation.mutate({ provider: provider.type })}
+                            onClick={() =>
+                              testMutation.mutate({ provider: provider.type })
+                            }
                             disabled={!isAvailable || testMutation.isPending}
                           >
                             Test
@@ -252,14 +380,19 @@ export default function Settings() {
                   <Cloud className="h-5 w-5" />
                   Cloud Providers
                 </CardTitle>
-                <CardDescription>API-based services (requires API keys)</CardDescription>
+                <CardDescription>
+                  API-based services (requires API keys)
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {cloudProviders.map(provider => {
                     const info = PROVIDER_INFO[provider.type];
                     return (
-                      <div key={provider.type} className="p-4 border rounded-lg space-y-4">
+                      <div
+                        key={provider.type}
+                        className="p-4 border rounded-lg space-y-4"
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
                             <div className="p-2 bg-primary/10 rounded-lg">
@@ -270,36 +403,57 @@ export default function Settings() {
                                 <p className="font-medium">{info?.name}</p>
                                 {provider.enabled && <Badge>Enabled</Badge>}
                               </div>
-                              <p className="text-sm text-muted-foreground">{info?.description}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {info?.description}
+                              </p>
                             </div>
                           </div>
-                          <Switch 
+                          <Switch
                             checked={provider.enabled}
-                            onCheckedChange={(enabled) => handleSaveProvider(provider.type, enabled)}
+                            onCheckedChange={enabled =>
+                              handleSaveProvider(provider.type, enabled)
+                            }
                           />
                         </div>
                         <div className="flex gap-2">
                           <div className="flex-1">
-                            <Label htmlFor={`key-${provider.type}`} className="sr-only">API Key</Label>
+                            <Label
+                              htmlFor={`key-${provider.type}`}
+                              className="sr-only"
+                            >
+                              API Key
+                            </Label>
                             <Input
                               id={`key-${provider.type}`}
                               type="password"
                               placeholder="Enter API key..."
-                              value={apiKeys[provider.type] || ''}
-                              onChange={(e) => setApiKeys(prev => ({ ...prev, [provider.type]: e.target.value }))}
+                              value={apiKeys[provider.type] || ""}
+                              onChange={e =>
+                                setApiKeys(prev => ({
+                                  ...prev,
+                                  [provider.type]: e.target.value,
+                                }))
+                              }
                             />
                           </div>
-                          <Button 
+                          <Button
                             variant="outline"
-                            onClick={() => handleSaveProvider(provider.type, provider.enabled)}
+                            onClick={() =>
+                              handleSaveProvider(
+                                provider.type,
+                                provider.enabled
+                              )
+                            }
                             disabled={!apiKeys[provider.type]}
                           >
                             <Save className="h-4 w-4 mr-2" />
                             Save
                           </Button>
-                          <Button 
+                          <Button
                             variant="outline"
-                            onClick={() => testMutation.mutate({ provider: provider.type })}
+                            onClick={() =>
+                              testMutation.mutate({ provider: provider.type })
+                            }
                             disabled={testMutation.isPending}
                           >
                             Test
@@ -319,7 +473,9 @@ export default function Settings() {
                   <Terminal className="h-5 w-5" />
                   CLI Tools
                 </CardTitle>
-                <CardDescription>Use your existing subscriptions via command-line tools</CardDescription>
+                <CardDescription>
+                  Use your existing subscriptions via command-line tools
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -327,27 +483,46 @@ export default function Settings() {
                     const info = PROVIDER_INFO[provider.type];
                     const isAvailable = available?.includes(provider.type);
                     return (
-                      <div key={provider.type} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div
+                        key={provider.type}
+                        className="flex items-center justify-between p-4 border rounded-lg"
+                      >
                         <div className="flex items-center gap-4">
-                          <div className={`p-2 rounded-lg ${isAvailable ? 'bg-green-500/10' : 'bg-muted'}`}>
+                          <div
+                            className={`p-2 rounded-lg ${isAvailable ? "bg-green-500/10" : "bg-muted"}`}
+                          >
                             {info?.icon}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
                               <p className="font-medium">{info?.name}</p>
                               {isAvailable ? (
-                                <Badge variant="outline" className="text-green-600">Installed</Badge>
+                                <Badge
+                                  variant="outline"
+                                  className="text-green-600"
+                                >
+                                  Installed
+                                </Badge>
                               ) : (
-                                <Badge variant="outline" className="text-muted-foreground">Not Found</Badge>
+                                <Badge
+                                  variant="outline"
+                                  className="text-muted-foreground"
+                                >
+                                  Not Found
+                                </Badge>
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground">{info?.description}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {info?.description}
+                            </p>
                           </div>
                         </div>
                         <div className="flex items-center gap-4">
-                          <Switch 
+                          <Switch
                             checked={provider.enabled}
-                            onCheckedChange={(enabled) => handleSaveProvider(provider.type, enabled)}
+                            onCheckedChange={enabled =>
+                              handleSaveProvider(provider.type, enabled)
+                            }
                             disabled={!isAvailable}
                           />
                         </div>
@@ -367,7 +542,10 @@ export default function Settings() {
                   <Server className="h-5 w-5" />
                   Neo4j Graph Database
                 </CardTitle>
-                <CardDescription>Configure Neo4j connection for entity relationships and knowledge graphs</CardDescription>
+                <CardDescription>
+                  Configure Neo4j connection for entity relationships and
+                  knowledge graphs
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -429,7 +607,10 @@ export default function Settings() {
                   <Cloud className="h-5 w-5" />
                   Supabase
                 </CardTitle>
-                <CardDescription>Configure Supabase connection for structured data and authentication</CardDescription>
+                <CardDescription>
+                  Configure Supabase connection for structured data and
+                  authentication
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -451,7 +632,9 @@ export default function Settings() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="supabase-service-key">Service Role Key (Optional)</Label>
+                    <Label htmlFor="supabase-service-key">
+                      Service Role Key (Optional)
+                    </Label>
                     <Input
                       id="supabase-service-key"
                       type="password"
@@ -480,7 +663,9 @@ export default function Settings() {
                   <Zap className="h-5 w-5" />
                   Vector Database
                 </CardTitle>
-                <CardDescription>Configure vector database for embeddings and semantic search</CardDescription>
+                <CardDescription>
+                  Configure vector database for embeddings and semantic search
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -501,7 +686,9 @@ export default function Settings() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="vectordb-api-key">API Key (if required)</Label>
+                    <Label htmlFor="vectordb-api-key">
+                      API Key (if required)
+                    </Label>
                     <Input
                       id="vectordb-api-key"
                       type="password"
@@ -510,7 +697,9 @@ export default function Settings() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="vectordb-collection">Default Collection</Label>
+                    <Label htmlFor="vectordb-collection">
+                      Default Collection
+                    </Label>
                     <Input
                       id="vectordb-collection"
                       placeholder="preprocessing_embeddings"
@@ -538,7 +727,9 @@ export default function Settings() {
                   <Rocket className="h-5 w-5" />
                   Colab Enterprise (Headless)
                 </CardTitle>
-                <CardDescription>Configure Colab Enterprise for GPU notebooks/jobs (headless)</CardDescription>
+                <CardDescription>
+                  Configure Colab Enterprise for GPU notebooks/jobs (headless)
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -549,7 +740,12 @@ export default function Settings() {
                         id="colab-project"
                         placeholder="gcp-project-id"
                         value={colabConfig.projectId}
-                        onChange={(e) => setColabConfig({ ...colabConfig, projectId: e.target.value })}
+                        onChange={e =>
+                          setColabConfig({
+                            ...colabConfig,
+                            projectId: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
@@ -558,7 +754,12 @@ export default function Settings() {
                         id="colab-region"
                         placeholder="us-central1"
                         value={colabConfig.region}
-                        onChange={(e) => setColabConfig({ ...colabConfig, region: e.target.value })}
+                        onChange={e =>
+                          setColabConfig({
+                            ...colabConfig,
+                            region: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </div>
@@ -570,37 +771,63 @@ export default function Settings() {
                         id="colab-runtime"
                         placeholder="gpu-template-name"
                         value={colabConfig.runtimeTemplate}
-                        onChange={(e) => setColabConfig({ ...colabConfig, runtimeTemplate: e.target.value })}
+                        onChange={e =>
+                          setColabConfig({
+                            ...colabConfig,
+                            runtimeTemplate: e.target.value,
+                          })
+                        }
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="colab-notebook">Notebook path (optional)</Label>
+                      <Label htmlFor="colab-notebook">
+                        Notebook path (optional)
+                      </Label>
                       <Input
                         id="colab-notebook"
                         placeholder="gs://bucket/path/notebook.ipynb"
                         value={colabConfig.notebookPath}
-                        onChange={(e) => setColabConfig({ ...colabConfig, notebookPath: e.target.value })}
+                        onChange={e =>
+                          setColabConfig({
+                            ...colabConfig,
+                            notebookPath: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="colab-sa">Service account JSON (optional)</Label>
+                    <Label htmlFor="colab-sa">
+                      Service account JSON (optional)
+                    </Label>
                     <Input
                       id="colab-sa"
                       placeholder='{ "type": "service_account", ... }'
                       value={colabConfig.serviceAccountJson}
-                      onChange={(e) => setColabConfig({ ...colabConfig, serviceAccountJson: e.target.value })}
+                      onChange={e =>
+                        setColabConfig({
+                          ...colabConfig,
+                          serviceAccountJson: e.target.value,
+                        })
+                      }
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="colab-sync">Sync bucket / storage (optional)</Label>
+                    <Label htmlFor="colab-sync">
+                      Sync bucket / storage (optional)
+                    </Label>
                     <Input
                       id="colab-sync"
                       placeholder="gs://bucket-or-r2-path"
                       value={colabConfig.syncBucket}
-                      onChange={(e) => setColabConfig({ ...colabConfig, syncBucket: e.target.value })}
+                      onChange={e =>
+                        setColabConfig({
+                          ...colabConfig,
+                          syncBucket: e.target.value,
+                        })
+                      }
                     />
                   </div>
 
@@ -628,12 +855,13 @@ export default function Settings() {
             </Card>
           </TabsContent>
 
-
           <TabsContent value="routing" className="space-y-4">
             <Card>
               <CardHeader>
                 <CardTitle>Task Routing Rules</CardTitle>
-                <CardDescription>Configure which providers handle which tasks</CardDescription>
+                <CardDescription>
+                  Configure which providers handle which tasks
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -643,39 +871,42 @@ export default function Settings() {
                       <Badge variant="secondary">Local First</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">
-                      Sentiment analysis, keyword extraction, language detection, classification
+                      Sentiment analysis, keyword extraction, language
+                      detection, classification
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Priority: Ollama → LM Studio → Groq → OpenRouter
                     </p>
                   </div>
-                  
+
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-medium">Medium Tasks</p>
                       <Badge variant="secondary">Balanced</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">
-                      Short summarization, entity extraction, rewriting, translation
+                      Short summarization, entity extraction, rewriting,
+                      translation
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Priority: Ollama → Groq → OpenRouter → Google
                     </p>
                   </div>
-                  
+
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-medium">Complex Tasks</p>
                       <Badge variant="secondary">Cloud Preferred</Badge>
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">
-                      Long summarization, deep analysis, code generation, reasoning
+                      Long summarization, deep analysis, code generation,
+                      reasoning
                     </p>
                     <p className="text-xs text-muted-foreground">
                       Priority: Anthropic → OpenAI → Google → Claude CLI
                     </p>
                   </div>
-                  
+
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
                       <p className="font-medium">Embeddings</p>
@@ -697,7 +928,9 @@ export default function Settings() {
             <Card>
               <CardHeader>
                 <CardTitle>System Information</CardTitle>
-                <CardDescription>Platform configuration and status</CardDescription>
+                <CardDescription>
+                  Platform configuration and status
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -715,11 +948,15 @@ export default function Settings() {
                   </div>
                   <div className="flex justify-between py-2 border-b">
                     <span className="text-muted-foreground">Python Bridge</span>
-                    <Badge variant="outline" className="text-green-600">Available</Badge>
+                    <Badge variant="outline" className="text-green-600">
+                      Available
+                    </Badge>
                   </div>
                   <div className="flex justify-between py-2">
                     <span className="text-muted-foreground">Content Store</span>
-                    <Badge variant="outline" className="text-green-600">Active</Badge>
+                    <Badge variant="outline" className="text-green-600">
+                      Active
+                    </Badge>
                   </div>
                 </div>
               </CardContent>

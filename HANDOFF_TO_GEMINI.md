@@ -10,6 +10,7 @@
 ## **Current State**
 
 ### **What's Working:**
+
 - ✅ Production pipeline architecture complete (document → conversation → messages → behaviors)
 - ✅ 256 custom patterns imported to database (gaslighting, DARVO, parental alienation, etc.)
 - ✅ Multi-pass NLP classifier created (6 passes: spaCy, NLTK, TextBlob, Pattern Analyzer, Sentence Transformers, Aggregation)
@@ -20,11 +21,13 @@
 - ✅ spaCy installed + en_core_web_sm model loaded successfully
 
 ### **In Progress:**
+
 - ⏳ TextBlob installation (running in background, session: test)
 - ⏳ Need to verify TextBlob corpora downloaded
 - ⏳ Need to test multi-pass classifier with all 6 passes enabled
 
 ### **What's Missing:**
+
 - ❌ TextBlob verification
 - ❌ Multi-pass classifier end-to-end test
 - ❌ Phase 24 (Dependency Management & Deployment) not added to todo.md yet
@@ -35,6 +38,7 @@
 ## **Immediate Tasks for You (Gemini)**
 
 ### **Priority 1: Verify TextBlob Installation**
+
 ```bash
 # Check if TextBlob is installed
 python3 -c "import textblob; print('✓ TextBlob installed')"
@@ -44,40 +48,45 @@ python3 -c "from textblob import TextBlob; tb = TextBlob('This is a test.'); pri
 ```
 
 If TextBlob fails, install it:
+
 ```bash
 sudo pip3 install textblob --quiet
 python3 -m textblob.download_corpora
 ```
 
 ### **Priority 2: Test Multi-Pass Classifier**
+
 Run a test to verify all 6 passes work:
+
 ```bash
 cd /home/ubuntu/mcp-tool-platform
 node --import tsx/esm server/mcp/analysis/multi-pass-classifier.test.ts
 ```
 
 Or create a simple test script:
+
 ```typescript
 // test-classifier.ts
-import { MultiPassClassifier } from './server/mcp/analysis/multi-pass-classifier';
+import { MultiPassClassifier } from "./server/mcp/analysis/multi-pass-classifier";
 
 const classifier = new MultiPassClassifier();
 const result = await classifier.classify(
   "I never blocked your calls. You're crazy. I'm the victim here.",
-  { platform: 'sms', timestamp: new Date() }
+  { platform: "sms", timestamp: new Date() }
 );
 
-console.log('Classification result:', JSON.stringify(result, null, 2));
+console.log("Classification result:", JSON.stringify(result, null, 2));
 ```
 
 ### **Priority 3: Add Phase 24 to todo.md**
+
 Append this to `/home/ubuntu/mcp-tool-platform/todo.md`:
 
 ```markdown
-
 ## Phase 24 - Dependency Management & Deployment
 
 ### Python Dependencies
+
 - [x] Install spaCy + en_core_web_sm model
 - [ ] Install TextBlob + corpora (verify)
 - [ ] Test all Python NLP libraries (spaCy, NLTK, TextBlob, sentence-transformers, langdetect)
@@ -86,6 +95,7 @@ Append this to `/home/ubuntu/mcp-tool-platform/todo.md`:
 - [ ] Create pip install script for production
 
 ### Docker Environment (Discussion Needed)
+
 - [ ] Discuss Docker vs Manus native deployment
 - [ ] Test file upload size limits on Manus hosting
 - [ ] Test memory limits for 400-page HTML processing
@@ -94,6 +104,7 @@ Append this to `/home/ubuntu/mcp-tool-platform/todo.md`:
 - [ ] Document deployment requirements
 
 ### Large File Handling
+
 - [ ] Implement streaming upload to R2
 - [ ] Process files from R2 instead of memory
 - [ ] Add background job queue for long analysis
@@ -101,6 +112,7 @@ Append this to `/home/ubuntu/mcp-tool-platform/todo.md`:
 - [ ] Test with actual 400-page Facebook HTML
 
 ### Production Readiness
+
 - [ ] Add health check endpoint
 - [ ] Add dependency verification on startup
 - [ ] Create setup script for fresh deployments
@@ -108,13 +120,14 @@ Append this to `/home/ubuntu/mcp-tool-platform/todo.md`:
 ```
 
 ### **Priority 4: Update claude.md**
+
 Add this section to `/home/ubuntu/mcp-tool-platform/claude.md`:
 
 ```markdown
-
 ## **Python Dependencies Status**
 
 ### Installed & Working:
+
 - ✅ spaCy 3.x + en_core_web_sm model
 - ✅ NLTK 3.9.2
 - ✅ sentence-transformers 5.2.0
@@ -122,6 +135,7 @@ Add this section to `/home/ubuntu/mcp-tool-platform/claude.md`:
 - ✅ TextBlob (verify after installation)
 
 ### Multi-Pass Classifier:
+
 - **Pass 0:** Priority screener (custody/alienation flags)
 - **Pass 1:** spaCy (entities, structure, speaker attribution)
 - **Pass 2:** NLTK VADER (sentiment, negation, sarcasm)
@@ -131,10 +145,12 @@ Add this section to `/home/ubuntu/mcp-tool-platform/claude.md`:
 - **Pass 6:** Aggregation (consensus sentiment)
 
 ### Critical Note:
+
 The generic `nlp.ts` plugin uses regex fallbacks. The forensic system uses `multi-pass-classifier.ts` which calls real Python NLP tools via subprocess. DO NOT confuse the two.
 ```
 
 ### **Priority 5: Create requirements.txt**
+
 Create `/home/ubuntu/mcp-tool-platform/requirements.txt`:
 
 ```txt
@@ -166,6 +182,7 @@ numpy>=1.24.0
 ```
 
 Then run:
+
 ```bash
 pip3 freeze > /home/ubuntu/mcp-tool-platform/requirements-frozen.txt
 ```
@@ -245,13 +262,16 @@ After completing Priority 1-5, ADD these backend UI tasks to todo.md as Phase 25
 ## **Context You Need**
 
 ### **Project Purpose:**
+
 Forensic analysis platform for custody case evidence. Processes messages from multiple platforms (SMS, Facebook, iMessage, email, ChatGPT) to detect:
+
 - Gaslighting, DARVO, parental alienation
 - Custody interference (call blocking, visit denial)
 - Manipulation patterns (love bombing, blame shifting)
 - Michigan Custody Law (MCL) factors
 
 ### **Data Flow:**
+
 1. User uploads file (Facebook HTML, XML SMS, PDF iMessage)
 2. Parse → Chunk → Store in Chroma (72hr TTL)
 3. Classify with multi-pass NLP (6 passes)
@@ -262,6 +282,7 @@ Forensic analysis platform for custody case evidence. Processes messages from mu
    - **Chroma:** Working memory (purged after 72hrs)
 
 ### **Critical Files:**
+
 - `server/mcp/analysis/multi-pass-classifier.ts` - Main classification engine
 - `server/python-tools/nlp_runner.py` - Python NLP bridge
 - `server/mcp/pipelines/production-pipeline.ts` - End-to-end orchestrator
@@ -269,6 +290,7 @@ Forensic analysis platform for custody case evidence. Processes messages from mu
 - `server/mcp/analysis/priority-screener.ts` - Custody/alienation immediate flags
 
 ### **User's Custom Patterns:**
+
 - 256 patterns in `behavioralPatterns` table (loaded via `pattern-analyzer.ts`)
 - Includes user's 200-hour analysis library
 - Priority patterns: "Kailah"/"Kyla" mentions, call/visit blocking
@@ -299,12 +321,14 @@ Forensic analysis platform for custody case evidence. Processes messages from mu
 **Model Selection Strategy:**
 
 **By Speed:**
+
 1. **Groq** (FASTEST - use for quick tasks, testing, iterations)
 2. OpenAI
 3. Gemini Pro
 4. Claude
 
 **By Cost (cheapest to most expensive):**
+
 1. OpenRouter free tier (Mistral, Groq)
 2. Cohere (testing key - good for embeddings, classification, search)
 3. OpenAI (user has credits)
@@ -312,6 +336,7 @@ Forensic analysis platform for custody case evidence. Processes messages from mu
 5. Claude (expensive, last resort)
 
 **By Task:**
+
 - **Groq:** Fast iterations, testing, simple code generation
 - **Cohere:** Embeddings, text classification, semantic search, summarization
 - **OpenAI:** General tasks, code generation, reasoning
@@ -319,6 +344,7 @@ Forensic analysis platform for custody case evidence. Processes messages from mu
 - **Claude:** Architecture, complex debugging, critical decisions ONLY
 
 **Use Claude ONLY for:**
+
 - Architecture decisions
 - Complex debugging
 - Critical system design

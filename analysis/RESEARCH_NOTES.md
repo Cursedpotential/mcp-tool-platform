@@ -12,20 +12,21 @@ This preprocessing tool shop serves as an intermediary "Home Depot of tools" tha
 
 ### Key Architecture Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| **MCP Transport** | Streamable HTTP | Multi-client support, SSE streaming, session management |
-| **Server Pattern** | Composite Service | Reduces chattiness, maximizes token efficiency |
-| **Vector Store** | Chroma (working memory) | Built-in persistence, metadata filtering, dev-friendly |
-| **NLP Libraries** | spaCy + Transformers | spaCy for speed, Transformers for advanced tasks |
-| **Search Tools** | ripgrep primary, ugrep fallback | JSON output, streaming, comprehensive filtering |
-| **LLM Interface** | Provider-agnostic via adapters | Supports Ollama, Gemini, OpenRouter, local BERT |
+| Decision           | Choice                          | Rationale                                               |
+| ------------------ | ------------------------------- | ------------------------------------------------------- |
+| **MCP Transport**  | Streamable HTTP                 | Multi-client support, SSE streaming, session management |
+| **Server Pattern** | Composite Service               | Reduces chattiness, maximizes token efficiency          |
+| **Vector Store**   | Chroma (working memory)         | Built-in persistence, metadata filtering, dev-friendly  |
+| **NLP Libraries**  | spaCy + Transformers            | spaCy for speed, Transformers for advanced tasks        |
+| **Search Tools**   | ripgrep primary, ugrep fallback | JSON output, streaming, comprehensive filtering         |
+| **LLM Interface**  | Provider-agnostic via adapters  | Supports Ollama, Gemini, OpenRouter, local BERT         |
 
 ---
 
 ## 1. MCP Protocol Specification
 
 ### Version Information
+
 - **MCP Specification**: 2025-06-18
 - **Python SDK**: >=1.2.0
 - **Node.js**: >=18.0.0
@@ -33,12 +34,14 @@ This preprocessing tool shop serves as an intermediary "Home Depot of tools" tha
 ### Transport Options
 
 **Streamable HTTP** (Recommended for this platform):
+
 - Uses HTTP POST for client-to-server messages
 - Server-Sent Events (SSE) for real-time streaming
 - Supports resumability and session management
 - Replaces older `HTTP+SSE` transport from 2024-11-05
 
 **Security Requirements**:
+
 - MUST validate `Origin` header on all requests
 - Bind to `localhost` (127.0.0.1) when running locally
 - Implement proper authentication mechanisms
@@ -46,6 +49,7 @@ This preprocessing tool shop serves as an intermediary "Home Depot of tools" tha
 ### Server Implementation Pattern
 
 **Composite Service Pattern** (Selected):
+
 ```
 Instead of:
   - fetch_customer() → fetch_orders() → fetch_tickets() [3 calls, high tokens]
@@ -55,16 +59,19 @@ Use:
 ```
 
 This pattern is critical for achieving 85%+ token reduction by:
+
 1. Combining multiple API calls into single tools
 2. Returning preprocessed, structured data
 3. Using references instead of inline content
 
 ### Tool Discovery & Paging
+
 - Dynamic tool discovery via `notifications/tools/didChange`
 - Pagination support for large result sets
 - Streaming for long-running preprocessing tasks
 
 ### Sources
+
 - https://modelcontextprotocol.io/specification/2025-06-18
 - https://modelcontextprotocol.io/specification/2025-06-18/basic/transports
 
@@ -73,26 +80,31 @@ This pattern is critical for achieving 85%+ token reduction by:
 ## 2. Claude & Gemini Compatibility
 
 ### Claude MCP Connector
+
 - **Beta Header**: `anthropic-beta: mcp-client-2025-11-20`
 - **Deprecated**: `mcp-client-2025-04-04`
 - **Limitation**: Only `tool_calls` supported; server must be HTTP-accessible
 
 **Configuration**:
+
 - `mcp_servers` array for connection details
 - `mcp_toolset` in `tools` array for tool configuration
 - Supports multi-server connectivity in single request
 
 ### Gemini Function Calling
+
 - Supports parallel function calling (multiple in one turn)
 - Supports compositional calling (sequential)
 - Python SDK has automatic function calling feature
 
 **Token Efficiency Patterns**:
+
 - Minimize function declarations sent per request
 - Use structured responses to reduce parsing overhead
 - Batch related operations into single function calls
 
 ### Sources
+
 - https://platform.claude.com/docs/en/agents-and-tools/mcp-connector
 - https://ai.google.dev/gemini-api/docs/function-calling
 
@@ -101,6 +113,7 @@ This pattern is critical for achieving 85%+ token reduction by:
 ## 3. Search Tools (ripgrep/ugrep)
 
 ### ripgrep (Primary)
+
 ```bash
 # JSON structured output
 rg --json "pattern" ./path
@@ -115,11 +128,21 @@ rg --json \
 ```
 
 **Output Structure**:
+
 ```json
-{"type":"match","data":{"path":{"text":"file.md"},"lines":{"text":"matched line"},"line_number":42,"absolute_offset":1234}}
+{
+  "type": "match",
+  "data": {
+    "path": { "text": "file.md" },
+    "lines": { "text": "matched line" },
+    "line_number": 42,
+    "absolute_offset": 1234
+  }
+}
 ```
 
 ### ugrep (Fallback)
+
 ```bash
 # JSON output
 ugrep --json "pattern" ./path
@@ -133,6 +156,7 @@ ugrep --json \
 ```
 
 ### Python Integration (ripgrepy)
+
 ```python
 from ripgrepy import Ripgrepy
 
@@ -141,11 +165,13 @@ results = rg.json().glob("*.md").run().as_dict
 ```
 
 **Version Requirements**:
+
 - ripgrep: Latest stable
 - ripgrepy: Python 3.6+
 - ugrep: Latest stable
 
 ### Sources
+
 - https://github.com/BurntSushi/ripgrep/blob/master/GUIDE.md
 - https://ugrep.com/
 
@@ -156,6 +182,7 @@ results = rg.json().glob("*.md").run().as_dict
 ### Pandoc
 
 **Best Practices**:
+
 ```bash
 # Always specify formats explicitly
 pandoc -f docx -t markdown -s input.docx -o output.md
@@ -167,6 +194,7 @@ pandoc --standalone --metadata-file=meta.yaml input.md -o output.html
 **Performance Note**: Version 2.0+ has significant performance regression for small files. For high-throughput pipelines processing many small files, consider Pandoc 1.x if Lua filters aren't needed.
 
 **Supported Conversions** (relevant to preprocessing):
+
 - DOCX → Markdown
 - PDF → Markdown (with limitations)
 - HTML → Markdown
@@ -176,10 +204,12 @@ pandoc --standalone --metadata-file=meta.yaml input.md -o output.html
 ### Tesseract OCR
 
 **Critical Requirements**:
+
 - Input images: **300 DPI minimum**
 - Preprocessing is essential for accuracy
 
 **Page Segmentation Modes (PSM)**:
+
 ```bash
 # Single uniform block of text
 tesseract image.png output --psm 6
@@ -192,6 +222,7 @@ tesseract image.png output --psm 11
 ```
 
 **Language Support**:
+
 ```bash
 # Install language pack
 apt-get install tesseract-ocr-deu  # German
@@ -201,16 +232,19 @@ tesseract image.png output -l deu
 ```
 
 **Trained Data Options**:
+
 - `tessdata`: Standard (balanced)
 - `tessdata_best`: Highest accuracy (slower)
 - `tessdata_fast`: Fastest (lower accuracy)
 
 ### Preprocessing Pipeline
+
 ```
 Image → Binarization → Deskew → Denoise → Tesseract → Text
 ```
 
 ### Sources
+
 - https://pandoc.org/MANUAL.html
 - https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html
 
@@ -220,15 +254,16 @@ Image → Binarization → Deskew → Denoise → Tesseract → Text
 
 ### Recommended Stack
 
-| Task | Primary | Fallback |
-|------|---------|----------|
-| Tokenization/Sentence Split | spaCy | NLTK |
-| Entity Extraction | spaCy | Transformers |
-| Sentiment Analysis | Transformers | NLTK VADER |
-| Keyword Extraction | spaCy + TextRank | NLTK |
-| Language Detection | langdetect | spaCy |
+| Task                        | Primary          | Fallback     |
+| --------------------------- | ---------------- | ------------ |
+| Tokenization/Sentence Split | spaCy            | NLTK         |
+| Entity Extraction           | spaCy            | Transformers |
+| Sentiment Analysis          | Transformers     | NLTK VADER   |
+| Keyword Extraction          | spaCy + TextRank | NLTK         |
+| Language Detection          | langdetect       | spaCy        |
 
 ### spaCy (Primary for Speed)
+
 ```python
 import spacy
 nlp = spacy.load("en_core_web_sm")
@@ -236,15 +271,16 @@ nlp = spacy.load("en_core_web_sm")
 doc = nlp("Apple is buying a UK startup for $1 billion")
 
 # Entities
-entities = [(ent.text, ent.label_, ent.start_char, ent.end_char) 
+entities = [(ent.text, ent.label_, ent.start_char, ent.end_char)
             for ent in doc.ents]
 
 # Sentences with offsets
-sentences = [(sent.text, sent.start_char, sent.end_char) 
+sentences = [(sent.text, sent.start_char, sent.end_char)
              for sent in doc.sents]
 ```
 
 ### Transformers (Advanced Tasks)
+
 ```python
 from transformers import pipeline
 
@@ -258,6 +294,7 @@ entities = ner("Apple is buying UK startup")
 ```
 
 ### Provider-Agnostic Interface Pattern
+
 ```python
 from abc import ABC, abstractmethod
 
@@ -265,11 +302,11 @@ class NLPProvider(ABC):
     @abstractmethod
     def extract_entities(self, text: str) -> list[dict]:
         pass
-    
+
     @abstractmethod
     def analyze_sentiment(self, text: str) -> dict:
         pass
-    
+
     @abstractmethod
     def split_sentences(self, text: str) -> list[dict]:
         pass
@@ -287,12 +324,14 @@ class TransformersProvider(NLPProvider):
 ```
 
 ### Version Requirements
+
 - Python: >=3.8
 - spaCy: >=3.0
 - Transformers: >=4.0
 - NLTK: >=3.5
 
 ### Sources
+
 - https://spacy.io/usage/spacy-101
 - https://huggingface.co/docs/transformers/en/index
 
@@ -302,14 +341,15 @@ class TransformersProvider(NLPProvider):
 
 ### Why Chroma for Preprocessing
 
-| Feature | Chroma | FAISS |
-|---------|--------|-------|
-| Persistence | Built-in `PersistentClient` | Manual serialization |
-| Metadata Filtering | Native support | Limited |
-| Dev Experience | Simple API | Complex |
-| Use Case | Working memory, staging | Production scale |
+| Feature            | Chroma                      | FAISS                |
+| ------------------ | --------------------------- | -------------------- |
+| Persistence        | Built-in `PersistentClient` | Manual serialization |
+| Metadata Filtering | Native support              | Limited              |
+| Dev Experience     | Simple API                  | Complex              |
+| Use Case           | Working memory, staging     | Production scale     |
 
 ### Chroma Usage Pattern
+
 ```python
 import chromadb
 
@@ -342,12 +382,13 @@ results = collection.query(
 ```
 
 ### Export to Final DB Pattern
+
 ```python
 # After preprocessing, export to Neo4j/Supabase
 def export_to_final_db(collection_name: str):
     collection = client.get_collection(collection_name)
     all_data = collection.get(include=["embeddings", "metadatas", "documents"])
-    
+
     # Transform for Neo4j graph export
     for i, doc_id in enumerate(all_data["ids"]):
         yield {
@@ -356,16 +397,18 @@ def export_to_final_db(collection_name: str):
             "metadata": all_data["metadatas"][i],
             "text": all_data["documents"][i]
         }
-    
+
     # Clean up working memory after export
     client.delete_collection(collection_name)
 ```
 
 ### Version Requirements
+
 - chromadb: Latest stable
 - Python: >=3.9
 
 ### Sources
+
 - https://docs.trychroma.com/getting-started
 - https://docs.trychroma.com/docs/run-chroma/persistent-client
 
@@ -391,6 +434,7 @@ def export_to_final_db(collection_name: str):
 ```
 
 ### Ollama (Cloud or Self-Hosted)
+
 ```python
 import ollama
 
@@ -409,6 +453,7 @@ response = ollama.chat(
 ```
 
 ### Gemini 2.5 Flash (Cost-Effective Processing)
+
 ```python
 import google.generativeai as genai
 
@@ -419,6 +464,7 @@ response = model.generate_content("Extract entities from: ...")
 ```
 
 ### Local BERT Embeddings (sentence-transformers)
+
 ```python
 from sentence_transformers import SentenceTransformer
 
@@ -436,6 +482,7 @@ embeddings = model.encode([
 ```
 
 ### OpenRouter (Free Models)
+
 ```python
 import openai
 
@@ -452,15 +499,16 @@ response = client.chat.completions.create(
 
 ### Recommended Model Selection
 
-| Task | Recommended Model | Rationale |
-|------|-------------------|-----------|
-| Embeddings | sentence-transformers (local) | No API cost, fast |
-| Summarization | Gemini 2.5 Flash | Cost-effective, good quality |
-| Entity Extraction | spaCy (local) | No API cost, fast |
-| Complex Analysis | Gemini 2.5 Pro | Best reasoning |
-| Reranking | Contextual AI Reranker v2 | Open-source, multilingual |
+| Task              | Recommended Model             | Rationale                    |
+| ----------------- | ----------------------------- | ---------------------------- |
+| Embeddings        | sentence-transformers (local) | No API cost, fast            |
+| Summarization     | Gemini 2.5 Flash              | Cost-effective, good quality |
+| Entity Extraction | spaCy (local)                 | No API cost, fast            |
+| Complex Analysis  | Gemini 2.5 Pro                | Best reasoning               |
+| Reranking         | Contextual AI Reranker v2     | Open-source, multilingual    |
 
 ### Sources
+
 - https://ollama.com/cloud
 - https://ai.google.dev/gemini-api/docs/models
 - https://sbert.net/
@@ -472,11 +520,11 @@ response = client.chat.completions.create(
 
 ### Framework Decision
 
-| Option | Pros | Cons | Score |
-|--------|------|------|-------|
-| **TS Gateway + Python Runners** | Type safety, Python ML ecosystem | Two runtimes | ⭐⭐⭐⭐⭐ |
-| Pure TypeScript | Single runtime | Limited ML libraries | ⭐⭐⭐ |
-| Pure Python | Rich ML ecosystem | Slower HTTP handling | ⭐⭐⭐⭐ |
+| Option                          | Pros                             | Cons                 | Score      |
+| ------------------------------- | -------------------------------- | -------------------- | ---------- |
+| **TS Gateway + Python Runners** | Type safety, Python ML ecosystem | Two runtimes         | ⭐⭐⭐⭐⭐ |
+| Pure TypeScript                 | Single runtime                   | Limited ML libraries | ⭐⭐⭐     |
+| Pure Python                     | Rich ML ecosystem                | Slower HTTP handling | ⭐⭐⭐⭐   |
 
 **Decision**: TypeScript Gateway + Python Runners
 
@@ -487,18 +535,26 @@ response = client.chat.completions.create(
 ### Token Efficiency Strategies
 
 1. **Reference-Based Returns**: Never inline large content
+
    ```json
-   {"ref": "sha256:abc123", "size": 45000, "mime": "text/markdown", "preview": "First 200 chars..."}
+   {
+     "ref": "sha256:abc123",
+     "size": 45000,
+     "mime": "text/markdown",
+     "preview": "First 200 chars..."
+   }
    ```
 
 2. **Paged Retrieval**: Chunk large results
+
    ```json
-   {"ref": "sha256:abc123", "page": 1, "total_pages": 10, "content": "..."}
+   { "ref": "sha256:abc123", "page": 1, "total_pages": 10, "content": "..." }
    ```
 
 3. **Structured Metadata**: Return offsets/citations, not full text
+
    ```json
-   {"entities": [{"text": "Apple", "type": "ORG", "start": 0, "end": 5}]}
+   { "entities": [{ "text": "Apple", "type": "ORG", "start": 0, "end": 5 }] }
    ```
 
 4. **Preprocessing Pipeline**: Extract everything locally before LLM sees it
@@ -510,11 +566,11 @@ response = client.chat.completions.create(
 
 ## Breaking Changes & Deprecations
 
-| Component | Change | Impact |
-|-----------|--------|--------|
-| MCP Transport | `HTTP+SSE` → `Streamable HTTP` | Update transport implementation |
-| Claude Connector | `mcp-client-2025-04-04` deprecated | Use `mcp-client-2025-11-20` |
-| Pandoc | 2.0+ performance regression | Consider 1.x for high-throughput |
+| Component        | Change                             | Impact                           |
+| ---------------- | ---------------------------------- | -------------------------------- |
+| MCP Transport    | `HTTP+SSE` → `Streamable HTTP`     | Update transport implementation  |
+| Claude Connector | `mcp-client-2025-04-04` deprecated | Use `mcp-client-2025-11-20`      |
+| Pandoc           | 2.0+ performance regression        | Consider 1.x for high-throughput |
 
 ---
 

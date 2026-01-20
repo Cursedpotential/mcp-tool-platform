@@ -27,12 +27,14 @@ This document defines the API contract and architecture for connecting MCP Tool 
 Tailscale creates a private mesh network between your devices. The VPS appears as a private IP on your Tailscale network.
 
 **Pros:**
+
 - Zero configuration NAT traversal
 - End-to-end encryption
 - No exposed public ports
 - Works behind firewalls
 
 **Configuration:**
+
 ```
 Endpoint: http://your-vps-tailscale-hostname:8787
 Auth: Bearer token
@@ -43,12 +45,14 @@ Auth: Bearer token
 Cloudflare Tunnel (formerly Argo Tunnel) creates a secure outbound-only connection from your VPS to Cloudflare's edge.
 
 **Pros:**
+
 - No inbound firewall rules needed
 - DDoS protection
 - Zero-trust access policies
 - Custom domain support
 
 **Configuration:**
+
 ```
 Endpoint: https://cli-bridge.your-domain.com
 Auth: Cloudflare Access JWT or Bearer token
@@ -59,12 +63,15 @@ Auth: Cloudflare Access JWT or Bearer token
 ## API Contract
 
 ### Base URL
+
 ```
 {BRIDGE_ENDPOINT}/api/v1
 ```
 
 ### Authentication
+
 All requests require a Bearer token in the Authorization header:
+
 ```
 Authorization: Bearer {BRIDGE_API_KEY}
 ```
@@ -74,11 +81,13 @@ Authorization: Bearer {BRIDGE_API_KEY}
 ### Endpoints
 
 #### 1. Health Check
+
 ```http
 GET /health
 ```
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -95,11 +104,13 @@ GET /health
 ---
 
 #### 2. List Available Tools
+
 ```http
 GET /tools
 ```
 
 **Response:**
+
 ```json
 {
   "tools": [
@@ -131,17 +142,17 @@ GET /tools
 ---
 
 #### 3. Invoke Tool (Non-Streaming)
+
 ```http
 POST /tools/{tool_id}/invoke
 Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
-  "messages": [
-    { "role": "user", "content": "Explain this code..." }
-  ],
+  "messages": [{ "role": "user", "content": "Explain this code..." }],
   "options": {
     "timeout": 120000,
     "workingDir": "/workspace/project",
@@ -153,6 +164,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -169,6 +181,7 @@ Content-Type: application/json
 ---
 
 #### 4. Invoke Tool (Streaming)
+
 ```http
 POST /tools/{tool_id}/stream
 Content-Type: application/json
@@ -178,6 +191,7 @@ Accept: text/event-stream
 **Request Body:** Same as non-streaming
 
 **Response:** Server-Sent Events (SSE)
+
 ```
 event: start
 data: {"tool": "claude", "sessionId": "abc123"}
@@ -198,6 +212,7 @@ data: {"latencyMs": 5432, "tokensUsed": {"input": 150, "output": 500}}
 ---
 
 #### 5. Session Management (Optional)
+
 For tools that support persistent sessions (like Aider with git context):
 
 ```http
@@ -206,6 +221,7 @@ Content-Type: application/json
 ```
 
 **Request Body:**
+
 ```json
 {
   "tool": "aider",
@@ -218,6 +234,7 @@ Content-Type: application/json
 ```
 
 **Response:**
+
 ```json
 {
   "sessionId": "sess_abc123",
@@ -232,6 +249,7 @@ Content-Type: application/json
 ## Docker Container Setup
 
 ### Dockerfile
+
 ```dockerfile
 FROM ubuntu:22.04
 
@@ -270,8 +288,9 @@ CMD ["node", "server.js"]
 ```
 
 ### docker-compose.yml
+
 ```yaml
-version: '3.8'
+version: "3.8"
 
 services:
   cli-bridge:
@@ -313,12 +332,12 @@ volumes:
 
 ### Settings UI Fields
 
-| Field | Type | Description |
-|-------|------|-------------|
-| Bridge Endpoint | URL | Full URL to CLI bridge (e.g., `http://vps.tailnet:8787`) |
-| API Key | Secret | Bearer token for authentication |
-| Connection Type | Select | Tailscale / Cloudflare Tunnel / Direct |
-| Health Check Interval | Number | Seconds between health checks (default: 60) |
+| Field                 | Type   | Description                                              |
+| --------------------- | ------ | -------------------------------------------------------- |
+| Bridge Endpoint       | URL    | Full URL to CLI bridge (e.g., `http://vps.tailnet:8787`) |
+| API Key               | Secret | Bearer token for authentication                          |
+| Connection Type       | Select | Tailscale / Cloudflare Tunnel / Direct                   |
+| Health Check Interval | Number | Seconds between health checks (default: 60)              |
 
 ### Environment Variables
 
@@ -344,10 +363,10 @@ CLI_BRIDGE_TIMEOUT=120000
 
 ## Implementation Status
 
-| Component | Status |
-|-----------|--------|
-| API Contract | ✅ Defined |
+| Component                | Status         |
+| ------------------------ | -------------- |
+| API Contract             | ✅ Defined     |
 | Provider Hub Integration | 🔄 In Progress |
-| Settings UI | 🔄 In Progress |
-| Docker Container | ❌ Not Started |
-| Bridge Server | ❌ Not Started |
+| Settings UI              | 🔄 In Progress |
+| Docker Container         | ❌ Not Started |
+| Bridge Server            | ❌ Not Started |

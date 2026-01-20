@@ -1,6 +1,6 @@
 /**
  * Retrieval Plugin
- * 
+ *
  * Provides retrieval capabilities:
  * - BM25 retrieval for keyword matching
  * - Supporting span retrieval for questions
@@ -8,8 +8,8 @@
  * - Hybrid retrieval (BM25 + embeddings)
  */
 
-import { getContentStore } from '../store/content-store';
-import type { ContentRef } from '../../../shared/mcp-types';
+import { getContentStore } from "../store/content-store";
+import type { ContentRef } from "../../../shared/mcp-types";
 
 interface Citation {
   id: string;
@@ -54,7 +54,9 @@ interface HybridSearchArgs {
 /**
  * Retrieve supporting spans for a question
  */
-export async function retrieveSupportingSpans(args: RetrieveSupportingSpansArgs): Promise<{
+export async function retrieveSupportingSpans(
+  args: RetrieveSupportingSpansArgs
+): Promise<{
   spans: Array<{
     text: string;
     score: number;
@@ -86,9 +88,7 @@ export async function retrieveSupportingSpans(args: RetrieveSupportingSpansArgs)
   }
 
   // Select top passages
-  const topPassages = scored
-    .sort((a, b) => b.score - a.score)
-    .slice(0, topK);
+  const topPassages = scored.sort((a, b) => b.score - a.score).slice(0, topK);
 
   // Generate citations
   const citations: Citation[] = topPassages.map((p, i) => ({
@@ -101,7 +101,7 @@ export async function retrieveSupportingSpans(args: RetrieveSupportingSpansArgs)
   }));
 
   return {
-    spans: topPassages.map((p) => ({
+    spans: topPassages.map(p => ({
       text: p.text,
       score: p.score,
       startOffset: p.startOffset,
@@ -190,11 +190,12 @@ export async function hybridSearch(args: HybridSearchArgs): Promise<{
 
     if (bm25Scored.length > 0) {
       const best = bm25Scored.sort((a, b) => b.score - a.score)[0];
-      
+
       // Placeholder for semantic score - in production, use ML plugin
       const semanticScore = 0.5;
-      
-      const combinedScore = bm25Weight * best.score + (1 - bm25Weight) * semanticScore;
+
+      const combinedScore =
+        bm25Weight * best.score + (1 - bm25Weight) * semanticScore;
 
       results.push({
         docRef,
@@ -207,7 +208,9 @@ export async function hybridSearch(args: HybridSearchArgs): Promise<{
   }
 
   return {
-    results: results.sort((a, b) => b.combinedScore - a.combinedScore).slice(0, topK),
+    results: results
+      .sort((a, b) => b.combinedScore - a.combinedScore)
+      .slice(0, topK),
   };
 }
 
@@ -242,27 +245,47 @@ export async function findAnswerPassages(args: {
   const passages = splitIntoPassages(text);
 
   // Score based on question type and content
-  const scored = passages.map((passage) => {
+  const scored = passages.map(passage => {
     let score = 0;
 
     // BM25 base score
     const queryTerms = tokenize(args.question);
-    score += calculateBM25Score(passage.text, queryTerms, passages.length, getAverageLength(passages));
+    score += calculateBM25Score(
+      passage.text,
+      queryTerms,
+      passages.length,
+      getAverageLength(passages)
+    );
 
     // Boost based on question type patterns
-    if (questionType === 'what' && /\b(is|are|means?|defined?)\b/i.test(passage.text)) {
+    if (
+      questionType === "what" &&
+      /\b(is|are|means?|defined?)\b/i.test(passage.text)
+    ) {
       score *= 1.2;
     }
-    if (questionType === 'how' && /\b(steps?|process|method|way)\b/i.test(passage.text)) {
+    if (
+      questionType === "how" &&
+      /\b(steps?|process|method|way)\b/i.test(passage.text)
+    ) {
       score *= 1.2;
     }
-    if (questionType === 'why' && /\b(because|reason|cause|due to)\b/i.test(passage.text)) {
+    if (
+      questionType === "why" &&
+      /\b(because|reason|cause|due to)\b/i.test(passage.text)
+    ) {
       score *= 1.2;
     }
-    if (questionType === 'when' && /\b\d{4}\b|\b(date|time|year|month)\b/i.test(passage.text)) {
+    if (
+      questionType === "when" &&
+      /\b\d{4}\b|\b(date|time|year|month)\b/i.test(passage.text)
+    ) {
       score *= 1.2;
     }
-    if (questionType === 'who' && /\b[A-Z][a-z]+\s+[A-Z][a-z]+\b/.test(passage.text)) {
+    if (
+      questionType === "who" &&
+      /\b[A-Z][a-z]+\s+[A-Z][a-z]+\b/.test(passage.text)
+    ) {
       score *= 1.2;
     }
 
@@ -288,7 +311,9 @@ export async function findAnswerPassages(args: {
 
       for (const sentence of sentences) {
         const sentenceTerms = new Set(tokenize(sentence));
-        const overlap = Array.from(queryTerms).filter((t) => sentenceTerms.has(t)).length;
+        const overlap = Array.from(queryTerms).filter(t =>
+          sentenceTerms.has(t)
+        ).length;
         if (overlap > bestOverlap) {
           bestOverlap = overlap;
           bestSentence = sentence;
@@ -300,7 +325,7 @@ export async function findAnswerPassages(args: {
   }
 
   return {
-    passages: topPassages.map((p) => ({
+    passages: topPassages.map(p => ({
       text: p.text,
       confidence: p.confidence,
       offset: p.startOffset,
@@ -338,17 +363,20 @@ function splitIntoPassages(text: string, maxLength: number = 500): Passage[] {
     // Split long paragraphs
     if (trimmed.length > maxLength) {
       const sentences = trimmed.match(/[^.!?]+[.!?]+/g) ?? [trimmed];
-      let currentPassage = '';
+      let currentPassage = "";
       let passageStart = offset;
 
       for (const sentence of sentences) {
-        if (currentPassage.length + sentence.length > maxLength && currentPassage.length > 0) {
+        if (
+          currentPassage.length + sentence.length > maxLength &&
+          currentPassage.length > 0
+        ) {
           passages.push({
             text: currentPassage.trim(),
             startOffset: passageStart,
             endOffset: passageStart + currentPassage.length,
           });
-          currentPassage = '';
+          currentPassage = "";
           passageStart = offset + trimmed.indexOf(sentence);
         }
         currentPassage += sentence;
@@ -377,21 +405,31 @@ function splitIntoPassages(text: string, maxLength: number = 500): Passage[] {
 }
 
 function tokenize(text: string): string[] {
-  return (text.toLowerCase().match(/\b\w{2,}\b/g) ?? [])
-    .filter((word) => !STOPWORDS.has(word));
+  return (text.toLowerCase().match(/\b\w{2,}\b/g) ?? []).filter(
+    word => !STOPWORDS.has(word)
+  );
 }
 
-function scorePassagesBM25(passages: Passage[], queryTerms: string[], fullText: string): ScoredPassage[] {
+function scorePassagesBM25(
+  passages: Passage[],
+  queryTerms: string[],
+  fullText: string
+): ScoredPassage[] {
   const avgLength = getAverageLength(passages);
   const N = passages.length;
 
-  return passages.map((passage) => ({
+  return passages.map(passage => ({
     ...passage,
     score: calculateBM25Score(passage.text, queryTerms, N, avgLength),
   }));
 }
 
-function calculateBM25Score(text: string, queryTerms: string[], N: number, avgDl: number): number {
+function calculateBM25Score(
+  text: string,
+  queryTerms: string[],
+  N: number,
+  avgDl: number
+): number {
   const terms = tokenize(text);
   const termFreq: Map<string, number> = new Map();
 
@@ -421,30 +459,108 @@ function calculateBM25Score(text: string, queryTerms: string[], N: number, avgDl
 
 function getAverageLength(passages: Passage[]): number {
   if (passages.length === 0) return 100;
-  const totalLength = passages.reduce((sum, p) => sum + tokenize(p.text).length, 0);
+  const totalLength = passages.reduce(
+    (sum, p) => sum + tokenize(p.text).length,
+    0
+  );
   return totalLength / passages.length;
 }
 
 function classifyQuestion(question: string): string {
   const lower = question.toLowerCase();
-  if (lower.startsWith('what')) return 'what';
-  if (lower.startsWith('how')) return 'how';
-  if (lower.startsWith('why')) return 'why';
-  if (lower.startsWith('when')) return 'when';
-  if (lower.startsWith('who')) return 'who';
-  if (lower.startsWith('where')) return 'where';
-  if (lower.startsWith('which')) return 'which';
-  return 'other';
+  if (lower.startsWith("what")) return "what";
+  if (lower.startsWith("how")) return "how";
+  if (lower.startsWith("why")) return "why";
+  if (lower.startsWith("when")) return "when";
+  if (lower.startsWith("who")) return "who";
+  if (lower.startsWith("where")) return "where";
+  if (lower.startsWith("which")) return "which";
+  return "other";
 }
 
 const STOPWORDS = new Set([
-  'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-  'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were', 'been',
-  'be', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-  'should', 'may', 'might', 'must', 'shall', 'can', 'need', 'dare', 'ought',
-  'used', 'it', 'its', 'this', 'that', 'these', 'those', 'i', 'you', 'he',
-  'she', 'we', 'they', 'what', 'which', 'who', 'whom', 'whose', 'where',
-  'when', 'why', 'how', 'all', 'each', 'every', 'both', 'few', 'more',
-  'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own',
-  'same', 'so', 'than', 'too', 'very', 'just', 'also',
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "but",
+  "in",
+  "on",
+  "at",
+  "to",
+  "for",
+  "of",
+  "with",
+  "by",
+  "from",
+  "as",
+  "is",
+  "was",
+  "are",
+  "were",
+  "been",
+  "be",
+  "have",
+  "has",
+  "had",
+  "do",
+  "does",
+  "did",
+  "will",
+  "would",
+  "could",
+  "should",
+  "may",
+  "might",
+  "must",
+  "shall",
+  "can",
+  "need",
+  "dare",
+  "ought",
+  "used",
+  "it",
+  "its",
+  "this",
+  "that",
+  "these",
+  "those",
+  "i",
+  "you",
+  "he",
+  "she",
+  "we",
+  "they",
+  "what",
+  "which",
+  "who",
+  "whom",
+  "whose",
+  "where",
+  "when",
+  "why",
+  "how",
+  "all",
+  "each",
+  "every",
+  "both",
+  "few",
+  "more",
+  "most",
+  "other",
+  "some",
+  "such",
+  "no",
+  "nor",
+  "not",
+  "only",
+  "own",
+  "same",
+  "so",
+  "than",
+  "too",
+  "very",
+  "just",
+  "also",
 ]);

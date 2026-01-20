@@ -1,6 +1,6 @@
 /**
  * Wiki/Documentation Content System
- * 
+ *
  * Provides comprehensive documentation for the MCP Tool Platform
  * including tool catalog, architecture, API reference, and best practices.
  */
@@ -30,44 +30,61 @@ export interface WikiCategory {
 
 export const WIKI_CATEGORIES: WikiCategory[] = [
   {
-    name: 'Getting Started',
-    description: 'Introduction and setup guides',
-    pages: ['overview', 'quick-start', 'authentication'],
+    name: "Getting Started",
+    description: "Introduction and setup guides",
+    pages: ["overview", "quick-start", "authentication"],
   },
   {
-    name: 'Tool Catalog',
-    description: 'Documentation for all available tools',
-    pages: ['document-tools', 'nlp-tools', 'search-tools', 'ml-tools', 'retrieval-tools', 'summarization-tools'],
+    name: "Tool Catalog",
+    description: "Documentation for all available tools",
+    pages: [
+      "document-tools",
+      "nlp-tools",
+      "search-tools",
+      "ml-tools",
+      "retrieval-tools",
+      "summarization-tools",
+    ],
   },
   {
-    name: 'Architecture',
-    description: 'System design and internals',
-    pages: ['architecture-overview', 'content-store', 'worker-swarm', 'plugin-system'],
+    name: "Architecture",
+    description: "System design and internals",
+    pages: [
+      "architecture-overview",
+      "content-store",
+      "worker-swarm",
+      "plugin-system",
+    ],
   },
   {
-    name: 'API Reference',
-    description: 'API endpoints and usage',
-    pages: ['api-overview', 'mcp-gateway', 'rest-api', 'websocket-api'],
+    name: "API Reference",
+    description: "API endpoints and usage",
+    pages: ["api-overview", "mcp-gateway", "rest-api", "websocket-api"],
   },
   {
-    name: 'Best Practices',
-    description: 'Guides for optimal usage',
-    pages: ['token-efficiency', 'large-file-processing', 'llm-routing', 'security'],
+    name: "Best Practices",
+    description: "Guides for optimal usage",
+    pages: [
+      "token-efficiency",
+      "large-file-processing",
+      "llm-routing",
+      "security",
+    ],
   },
   {
-    name: 'Platform Integration',
-    description: 'Integrating with AI platforms',
-    pages: ['claude-integration', 'gemini-integration', 'openai-integration'],
+    name: "Platform Integration",
+    description: "Integrating with AI platforms",
+    pages: ["claude-integration", "gemini-integration", "openai-integration"],
   },
 ];
 
 export const WIKI_PAGES: Record<string, WikiPage> = {
-  'overview': {
-    slug: 'overview',
-    title: 'MCP Tool Platform Overview',
-    category: 'Getting Started',
-    lastUpdated: '2024-12-31',
-    tags: ['introduction', 'overview'],
+  overview: {
+    slug: "overview",
+    title: "MCP Tool Platform Overview",
+    category: "Getting Started",
+    lastUpdated: "2024-12-31",
+    tags: ["introduction", "overview"],
     content: `
 # MCP Tool Platform Overview
 
@@ -142,12 +159,12 @@ Generate configs for any AI platform:
 `,
   },
 
-  'quick-start': {
-    slug: 'quick-start',
-    title: 'Quick Start Guide',
-    category: 'Getting Started',
-    lastUpdated: '2024-12-31',
-    tags: ['setup', 'tutorial'],
+  "quick-start": {
+    slug: "quick-start",
+    title: "Quick Start Guide",
+    category: "Getting Started",
+    lastUpdated: "2024-12-31",
+    tags: ["setup", "tutorial"],
     content: `
 # Quick Start Guide
 
@@ -224,12 +241,12 @@ curl -X POST https://your-domain.manus.space/api/mcp/invoke_tool \\
 `,
   },
 
-  'authentication': {
-    slug: 'authentication',
-    title: 'Authentication',
-    category: 'Getting Started',
-    lastUpdated: '2024-12-31',
-    tags: ['auth', 'api-keys', 'security'],
+  authentication: {
+    slug: "authentication",
+    title: "Authentication",
+    category: "Getting Started",
+    lastUpdated: "2024-12-31",
+    tags: ["auth", "api-keys", "security"],
     content: `
 # Authentication
 
@@ -293,12 +310,12 @@ Each key can have granular permissions:
 `,
   },
 
-  'document-tools': {
-    slug: 'document-tools',
-    title: 'Document Tools',
-    category: 'Tool Catalog',
-    lastUpdated: '2024-12-31',
-    tags: ['tools', 'document', 'ocr', 'conversion'],
+  "document-tools": {
+    slug: "document-tools",
+    title: "Document Tools",
+    category: "Tool Catalog",
+    lastUpdated: "2024-12-31",
+    tags: ["tools", "document", "ocr", "conversion"],
     content: `
 # Document Tools
 
@@ -414,12 +431,12 @@ Normalize text formatting and encoding.
 `,
   },
 
-  'nlp-tools': {
-    slug: 'nlp-tools',
-    title: 'NLP Tools',
-    category: 'Tool Catalog',
-    lastUpdated: '2024-12-31',
-    tags: ['tools', 'nlp', 'entities', 'keywords'],
+  "nlp-tools": {
+    slug: "nlp-tools",
+    title: "NLP Tools",
+    category: "Tool Catalog",
+    lastUpdated: "2024-12-31",
+    tags: ["tools", "nlp", "entities", "keywords"],
     content: `
 # NLP Tools
 
@@ -543,12 +560,12 @@ Analyze sentiment of text.
 `,
   },
 
-  'search-tools': {
-    slug: 'search-tools',
-    title: 'Search Tools',
-    category: 'Tool Catalog',
-    lastUpdated: '2024-12-31',
-    tags: ['tools', 'search', 'ripgrep', 'regex'],
+  "search-tools": {
+    slug: "search-tools",
+    title: "Search Tools",
+    category: "Tool Catalog",
+    lastUpdated: "2024-12-31",
+    tags: ["tools", "search", "ripgrep", "regex"],
     content: `
 # Search Tools
 
@@ -629,12 +646,12 @@ Search files using ugrep (alternative to ripgrep).
 `,
   },
 
-  'token-efficiency': {
-    slug: 'token-efficiency',
-    title: 'Token Efficiency Best Practices',
-    category: 'Best Practices',
-    lastUpdated: '2024-12-31',
-    tags: ['best-practices', 'tokens', 'optimization'],
+  "token-efficiency": {
+    slug: "token-efficiency",
+    title: "Token Efficiency Best Practices",
+    category: "Best Practices",
+    lastUpdated: "2024-12-31",
+    tags: ["best-practices", "tokens", "optimization"],
     content: `
 # Token Efficiency Best Practices
 
@@ -737,12 +754,12 @@ Use local models for simple tasks:
 `,
   },
 
-  'claude-integration': {
-    slug: 'claude-integration',
-    title: 'Claude Desktop Integration',
-    category: 'Platform Integration',
-    lastUpdated: '2024-12-31',
-    tags: ['claude', 'mcp', 'integration'],
+  "claude-integration": {
+    slug: "claude-integration",
+    title: "Claude Desktop Integration",
+    category: "Platform Integration",
+    lastUpdated: "2024-12-31",
+    tags: ["claude", "mcp", "integration"],
     content: `
 # Claude Desktop Integration
 
@@ -819,12 +836,12 @@ For search tasks:
 `,
   },
 
-  'architecture-overview': {
-    slug: 'architecture-overview',
-    title: 'Architecture Overview',
-    category: 'Architecture',
-    lastUpdated: '2024-12-31',
-    tags: ['architecture', 'design', 'internals'],
+  "architecture-overview": {
+    slug: "architecture-overview",
+    title: "Architecture Overview",
+    category: "Architecture",
+    lastUpdated: "2024-12-31",
+    tags: ["architecture", "design", "internals"],
     content: `
 # Architecture Overview
 
@@ -968,7 +985,7 @@ export function getWikiPage(slug: string): WikiPage | null {
 export function getPagesByCategory(category: string): WikiPage[] {
   const cat = WIKI_CATEGORIES.find(c => c.name === category);
   if (!cat) return [];
-  
+
   return cat.pages
     .map(slug => WIKI_PAGES[slug])
     .filter((page): page is WikiPage => page !== undefined);
@@ -979,7 +996,7 @@ export function getPagesByCategory(category: string): WikiPage[] {
  */
 export function searchWiki(query: string): WikiPage[] {
   const lowerQuery = query.toLowerCase();
-  
+
   return Object.values(WIKI_PAGES).filter(page => {
     return (
       page.title.toLowerCase().includes(lowerQuery) ||
