@@ -1,31 +1,24 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
 # Install system dependencies
-RUN apk add --no-cache git curl
+RUN apk add --no-cache git curl python3 make g++
 
-# Install pnpm
-RUN npm install -g pnpm
+# Copy package files first for caching
+COPY package.json ./
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
-
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Install dependencies using npm (more reliable in CI)
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
 
-# Build application
-# Build server application only (skipping broken client build for now)
-RUN pnpm run build:server
-
-# Clean up dev dependencies (optional, but good for production)
-# RUN pnpm prune --prod
+# Build server application
+RUN npm run build:server
 
 # Expose port
 EXPOSE 3000
 
 # Start application
-CMD ["pnpm", "start"]
+CMD ["npm", "start"]
