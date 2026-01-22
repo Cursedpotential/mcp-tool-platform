@@ -58,7 +58,8 @@ services:
   # ===========================================================================
   mcp-platform:
     build:
-      context: ../../../
+      # Coolify runs docker-compose from repo root, so use . as context
+      context: .
       dockerfile: Dockerfile
     image: mcp-platform:latest
     container_name: mcp-platform
