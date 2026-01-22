@@ -17,8 +17,9 @@ import { execSync } from 'child_process';
 import { readFileSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-// @ts-ignore
-import pdfParse from 'pdf-parse';
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const pdfParse = require('pdf-parse');
 
 // ============================================================================
 // TYPES
@@ -159,8 +160,7 @@ export class OCRProcessor {
       // Use pdf-parse to extract text from PDF
       const pdfDataBuffer = Buffer.isBuffer(pdfData) ? pdfData : Buffer.from(pdfData);
 
-      // @ts-ignore - Handle ESM Interop for pdf-parse
-      const pdfResult = await (pdfParse.default || pdfParse)(pdfDataBuffer);
+      const pdfResult = await pdfParse(pdfDataBuffer);
 
       // Extract text from all pages or specific pages
       let extractedText = pdfResult.text;

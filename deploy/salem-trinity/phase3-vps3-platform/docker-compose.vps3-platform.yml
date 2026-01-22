@@ -138,7 +138,10 @@ services:
     hostname: metamcp-external
     restart: unless-stopped
     working_dir: /app
-    command: sh -c "npm install -g @modelcontextprotocol/server-registry && mcp-registry serve"
+    command: sh -c "npm install -g @modelcontextprotocol/server-filesystem @modelcontextprotocol/server-memory && echo 'Registry not yet available via npm - using temporary placeholder or local'"
+    # NOTE: The official registry package is currently in flux. 
+    # For now, we will mount a local registry or use a placeholder command to prevent crash loops
+    # command: sh -c "npm install -g @modelcontextprotocol/registry && mcp-registry serve"
     environment:
       - MCP_REGISTRY_PORT=3002
       - MCP_REGISTRY_HOST=0.0.0.0
