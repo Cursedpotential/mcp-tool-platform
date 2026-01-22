@@ -96,7 +96,7 @@ ssh salem-platform "hostname && uptime"
 
 ```bash
 # From your workstation
-curl -H "Authorization: Bearer 2|JcKuUG0IAm5rkoSnFAXs1qMo7KTAwx5Ggt1svTr7ce5b0874" https://nexus.mitechconsult.com/api/v1/servers
+curl -H "Authorization: Bearer ydcRFzANLzkZbVaIO4XKaxBTgDZX5NfE1gHg2TlT8ySLfRR0fCyYNfn9osEz74P9" https://nexus.mitechconsult.com/api/v1/servers
 ```
 
 **Expected**: JSON response with all 3 servers (salem-nexus, salem-forge, salem-platform)

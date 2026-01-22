@@ -1,0 +1,101 @@
+version: '3.8'
+
+# =============================================================================
+# Salem Forensic Trinity - VPS3 (salem-platform) Application Layer
+# =============================================================================
+# VPS: 10.10.0.4 (Private Network)
+# Role: Host for the MCP Tool Platform (Node.js/TypeScript)
+# Services: mcp-platform
+# 
+# CRITICAL: Cross-VPS Communication via Hetzner Private Network (10.10.0.x)
+# - Database (VPS1): 10.10.0.2:5432
+# - Redis/Cache (VPS2): 10.10.0.3:6379
+# - LLM Gateway (VPS2): 10.10.0.3:4000
+# - Vector DB (VPS2): 10.10.0.3:8000
+# =============================================================================
+
+networks:
+  salem-platform-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/16
+
+services:
+  # ===========================================================================
+  # MCP Tool Platform - Main Application
+  # ===========================================================================
+  mcp-platform:
+    # Build from the current repository
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-platform
+    restart: unless-stopped
+    
+    # Environment variables from .env
+    env_file: .env
+    
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      
+      # Database Connection (VPS1)
+      - DATABASE_URL=${DATABASE_URL}
+      
+      # Redis / Dragonfly Connection (VPS2)
+      - REDIS_URL=${REDIS_URL}
+      
+      # LiteLLM Gateway (VPS2)
+      - LITELLM_URL=${LITELLM_URL}
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      
+      # Vector Database (VPS2)
+      - CHROMA_URL=${CHROMA_URL}
+      - CHROMA_API_KEY=${CHROMA_API_KEY}
+      
+      # Neo4j (External - Aura)
+      - NEO4J_URI=${NEO4J_URI}
+      - NEO4J_USERNAME=${NEO4J_USERNAME}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      
+      # Supabase (External)
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+      
+      # Encryption & Security
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      
+      # Domain & Public Access
+      - DOMAIN=${DOMAIN}
+      
+    volumes:
+      # Persist logs if needed
+      - ./logs:/app/logs
+      
+    networks:
+      - salem-platform-network
+      
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+          
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      
+    labels:
+      - "traefik.enable=true"
+      # Public router
+      - "traefik.http.routers.mcp-platform.rule=Host(`mcp.${DOMAIN}`)"
+      - "traefik.http.routers.mcp-platform.entrypoints=websecure"
+      - "traefik.http.routers.mcp-platform.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mcp-platform.loadbalancer.server.port=3000"
+      - "coolify.managed=true"

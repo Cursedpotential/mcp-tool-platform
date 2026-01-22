@@ -556,6 +556,93 @@ export const evidenceChains = mysqlTable(
   ]
 );
 
+// ============================================================================
+// SETTINGS & CONFIGURATION TABLES
+// ============================================================================
+
+// User settings - NLP config, workflow config, general preferences
+export const userSettings = mysqlTable("userSettings", {
+  id: int().autoincrement().notNull(),
+  userId: int()
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  settingKey: varchar({ length: 100 }).notNull(),
+  settingValue: text().notNull(),
+  createdAt: timestamp({ mode: "string" })
+    .default("CURRENT_TIMESTAMP")
+    .notNull(),
+  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
+});
+
+// LLM Providers - API keys for cloud LLM services
+export const llmProviders = mysqlTable("llmProviders", {
+  id: int().autoincrement().notNull(),
+  userId: int()
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  providerName: varchar({ length: 100 }).notNull(),
+  apiKeyEncrypted: text().notNull(),
+  baseUrl: varchar({ length: 512 }),
+  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
+  priority: int().default(0).notNull(),
+  usageCount: int().default(0).notNull(),
+  totalCostCents: int().default(0).notNull(),
+  createdAt: timestamp({ mode: "string" })
+    .default("CURRENT_TIMESTAMP")
+    .notNull(),
+  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
+});
+
+// Topic codes for message classification
+export const topicCodes = mysqlTable("topicCodes", {
+  id: int().autoincrement().notNull(),
+  userId: int()
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  code: varchar({ length: 50 }).notNull(),
+  description: text(),
+  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
+  createdAt: timestamp({ mode: "string" })
+    .default("CURRENT_TIMESTAMP")
+    .notNull(),
+  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
+});
+
+// Platform codes for source platform identification
+export const platformCodes = mysqlTable("platformCodes", {
+  id: int().autoincrement().notNull(),
+  userId: int()
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  code: varchar({ length: 50 }).notNull(),
+  description: text(),
+  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
+  createdAt: timestamp({ mode: "string" })
+    .default("CURRENT_TIMESTAMP")
+    .notNull(),
+  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
+});
+
+// LLM routing rules - which provider for which task type
+export const routingRules = mysqlTable("routingRules", {
+  id: int().autoincrement().notNull(),
+  userId: int()
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  taskType: varchar({ length: 100 }).notNull(),
+  primaryProviderId: int()
+    .notNull()
+    .references(() => llmProviders.id, { onDelete: "cascade" }),
+  fallbackProviderId: int().references(() => llmProviders.id, {
+    onDelete: "set null",
+  }),
+  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
+  createdAt: timestamp({ mode: "string" })
+    .default("CURRENT_TIMESTAMP")
+    .notNull(),
+  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
+});
+
 // Type exports for TypeScript
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
@@ -605,3 +692,13 @@ export type DocumentEntity = typeof documentEntities.$inferSelect;
 export type InsertDocumentEntity = typeof documentEntities.$inferInsert;
 export type EvidenceChain = typeof evidenceChains.$inferSelect;
 export type InsertEvidenceChain = typeof evidenceChains.$inferInsert;
+export type UserSetting = typeof userSettings.$inferSelect;
+export type InsertUserSetting = typeof userSettings.$inferInsert;
+export type LlmProvider = typeof llmProviders.$inferSelect;
+export type InsertLlmProvider = typeof llmProviders.$inferInsert;
+export type TopicCode = typeof topicCodes.$inferSelect;
+export type InsertTopicCode = typeof topicCodes.$inferInsert;
+export type PlatformCode = typeof platformCodes.$inferSelect;
+export type InsertPlatformCode = typeof platformCodes.$inferInsert;
+export type RoutingRule = typeof routingRules.$inferSelect;
+export type InsertRoutingRule = typeof routingRules.$inferInsert;
