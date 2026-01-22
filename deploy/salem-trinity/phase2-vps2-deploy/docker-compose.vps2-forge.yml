@@ -6,7 +6,7 @@ version: '3.8'
 # VPS: 116.203.198.77 (Public) / 10.10.0.3 (Private Network)
 # Role: Compute services, vector storage, browser automation
 # Services: LiteLLM, ChromaDB, Dragonfly, Ollama, Kasm, Browserless, Playwright, MetaMCP Internal
-# 
+#
 # CRITICAL: Uses Hetzner private network (10.10.0.x) for database connections
 # - VPS1 Postgres: 10.10.0.2:5432 (NOT 188.245.189.218)
 # - Free bandwidth, better security, lower latency
@@ -28,6 +28,7 @@ volumes:
   kasm_profiles:
   kasm_data:
 
+
 services:
   # ===========================================================================
   # LiteLLM - Multi-Provider LLM Gateway with Caching
@@ -40,27 +41,27 @@ services:
     environment:
       # Database Configuration - USES PRIVATE NETWORK IP
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@10.10.0.2:5432/${POSTGRES_DB:-salem}?sslmode=disable
-      
+
       # Master Key (generate with: openssl rand -hex 32)
       - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
-      
+
       # Model Configuration
       - LITELLM_CONFIG_PATH=/app/config.yaml
-      
+
       # Caching - Uses Dragonfly (internal)
       - LITELLM_CACHE=redis
       - REDIS_HOST=dragonfly
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${DRAGONFLY_PASSWORD:-}
-      
+
       # Logging
       - LITELLM_LOG=INFO
       - LITELLM_LOG_TO_FILE=true
-      
+
       # Rate Limiting
       - LITELLM_MAX_PARALLEL_REQUESTS=100
       - LITELLM_REQUEST_TIMEOUT=600
-      
+
       # Optional: Prometheus Metrics
       - LITELLM_ENABLE_PROMETHEUS=true
       - LITELLM_PROMETHEUS_PORT=9090
@@ -76,7 +77,7 @@ services:
         reservations:
           memory: 1G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      test: [ "CMD", "curl", "-f", "http://localhost:4000/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -101,17 +102,17 @@ services:
       - CHROMA_SERVER_HOST=0.0.0.0
       - CHROMA_SERVER_HTTP_PORT=8000
       - CHROMA_SERVER_CORS_ALLOW_ORIGINS=["*"]
-      
+
       # Authentication
       - CHROMA_SERVER_AUTH_CREDENTIALS_PROVIDER=chromadb.auth.token_authn.TokenAuthenticationServerProvider
       - CHROMA_SERVER_AUTH_CREDENTIALS=${CHROMA_API_KEY}
       - CHROMA_SERVER_AUTH_PROVIDER=chromadb.auth.token_authn.TokenAuthenticationServerProvider
       - CHROMA_AUTH_TOKEN_TRANSPORT_HEADER=X-Chroma-Token
-      
+
       # Storage
       - IS_PERSISTENT=TRUE
       - PERSIST_DIRECTORY=/chroma/data
-      
+
       # Performance
       - CHROMA_SERVER_GRPC_PORT=8001
       - ANONYMIZED_TELEMETRY=FALSE
@@ -126,7 +127,7 @@ services:
         reservations:
           memory: 2G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -147,14 +148,7 @@ services:
     hostname: dragonfly
     restart: unless-stopped
     command: >
-      dragonfly
-      --logtostderr
-      --requirepass=${DRAGONFLY_PASSWORD:-}
-      --maxmemory=2gb
-      --cache_mode=true
-      --keys_output_limit=12288
-      --dbfilename=dump.rdb
-      --dir=/data
+      dragonfly --logtostderr --requirepass=${DRAGONFLY_PASSWORD:-} --maxmemory=2gb --cache_mode=true --keys_output_limit=12288 --dbfilename=dump.rdb --dir=/data
     volumes:
       - dragonfly_data:/data
     networks:
@@ -166,15 +160,15 @@ services:
         reservations:
           memory: 1G
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      test: [ "CMD", "redis-cli", "--raw", "incr", "ping" ]
       interval: 30s
       timeout: 10s
       retries: 3
     # Internal only - no Traefik labels
 
-  # ===========================================================================
-  # Ollama - Local LLM Inference (Embeddings + Small Models)
-  # ===========================================================================
+    # ===========================================================================
+    # Ollama - Local LLM Inference (Embeddings + Small Models)
+    # ===========================================================================
   ollama:
     image: ollama/ollama:latest
     container_name: ollama
@@ -198,7 +192,7 @@ services:
         reservations:
           memory: 4G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      test: [ "CMD", "curl", "-f", "http://localhost:11434/api/tags" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -239,7 +233,7 @@ services:
         reservations:
           memory: 2G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      test: [ "CMD", "curl", "-f", "http://localhost:3000" ]
       interval: 60s
       timeout: 30s
       retries: 3
@@ -280,7 +274,7 @@ services:
         reservations:
           memory: 1G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/pressure"]
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/pressure" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -301,11 +295,7 @@ services:
     hostname: playwright
     restart: unless-stopped
     command: >
-      sh -c "
-      npm install -g playwright &&
-      npx playwright install &&
-      npx -y playwright-server --port 3100 --host 0.0.0.0
-      "
+      sh -c " npm install -g playwright && npx playwright install && npx -y playwright-server --port 3100 --host 0.0.0.0 "
     environment:
       - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
     volumes:
@@ -319,7 +309,7 @@ services:
         reservations:
           memory: 1G
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3100"]
+      test: [ "CMD", "curl", "-f", "http://localhost:3100" ]
       interval: 60s
       timeout: 30s
       retries: 3
@@ -340,13 +330,14 @@ services:
     hostname: metamcp-internal
     restart: unless-stopped
     working_dir: /app
-    command: sh -c "npm install -g @modelcontextprotocol/server-registry && mcp-registry serve"
+    command: sh -c "npm install -g @modelcontextprotocol/server-filesystem @modelcontextprotocol/server-memory && echo 'Registry not yet available via npm - using temporary placeholder or local'"
+    # command: sh -c "npm install -g @modelcontextprotocol/server-registry && mcp-registry serve"
     environment:
       - MCP_REGISTRY_PORT=3001
       - MCP_REGISTRY_HOST=0.0.0.0
       - MCP_REGISTRY_DATA_DIR=/app/data
       - MCP_REGISTRY_LOG_LEVEL=info
-      
+
       # Database connection - USES PRIVATE NETWORK IP
       - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@10.10.0.2:5432/${POSTGRES_DB:-salem}?sslmode=disable
     volumes:
@@ -360,54 +351,54 @@ services:
         reservations:
           memory: 512M
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/health"]
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:3001/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
     # Internal only - no Traefik labels (accessed from VPS3 MCP Platform)
 
-# =============================================================================
-# Network Notes
-# =============================================================================
-# 
-# PRIVATE NETWORK CONNECTIONS (10.10.0.x):
-# - LiteLLM → VPS1 Postgres: 10.10.0.2:5432
-# - MetaMCP Internal → VPS1 Postgres: 10.10.0.2:5432
-# - LiteLLM → Dragonfly: dragonfly:6379 (internal)
-# 
-# PUBLIC CONNECTIONS (via Traefik):
-# - llm.mitechconsult.com → LiteLLM:4000
-# - chroma.mitechconsult.com → ChromaDB:8000
-# - ollama.mitechconsult.com → Ollama:11434
-# - desktop.mitechconsult.com → Kasm:3000
-# - browser.mitechconsult.com → Browserless:3000
-# - playwright.mitechconsult.com → Playwright:3100
-# 
-# INTERNAL ONLY (no public access):
-# - Dragonfly:6379 (Redis cache)
-# - MetaMCP Internal:3001 (accessed from VPS3 only)
-# 
-# =============================================================================
-# Deployment Commands
-# =============================================================================
-# 
-# 1. Create .env file from template:
-#    cp .env.vps2.template .env
-#    nano .env  # Fill in required values
-# 
-# 2. Deploy via Coolify UI:
-#    - Server: salem-forge (116.203.198.77)
-#    - Source: Raw Compose
-#    - Paste this file content
-#    - Add environment variables from .env
-#    - Deploy
-# 
-# 3. Verify services:
-#    ssh salem-forge "docker ps"
-#    # Should show all 8 containers running
-# 
-# 4. Test private network:
-#    ssh salem-forge "docker exec litellm nc -zv 10.10.0.2 5432"
-#    # Should connect successfully to VPS1 Postgres
-# 
-# =============================================================================
+    # =============================================================================
+    # Network Notes
+    # =============================================================================
+    #
+    # PRIVATE NETWORK CONNECTIONS (10.10.0.x):
+    # - LiteLLM → VPS1 Postgres: 10.10.0.2:5432
+    # - MetaMCP Internal → VPS1 Postgres: 10.10.0.2:5432
+    # - LiteLLM → Dragonfly: dragonfly:6379 (internal)
+    #
+    # PUBLIC CONNECTIONS (via Traefik):
+    # - llm.mitechconsult.com → LiteLLM:4000
+    # - chroma.mitechconsult.com → ChromaDB:8000
+    # - ollama.mitechconsult.com → Ollama:11434
+    # - desktop.mitechconsult.com → Kasm:3000
+    # - browser.mitechconsult.com → Browserless:3000
+    # - playwright.mitechconsult.com → Playwright:3100
+    #
+    # INTERNAL ONLY (no public access):
+    # - Dragonfly:6379 (Redis cache)
+    # - MetaMCP Internal:3001 (accessed from VPS3 only)
+    #
+    # =============================================================================
+    # Deployment Commands
+    # =============================================================================
+    #
+    # 1. Create .env file from template:
+    #    cp .env.vps2.template .env
+    #    nano .env  # Fill in required values
+    #
+    # 2. Deploy via Coolify UI:
+    #    - Server: salem-forge (116.203.198.77)
+    #    - Source: Raw Compose
+    #    - Paste this file content
+    #    - Add environment variables from .env
+    #    - Deploy
+    #
+    # 3. Verify services:
+    #    ssh salem-forge "docker ps"
+    #    # Should show all 8 containers running
+    #
+    # 4. Test private network:
+    #    ssh salem-forge "docker exec litellm nc -zv 10.10.0.2 5432"
+    #    # Should connect successfully to VPS1 Postgres
+    #
+    # =============================================================================
