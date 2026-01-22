@@ -1,17 +1,44 @@
-# Salem Forensics Platform - Deployment Guide
+# Deployment Documentation
 
-**Architecture:** Two Hetzner VPS ($21/month total) with Cloudflare Zero Trust
+> [!IMPORTANT]
+> For the most up-to-date and comprehensive deployment instructions, please refer to the [**Master Deployment Guide**](deploy/salem-trinity/MASTER_DEPLOYMENT_GUIDE.md). This guide covers the full 3-VPS "Trinity" architecture.
+
+## Deployment Options
+
+The platform can be deployed in several configurations depending on your requirements:
+
+### 1. Master 3-VPS "Trinity" Deployment (Recommended)
+- **Status**: Production-ready, forensic-grade.
+- **Architecture**: Distributed across 3 VPS instances (Nexus, Forge, Platform).
+- **Documentation**: [MASTER_DEPLOYMENT_GUIDE.md](deploy/salem-trinity/MASTER_DEPLOYMENT_GUIDE.md)
+
+### 2. Standard 2-VPS Deployment
+- **Status**: Legacy/Alternative.
+- **Architecture**: Split between Storage/CMS and AI/Compute.
+- **Overview**: See the historical configuration below.
+
+### 3. Coolify Deployment
+- **Status**: Active management.
+- **Documentation**: [COOLIFY_DEPLOYMENT_GUIDE.md](docs/guides/COOLIFY_DEPLOYMENT_GUIDE.md)
 
 ---
 
-## Overview
+## 2-VPS Deployment Overview (Legacy)
 
-The Salem Forensics Platform is deployed across two Hetzner VPS instances:
+**Architecture:** Two Hetzner VPS ($21/month total) with Cloudflare Zero Trust
+
+### Overview
+
+The platform is deployed across two Hetzner VPS instances:
 
 - **VPS1 (Storage & CMS):** PostgreSQL, Directus, PhotoPrism, n8n
 - **VPS2 (AI & Compute):** LiteLLM, MetaMCP, Chroma, LibreChat, Open WebUI, Ollama, Kasm
 
 Both VPS are connected via Tailscale for secure cross-VPS communication and protected by Cloudflare Access for public access.
+
+---
+
+*(Rest of the legacy 2-VPS guide follows for reference...)*
 
 ---
 

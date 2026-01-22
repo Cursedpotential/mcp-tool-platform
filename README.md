@@ -86,6 +86,37 @@ Provider-agnostic design supporting:
 - **OpenAI** / **Anthropic**
 - **Local BERT** (sentence-transformers)
 
+## Documentation Structure
+
+The project documentation is organized into the following categories in the `docs/` directory:
+
+- [**Architecture**](docs/architecture/): Detailed design docs, data flow diagrams, and architectural analysis.
+- [**Guides**](docs/guides/): Implementation guides, development workflows, and setup instructions.
+- [**Reports**](docs/reports/): Code reviews, progress reports, and status updates.
+- [**Analysis**](docs/analysis/): In-depth analysis of gaps, behavior, and research notes.
+- [**Archive**](docs/archive/): Historical handoffs, task lists, and legacy documentation.
+
+Core deployment documentation can be found in:
+- [**DEPLOYMENT.md**](DEPLOYMENT.md): High-level deployment overview.
+- [**Master Deployment Guide**](deploy/salem-trinity/MASTER_DEPLOYMENT_GUIDE.md): Comprehensive 3-VPS "Trinity" deployment instructions.
+
+## Project Structure
+
+```
+├── client/             # Frontend React application
+├── server/             # Backend Node.js/TypeScript server
+│   ├── mcp/            # MCP Gateway logic and plugins
+│   └── python-tools/   # Python-based ML and NLP utilities
+├── shared/             # Shared TypeScript types and constants
+├── docs/               # Project documentation (organized by category)
+├── deploy/             # Deployment configurations and guides
+│   └── salem-trinity/  # Master 3-VPS deployment suite
+├── scripts/            # Maintenance and utility scripts
+├── config/             # Configuration files
+├── data/               # Local data storage and SQLite databases
+└── n8n-workflows/      # Exported n8n workflow definitions
+```
+
 ## Quick Start
 
 ### Prerequisites
@@ -115,116 +146,6 @@ The platform uses pre-configured environment variables for:
 - Database connection (`DATABASE_URL`)
 - Authentication (`JWT_SECRET`, `OAUTH_SERVER_URL`)
 - Built-in APIs (`BUILT_IN_FORGE_API_URL`, `BUILT_IN_FORGE_API_KEY`)
-
-## API Usage
-
-### Search for Tools
-
-```typescript
-const result = await trpc.mcp.searchTools.query({
-  query: "extract entities",
-  topK: 10,
-  category: "nlp",
-});
-// Returns: { success: true, data: [{ name, category, description, tags }] }
-```
-
-### Get Tool Specification
-
-```typescript
-const spec = await trpc.mcp.describeTool.query({
-  toolName: "nlp.extract_entities",
-});
-// Returns: Full schema, examples, permissions
-```
-
-### Invoke a Tool
-
-```typescript
-const result = await trpc.mcp.invokeTool.mutate({
-  toolName: "doc.ocr_image_or_pdf",
-  args: { path: "/data/document.pdf", language: "eng" },
-  options: { returnRef: true },
-});
-// Returns: { success: true, data: { textRef: "sha256:...", pages: 5 } }
-```
-
-### Retrieve Large Content
-
-```typescript
-const page = await trpc.mcp.getRef.query({
-  ref: "sha256:abc123...",
-  page: 1,
-  pageSize: 4096,
-});
-// Returns: { content: "...", page: 1, totalPages: 10, hasMore: true }
-```
-
-## Data Flow
-
-1. **Ingest**: Raw documents enter via filesystem or upload
-2. **Convert**: Pandoc/Tesseract extract text content
-3. **Analyze**: NLP plugins extract entities, sentiment, keywords
-4. **Chunk**: Document segmentation with offset tracking
-5. **Embed**: Optional ML embeddings for semantic search
-6. **Stage**: Working memory in Chroma for intermediate results
-7. **Export**: Structured data flows to Neo4j/Supabase/Vector DBs
-
-## Token Efficiency Strategies
-
-| Strategy                   | Implementation                                                |
-| -------------------------- | ------------------------------------------------------------- |
-| Reference-based returns    | Large outputs return `sha256:` refs instead of inline content |
-| Paged retrieval            | 4KB default pages, configurable up to 64KB                    |
-| Compact tool cards         | Search returns minimal metadata, full spec on demand          |
-| Structured metadata        | Offsets and citations enable precise retrieval                |
-| Hierarchical summarization | Map-reduce compression with citation tracking                 |
-
-## Testing
-
-```bash
-# Run all tests
-pnpm test
-
-# Run specific test file
-pnpm test server/mcp/store/content-store.test.ts
-```
-
-## Project Structure
-
-```
-server/
-  mcp/
-    gateway.ts          # MCP Gateway API (4 endpoints)
-    store/
-      content-store.ts  # Content-addressed storage
-    plugins/
-      search.ts         # ripgrep/ugrep integration
-      document.ts       # Pandoc/Tesseract
-      nlp.ts            # Entity extraction, sentiment, etc.
-      rules.ts          # Rule engine
-      diff.ts           # Text comparison
-      filesystem.ts     # Sandboxed file ops
-      ml.ts             # Embeddings (optional)
-      summarization.ts  # Map-reduce summarization
-      retrieval.ts      # BM25 retrieval
-      registry.ts       # Plugin registry
-    workers/
-      executor.ts       # Task execution
-    hitl/
-      approval.ts       # HITL approval system
-    export/
-      pipeline.ts       # Export to Neo4j/Supabase/VectorDB
-    observability/
-      tracing.ts        # Distributed tracing
-shared/
-  mcp-types/
-    index.ts            # Shared type definitions
-client/
-  src/
-    pages/
-      Home.tsx          # Dashboard
-```
 
 ## License
 
