@@ -10,10 +10,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- **Multi-Store Architecture**: Hybrid MySQL (VPS3) + PostgreSQL (VPS2) + Neo4j + Chroma + Redis + Directus
+- Trinity Router (`server/mcp/storage/systemRouter.ts`) for orchestrated multi-tier storage
+- Dedicated database helpers: `db.mysql.ts` and `db.postgres.ts`
 - Neo4j/Graphiti client wiring with driver-backed queries and connection testing.
 - Headless Colab Enterprise settings endpoints and UI card (test/save stubs, ready for real API hooks).
 - Postgres extension audit endpoint to verify Supabase-style extensions (vector/postgis/pg_graphql/pg_net/pg_cron/pgsodium/etc.).
 - MCP graph routing now executes Cypher via Graphiti.
+
+### Changed
+
+- **BREAKING**: Removed all Supabase dependencies and client code
+- Settings router migrated from Supabase to MySQL
+- Patterns router migrated from Supabase to MySQL
 
 ### Changed
 
@@ -52,7 +61,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Dependencies
 
 - **Backend**: Node.js 22, TypeScript 5.9, Express 4.21, tRPC 11.6
-- **Database**: PostgreSQL + PGVector + PostGIS, Neo4j Aura
+- **Database**: MySQL (VPS3), PostgreSQL + PGVector + PostGIS (VPS2), Neo4j Aura, Chroma, Redis
 - **AI/ML**: spaCy, NLTK, TextBlob, sentence-transformers
 - **Frontend**: React 19, Tailwind CSS 4, tRPC hooks
 - **Infrastructure**: Docker Compose, 9 microservices, multi-VPS deployment

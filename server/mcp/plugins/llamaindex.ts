@@ -23,26 +23,16 @@ export async function chunkText(args: {
     chunkOverlap: args.chunkOverlap ?? 50,
   });
 
-  const nodes = splitter.getNodesFromText(args.text);
-  const chunks = nodes.map(node => ({
-    text: extractNodeText(node),
-    startChar: (node as { startCharIdx?: number }).startCharIdx,
-    endChar: (node as { endCharIdx?: number }).endCharIdx,
+  // splitText returns string[] in some versions, and getNodesFromText returns TextNode[]
+  // We use splitText for maximum compatibility if getNodesFromText fails type checks
+  const chunks_text = splitter.splitText(args.text);
+
+  const chunks = chunks_text.map((text, index) => ({
+    text: text,
+    // Approximate indices if not provided by the splitter
+    startChar: index * (args.chunkSize ?? 512),
+    endChar: (index + 1) * (args.chunkSize ?? 512),
   }));
 
   return { chunks, count: chunks.length };
-}
-
-function extractNodeText(node: unknown): string {
-  if (typeof node === "string") {
-    return node;
-  }
-  if (typeof (node as { text?: string }).text === "string") {
-    return (node as { text: string }).text;
-  }
-  const content = (node as { getContent?: () => string }).getContent?.();
-  if (typeof content === "string") {
-    return content;
-  }
-  return "";
 }

@@ -1,649 +1,600 @@
 import {
-  mysqlTable,
-  mysqlSchema,
-  AnyMySqlColumn,
-  index,
-  int,
+  pgTable,
+  serial,
   varchar,
   text,
-  mysqlEnum,
   timestamp,
-  foreignKey,
-} from "drizzle-orm/mysql-core";
+  boolean,
+  integer,
+  index,
+  primaryKey
+} from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
-export const analysisModules = mysqlTable(
+// ============================================================================
+// ANALYSIS & MODULES
+// ============================================================================
+
+export const analysisModules = pgTable(
   "analysisModules",
   {
-    id: int().autoincrement().notNull(),
-    moduleId: varchar({ length: 64 }).notNull(),
-    name: varchar({ length: 255 }).notNull(),
-    description: text(),
-    category: mysqlEnum(["negative", "positive", "neutral"]).notNull(),
-    subcategory: varchar({ length: 100 }),
-    isBuiltIn: mysqlEnum(["true", "false"]).default("true").notNull(),
-    isEnabled: mysqlEnum(["true", "false"]).default("true").notNull(),
-    severityWeight: int().default(50),
-    mclMapping: varchar({ length: 50 }),
-    createdAt: timestamp({ mode: "string" })
-      .default("CURRENT_TIMESTAMP")
-      .notNull(),
-    updatedAt: timestamp({ mode: "string" })
+    id: serial("id").primaryKey(),
+    moduleId: varchar("moduleId", { length: 64 }).notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description"),
+    category: varchar("category", { length: 20 }).notNull(), // negative, positive, neutral
+    subcategory: varchar("subcategory", { length: 100 }),
+    isBuiltIn: boolean("isBuiltIn").default(true).notNull(),
+    isEnabled: boolean("isEnabled").default(true).notNull(),
+    severityWeight: integer("severityWeight").default(50),
+    mclMapping: varchar("mclMapping", { length: 50 }),
+    createdAt: timestamp("createdAt", { mode: "string" })
       .defaultNow()
-      .onUpdateNow()
+      .notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "string" })
+      .defaultNow()
       .notNull(),
   },
-  table => [index("analysisModules_moduleId_unique").on(table.moduleId)]
+  (table) => ({
+    moduleIdIdx: index("analysisModules_moduleId_unique").on(table.moduleId),
+  })
 );
 
-export const analysisResults = mysqlTable("analysisResults", {
-  id: int().autoincrement().notNull(),
-  userId: int().notNull(),
-  documentId: varchar({ length: 64 }),
-  documentName: varchar({ length: 255 }),
-  analysisType: varchar({ length: 100 }).notNull(),
-  modulesUsed: text().notNull(),
-  overallScore: int(),
-  mclFactors: text(),
-  findings: text().notNull(),
-  timeline: text(),
-  contradictions: text(),
-  summary: text(),
-  status: mysqlEnum(["pending", "processing", "completed", "error"])
-    .default("pending")
-    .notNull(),
-  processingTimeMs: int(),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
+export const analysisResults = pgTable("analysisResults", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull(),
+  documentId: varchar("documentId", { length: 64 }),
+  documentName: varchar("documentName", { length: 255 }),
+  analysisType: varchar("analysisType", { length: 100 }).notNull(),
+  modulesUsed: text("modulesUsed").notNull(),
+  overallScore: integer("overallScore"),
+  mclFactors: text("mclFactors"),
+  findings: text("findings").notNull(),
+  timeline: text("timeline"),
+  contradictions: text("contradictions"),
+  summary: text("summary"),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  processingTimeMs: integer("processingTimeMs"),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
 });
 
-export const apiKeyUsageLogs = mysqlTable("apiKeyUsageLogs", {
-  id: int().autoincrement().notNull(),
-  apiKeyId: int()
-    .notNull()
-    .references(() => apiKeys.id, { onDelete: "cascade" }),
-  toolName: varchar({ length: 255 }),
-  method: varchar({ length: 50 }),
-  statusCode: int(),
-  latencyMs: int(),
-  tokensUsed: int(),
-  cost: int(),
-  ipAddress: varchar({ length: 45 }),
-  userAgent: text(),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-});
+// ============================================================================
+// API KEYS
+// ============================================================================
 
-export const apiKeys = mysqlTable(
-  "apiKeys",
-  {
-    id: int().autoincrement().notNull(),
-    userId: int()
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    name: varchar({ length: 255 }).notNull(),
-    keyHash: varchar({ length: 255 }).notNull(),
-    keyPrefix: varchar({ length: 16 }).notNull(),
-    permissions: text().notNull(),
-    lastUsedAt: timestamp({ mode: "string" }),
-    expiresAt: timestamp({ mode: "string" }),
-    isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-    usageCount: int().default(0).notNull(),
-    createdAt: timestamp({ mode: "string" })
-      .default("CURRENT_TIMESTAMP")
-      .notNull(),
-    updatedAt: timestamp({ mode: "string" })
-      .defaultNow()
-      .onUpdateNow()
-      .notNull(),
-  },
-  table => [index("apiKeys_keyHash_unique").on(table.keyHash)]
-);
-
-export const behavioralPatterns = mysqlTable("behavioralPatterns", {
-  id: int().autoincrement().notNull(),
-  userId: int().references(() => users.id, { onDelete: "cascade" }),
-  name: varchar({ length: 255 }).notNull(),
-  category: varchar({ length: 100 }).notNull(),
-  pattern: text().notNull(),
-  description: text(),
-  severity: int().default(5).notNull(),
-  mclFactors: text(),
-  examples: text(),
-  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-  isCustom: mysqlEnum(["true", "false"]).default("false").notNull(),
-  matchCount: int().default(0).notNull(),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
-});
-
-export const bertConfigs = mysqlTable("bertConfigs", {
-  id: int().autoincrement().notNull(),
-  userId: int().references(() => users.id, { onDelete: "cascade" }),
-  name: varchar({ length: 255 }).notNull(),
-  modelName: varchar({ length: 255 }).notNull(),
-  modelSource: varchar({ length: 50 }).default("huggingface").notNull(),
-  taskType: varchar({ length: 50 }).notNull(),
-  confidenceThreshold: int().default(70).notNull(),
-  maxSequenceLength: int().default(512).notNull(),
-  batchSize: int().default(8).notNull(),
-  useGpu: mysqlEnum(["true", "false"]).default("false").notNull(),
-  customLabels: text(),
-  preprocessingSteps: text(),
-  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-  isDefault: mysqlEnum(["true", "false"]).default("false").notNull(),
-  avgLatencyMs: int().default(0),
-  usageCount: int().default(0),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
-});
-
-export const forensicResults = mysqlTable("forensicResults", {
-  id: int().autoincrement().notNull(),
-  userId: int().references(() => users.id, { onDelete: "cascade" }),
-  sourceHash: varchar({ length: 64 }).notNull(),
-  sourceType: varchar({ length: 50 }),
-  analysisType: varchar({ length: 50 }).notNull(),
-  results: text().notNull(),
-  matchCount: int().default(0),
-  severityScore: int(),
-  mclFactorsMatched: text(),
-  processingTimeMs: int(),
-  modelUsed: varchar({ length: 255 }),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-});
-
-export const hurtlexCategories = mysqlTable("hurtlexCategories", {
-  id: int().autoincrement().notNull(),
-  userId: int().references(() => users.id, { onDelete: "cascade" }),
-  code: varchar({ length: 20 }).notNull(),
-  name: varchar({ length: 255 }).notNull(),
-  description: text(),
-  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-  termCount: int().default(0).notNull(),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
-});
-
-export const hurtlexSyncStatus = mysqlTable("hurtlexSyncStatus", {
-  id: int().autoincrement().notNull(),
-  language: varchar({ length: 10 }).notNull(),
-  lastSyncAt: timestamp({ mode: "string" }),
-  termCount: int().default(0).notNull(),
-  sourceUrl: text(),
-  sourceCommit: varchar({ length: 64 }),
-  status: mysqlEnum(["pending", "syncing", "success", "error"])
-    .default("pending")
-    .notNull(),
-  errorMessage: text(),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
-});
-
-export const hurtlexTerms = mysqlTable("hurtlexTerms", {
-  id: int().autoincrement().notNull(),
-  userId: int().references(() => users.id, { onDelete: "cascade" }),
-  term: varchar({ length: 255 }).notNull(),
-  category: varchar({ length: 50 }).notNull(),
-  language: varchar({ length: 10 }).default("en").notNull(),
-  level: varchar({ length: 20 }),
-  pos: varchar({ length: 20 }),
-  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-  isCustom: mysqlEnum(["true", "false"]).default("false").notNull(),
-  matchCount: int().default(0).notNull(),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
-});
-
-export const mclFactors = mysqlTable(
-  "mclFactors",
-  {
-    id: int().autoincrement().notNull(),
-    factorLetter: varchar({ length: 5 }).notNull(),
-    name: varchar({ length: 255 }).notNull(),
-    description: text().notNull(),
-    keywords: text(),
-    patternCategories: text(),
-    isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-    createdAt: timestamp({ mode: "string" })
-      .default("CURRENT_TIMESTAMP")
-      .notNull(),
-    updatedAt: timestamp({ mode: "string" })
-      .defaultNow()
-      .onUpdateNow()
-      .notNull(),
-  },
-  table => [index("mclFactors_factorLetter_unique").on(table.factorLetter)]
-);
-
-export const patternCategories = mysqlTable("patternCategories", {
-  id: int().autoincrement().notNull(),
-  userId: int().references(() => users.id, { onDelete: "cascade" }),
-  name: varchar({ length: 100 }).notNull(),
-  description: text(),
-  color: varchar({ length: 7 }),
-  icon: varchar({ length: 50 }),
-  defaultSeverity: int().default(5).notNull(),
-  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-  sortOrder: int().default(0).notNull(),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
-});
-
-export const schemaResolvers = mysqlTable("schemaResolvers", {
-  id: int().autoincrement().notNull(),
-  userId: int().references(() => users.id, { onDelete: "cascade" }),
-  name: varchar({ length: 255 }).notNull(),
-  sourceFormat: varchar({ length: 100 }),
-  fieldMappings: text().notNull(),
-  aiGenerated: mysqlEnum(["true", "false"]).default("false").notNull(),
-  confidence: int(),
-  sampleData: text(),
-  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-  usageCount: int().default(0),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
-});
-
-export const severityWeights = mysqlTable("severityWeights", {
-  id: int().autoincrement().notNull(),
-  userId: int().references(() => users.id, { onDelete: "cascade" }),
-  category: varchar({ length: 100 }).notNull(),
-  weight: int().default(5).notNull(),
-  description: text(),
-  mclFactors: text(),
-  escalationThreshold: int(),
-  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
-});
-
-export const systemPrompts = mysqlTable("systemPrompts", {
-  id: int().autoincrement().notNull(),
-  userId: int()
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar({ length: 255 }).notNull(),
-  description: text(),
-  toolName: varchar({ length: 255 }),
-  promptText: text().notNull(),
-  variables: text(),
-  version: int().default(1).notNull(),
-  parentId: int(),
-  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-  successRate: int().default(0),
-  avgLatencyMs: int().default(0),
-  usageCount: int().default(0),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
-});
-
-export const users = mysqlTable(
+export const users = pgTable(
   "users",
   {
-    id: int().autoincrement().notNull(),
-    openId: varchar({ length: 64 }).notNull(),
-    name: text(),
-    email: varchar({ length: 320 }),
-    loginMethod: varchar({ length: 64 }),
-    role: mysqlEnum(["user", "admin"]).default("user").notNull(),
-    createdAt: timestamp({ mode: "string" })
-      .default("CURRENT_TIMESTAMP")
-      .notNull(),
-    updatedAt: timestamp({ mode: "string" })
+    id: serial("id").primaryKey(),
+    openId: varchar("openId", { length: 64 }).notNull(),
+    name: text("name"),
+    email: varchar("email", { length: 320 }),
+    loginMethod: varchar("loginMethod", { length: 64 }),
+    role: varchar("role", { length: 20 }).default("user").notNull(),
+    createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
+    lastSignedIn: timestamp("lastSignedIn", { mode: "string" })
       .defaultNow()
-      .onUpdateNow()
-      .notNull(),
-    lastSignedIn: timestamp({ mode: "string" })
-      .default("CURRENT_TIMESTAMP")
       .notNull(),
   },
-  table => [index("users_openId_unique").on(table.openId)]
+  (table) => ({
+    openIdIdx: index("users_openId_unique").on(table.openId),
+  })
 );
 
-export const workflowTemplates = mysqlTable("workflowTemplates", {
-  id: int().autoincrement().notNull(),
-  userId: int()
+export const apiKeys = pgTable(
+  "apiKeys",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 255 }).notNull(),
+    keyHash: varchar("keyHash", { length: 255 }).notNull(),
+    keyPrefix: varchar("keyPrefix", { length: 16 }).notNull(),
+    permissions: text("permissions").notNull(),
+    lastUsedAt: timestamp("lastUsedAt", { mode: "string" }),
+    expiresAt: timestamp("expiresAt", { mode: "string" }),
+    isActive: boolean("isActive").default(true).notNull(),
+    usageCount: integer("usageCount").default(0).notNull(),
+    createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    keyHashIdx: index("apiKeys_keyHash_unique").on(table.keyHash),
+  })
+);
+
+export const apiKeyUsageLogs = pgTable("apiKeyUsageLogs", {
+  id: serial("id").primaryKey(),
+  apiKeyId: integer("apiKeyId")
     .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  name: varchar({ length: 255 }).notNull(),
-  description: text(),
-  category: varchar({ length: 100 }),
-  steps: text().notNull(),
-  systemPromptId: int().references(() => systemPrompts.id),
-  isPublic: mysqlEnum(["true", "false"]).default("false").notNull(),
-  usageCount: int().default(0),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
+    .references(() => apiKeys.id, { onDelete: "cascade" }),
+  toolName: varchar("toolName", { length: 255 }),
+  method: varchar("method", { length: 50 }),
+  statusCode: integer("statusCode"),
+  latencyMs: integer("latencyMs"),
+  tokensUsed: integer("tokensUsed"),
+  cost: integer("cost"),
+  ipAddress: varchar("ipAddress", { length: 45 }),
+  userAgent: text("userAgent"),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
 });
 
 // ============================================================================
-// DOCUMENT INTELLIGENCE TABLES
+// PATTERNS & CONFIGS
 // ============================================================================
 
-// Documents table - stores metadata about processed documents
-export const documents = mysqlTable(
+export const behavioralPatterns = pgTable("behavioralPatterns", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 100 }).notNull(),
+  pattern: text("pattern").notNull(),
+  description: text("description"),
+  severity: integer("severity").default(5).notNull(),
+  mclFactors: text("mclFactors"),
+  examples: text("examples"),
+  isActive: boolean("isActive").default(true).notNull(),
+  isCustom: boolean("isCustom").default(false).notNull(),
+  matchCount: integer("matchCount").default(0).notNull(),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const bertConfigs = pgTable("bertConfigs", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  modelName: varchar("modelName", { length: 255 }).notNull(),
+  modelSource: varchar("modelSource", { length: 50 })
+    .default("huggingface")
+    .notNull(),
+  taskType: varchar("taskType", { length: 50 }).notNull(),
+  confidenceThreshold: integer("confidenceThreshold").default(70).notNull(),
+  maxSequenceLength: integer("maxSequenceLength").default(512).notNull(),
+  batchSize: integer("batchSize").default(8).notNull(),
+  useGpu: boolean("useGpu").default(false).notNull(),
+  customLabels: text("customLabels"),
+  preprocessingSteps: text("preprocessingSteps"),
+  isActive: boolean("isActive").default(true).notNull(),
+  isDefault: boolean("isDefault").default(false).notNull(),
+  avgLatencyMs: integer("avgLatencyMs").default(0),
+  usageCount: integer("usageCount").default(0),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const forensicResults = pgTable("forensicResults", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id, { onDelete: "cascade" }),
+  sourceHash: varchar("sourceHash", { length: 64 }).notNull(),
+  sourceType: varchar("sourceType", { length: 50 }),
+  analysisType: varchar("analysisType", { length: 50 }).notNull(),
+  results: text("results").notNull(),
+  matchCount: integer("matchCount").default(0),
+  severityScore: integer("severityScore"),
+  mclFactorsMatched: text("mclFactorsMatched"),
+  processingTimeMs: integer("processingTimeMs"),
+  modelUsed: varchar("modelUsed", { length: 255 }),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const hurtlexCategories = pgTable("hurtlexCategories", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id, { onDelete: "cascade" }),
+  code: varchar("code", { length: 20 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  isActive: boolean("isActive").default(true).notNull(),
+  termCount: integer("termCount").default(0).notNull(),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const hurtlexSyncStatus = pgTable("hurtlexSyncStatus", {
+  id: serial("id").primaryKey(),
+  language: varchar("language", { length: 10 }).notNull(),
+  lastSyncAt: timestamp("lastSyncAt", { mode: "string" }),
+  termCount: integer("termCount").default(0).notNull(),
+  sourceUrl: text("sourceUrl"),
+  sourceCommit: varchar("sourceCommit", { length: 64 }),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  errorMessage: text("errorMessage"),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const hurtlexTerms = pgTable("hurtlexTerms", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id, { onDelete: "cascade" }),
+  term: varchar("term", { length: 255 }).notNull(),
+  category: varchar("category", { length: 50 }).notNull(),
+  language: varchar("language", { length: 10 }).default("en").notNull(),
+  level: varchar("level", { length: 20 }),
+  pos: varchar("pos", { length: 20 }),
+  isActive: boolean("isActive").default(true).notNull(),
+  isCustom: boolean("isCustom").default(false).notNull(),
+  matchCount: integer("matchCount").default(0).notNull(),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const mclFactors = pgTable(
+  "mclFactors",
+  {
+    id: serial("id").primaryKey(),
+    factorLetter: varchar("factorLetter", { length: 5 }).notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: text("description").notNull(),
+    keywords: text("keywords"),
+    patternCategories: text("patternCategories"),
+    isActive: boolean("isActive").default(true).notNull(),
+    createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
+  },
+  (table) => ({
+    factorLetterIdx: index("mclFactors_factorLetter_unique").on(
+      table.factorLetter
+    ),
+  })
+);
+
+export const patternCategories = pgTable("patternCategories", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  color: varchar("color", { length: 7 }),
+  icon: varchar("icon", { length: 50 }),
+  defaultSeverity: integer("defaultSeverity").default(5).notNull(),
+  isActive: boolean("isActive").default(true).notNull(),
+  sortOrder: integer("sortOrder").default(0).notNull(),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const schemaResolvers = pgTable("schemaResolvers", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  sourceFormat: varchar("sourceFormat", { length: 100 }),
+  fieldMappings: text("fieldMappings").notNull(),
+  aiGenerated: boolean("aiGenerated").default(false).notNull(),
+  confidence: integer("confidence"),
+  sampleData: text("sampleData"),
+  isActive: boolean("isActive").default(true).notNull(),
+  usageCount: integer("usageCount").default(0),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const severityWeights = pgTable("severityWeights", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").references(() => users.id, { onDelete: "cascade" }),
+  category: varchar("category", { length: 100 }).notNull(),
+  weight: integer("weight").default(5).notNull(),
+  description: text("description"),
+  mclFactors: text("mclFactors"),
+  escalationThreshold: integer("escalationThreshold"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const systemPrompts = pgTable("systemPrompts", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  toolName: varchar("toolName", { length: 255 }),
+  promptText: text("promptText").notNull(),
+  variables: text("variables"),
+  version: integer("version").default(1).notNull(),
+  parentId: integer("parentId"),
+  isActive: boolean("isActive").default(true).notNull(),
+  successRate: integer("successRate").default(0),
+  avgLatencyMs: integer("avgLatencyMs").default(0),
+  usageCount: integer("usageCount").default(0),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
+});
+
+export const workflowTemplates = pgTable("workflowTemplates", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }),
+  steps: text("steps").notNull(),
+  systemPromptId: integer("systemPromptId").references(() => systemPrompts.id),
+  isPublic: boolean("isPublic").default(false).notNull(),
+  usageCount: integer("usageCount").default(0),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
+});
+
+// ============================================================================
+// DOCUMENT INTELLIGENCE
+// ============================================================================
+
+export const documents = pgTable(
   "documents",
   {
-    id: int().autoincrement().notNull(),
-    userId: int()
+    id: serial("id").primaryKey(),
+    userId: integer("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    filename: varchar({ length: 512 }).notNull(),
-    originalPath: varchar({ length: 1024 }),
-    mimeType: varchar({ length: 128 }),
-    fileSize: int(),
-    contentHash: varchar({ length: 64 }).notNull(),
-    processingStatus: mysqlEnum(["pending", "processing", "completed", "error"])
+    filename: varchar("filename", { length: 512 }).notNull(),
+    originalPath: varchar("originalPath", { length: 1024 }),
+    mimeType: varchar("mimeType", { length: 128 }),
+    fileSize: integer("fileSize"),
+    contentHash: varchar("contentHash", { length: 64 }).notNull(),
+    processingStatus: varchar("processingStatus", { length: 20 })
       .default("pending")
       .notNull(),
-    processingError: text(),
-    totalSections: int().default(0),
-    totalChunks: int().default(0),
-    totalEntities: int().default(0),
-    metadata: text(), // JSON: source, platform, date range, etc.
-    createdAt: timestamp({ mode: "string" })
-      .default("CURRENT_TIMESTAMP")
-      .notNull(),
-    updatedAt: timestamp({ mode: "string" })
-      .defaultNow()
-      .onUpdateNow()
-      .notNull(),
+    processingError: text("processingError"),
+    totalSections: integer("totalSections").default(0),
+    totalChunks: integer("totalChunks").default(0),
+    totalEntities: integer("totalEntities").default(0),
+    metadata: text("metadata"),
+    createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
   },
-  table => [
-    index("documents_contentHash_idx").on(table.contentHash),
-    index("documents_userId_idx").on(table.userId),
-  ]
+  (table) => ({
+    contentHashIdx: index("documents_contentHash_idx").on(table.contentHash),
+    userIdIdx: index("documents_userId_idx").on(table.userId),
+  })
 );
 
-// Document sections - logical divisions (chapters, conversations, threads)
-export const documentSections = mysqlTable(
+export const documentSections = pgTable(
   "documentSections",
   {
-    id: int().autoincrement().notNull(),
-    documentId: int()
+    id: serial("id").primaryKey(),
+    documentId: integer("documentId")
       .notNull()
       .references(() => documents.id, { onDelete: "cascade" }),
-    parentSectionId: int(), // For nested sections
-    sectionType: varchar({ length: 64 }).notNull(), // 'chapter', 'conversation', 'thread', 'paragraph'
-    title: varchar({ length: 512 }),
-    sequenceNum: int().notNull(), // Order within parent
-    startOffset: int().notNull(), // Character offset in original
-    endOffset: int().notNull(),
-    contentPreview: text(), // First 500 chars for quick reference
-    metadata: text(), // JSON: participants, date, platform, etc.
-    createdAt: timestamp({ mode: "string" })
-      .default("CURRENT_TIMESTAMP")
-      .notNull(),
+    parentSectionId: integer("parentSectionId"),
+    sectionType: varchar("sectionType", { length: 64 }).notNull(),
+    title: varchar("title", { length: 512 }),
+    sequenceNum: integer("sequenceNum").notNull(),
+    startOffset: integer("startOffset").notNull(),
+    endOffset: integer("endOffset").notNull(),
+    contentPreview: text("contentPreview"),
+    metadata: text("metadata"),
+    createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
   },
-  table => [
-    index("documentSections_documentId_idx").on(table.documentId),
-    index("documentSections_parentId_idx").on(table.parentSectionId),
-  ]
+  (table) => ({
+    docIdIdx: index("documentSections_documentId_idx").on(table.documentId),
+    parentIdIdx: index("documentSections_parentId_idx").on(
+      table.parentSectionId
+    ),
+  })
 );
 
-// Document chunks - fixed-size pieces for embedding/retrieval
-export const documentChunks = mysqlTable(
+export const documentChunks = pgTable(
   "documentChunks",
   {
-    id: int().autoincrement().notNull(),
-    documentId: int()
+    id: serial("id").primaryKey(),
+    documentId: integer("documentId")
       .notNull()
       .references(() => documents.id, { onDelete: "cascade" }),
-    sectionId: int().references(() => documentSections.id, {
+    sectionId: integer("sectionId").references(() => documentSections.id, {
       onDelete: "set null",
     }),
-    chunkIndex: int().notNull(), // Sequential index
-    startOffset: int().notNull(),
-    endOffset: int().notNull(),
-    chunkSize: int().notNull(),
-    overlap: int().default(0), // Overlap with previous chunk
-    content: text().notNull(),
-    contentHash: varchar({ length: 64 }).notNull(),
-    embeddingRef: varchar({ length: 128 }), // Reference to vector store
-    embeddingModel: varchar({ length: 64 }),
-    createdAt: timestamp({ mode: "string" })
-      .default("CURRENT_TIMESTAMP")
-      .notNull(),
+    chunkIndex: integer("chunkIndex").notNull(),
+    startOffset: integer("startOffset").notNull(),
+    endOffset: integer("endOffset").notNull(),
+    chunkSize: integer("chunkSize").notNull(),
+    overlap: integer("overlap").default(0),
+    content: text("content").notNull(),
+    contentHash: varchar("contentHash", { length: 64 }).notNull(),
+    embeddingRef: varchar("embeddingRef", { length: 128 }),
+    embeddingModel: varchar("embeddingModel", { length: 64 }),
+    createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
   },
-  table => [
-    index("documentChunks_documentId_idx").on(table.documentId),
-    index("documentChunks_sectionId_idx").on(table.sectionId),
-    index("documentChunks_contentHash_idx").on(table.contentHash),
-  ]
+  (table) => ({
+    docIdIdx: index("documentChunks_documentId_idx").on(table.documentId),
+    sectionIdIdx: index("documentChunks_sectionId_idx").on(table.sectionId),
+    contentHashIdx: index("documentChunks_contentHash_idx").on(
+      table.contentHash
+    ),
+  })
 );
 
-// Document spans - annotated regions (matches, citations, highlights)
-export const documentSpans = mysqlTable(
+export const documentSpans = pgTable(
   "documentSpans",
   {
-    id: int().autoincrement().notNull(),
-    documentId: int()
+    id: serial("id").primaryKey(),
+    documentId: integer("documentId")
       .notNull()
       .references(() => documents.id, { onDelete: "cascade" }),
-    chunkId: int().references(() => documentChunks.id, {
+    chunkId: integer("chunkId").references(() => documentChunks.id, {
       onDelete: "set null",
     }),
-    spanType: varchar({ length: 64 }).notNull(), // 'pattern_match', 'entity', 'citation', 'highlight'
-    label: varchar({ length: 255 }),
-    startOffset: int().notNull(),
-    endOffset: int().notNull(),
-    matchedText: text().notNull(),
-    context: text(), // Surrounding text for reference
-    confidence: int(), // 0-100
-    metadata: text(), // JSON: pattern_id, entity_type, severity, etc.
-    createdAt: timestamp({ mode: "string" })
-      .default("CURRENT_TIMESTAMP")
-      .notNull(),
+    spanType: varchar("spanType", { length: 64 }).notNull(),
+    label: varchar("label", { length: 255 }),
+    startOffset: integer("startOffset").notNull(),
+    endOffset: integer("endOffset").notNull(),
+    matchedText: text("matchedText").notNull(),
+    context: text("context"),
+    confidence: integer("confidence"),
+    metadata: text("metadata"),
+    createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
   },
-  table => [
-    index("documentSpans_documentId_idx").on(table.documentId),
-    index("documentSpans_chunkId_idx").on(table.chunkId),
-    index("documentSpans_spanType_idx").on(table.spanType),
-  ]
+  (table) => ({
+    docIdIdx: index("documentSpans_documentId_idx").on(table.documentId),
+    chunkIdIdx: index("documentSpans_chunkId_idx").on(table.chunkId),
+    spanTypeIdx: index("documentSpans_spanType_idx").on(table.spanType),
+  })
 );
 
-// Document summaries - hierarchical summaries at different levels
-export const documentSummaries = mysqlTable(
+export const documentSummaries = pgTable(
   "documentSummaries",
   {
-    id: int().autoincrement().notNull(),
-    documentId: int()
+    id: serial("id").primaryKey(),
+    documentId: integer("documentId")
       .notNull()
       .references(() => documents.id, { onDelete: "cascade" }),
-    sectionId: int().references(() => documentSections.id, {
+    sectionId: integer("sectionId").references(() => documentSections.id, {
       onDelete: "cascade",
     }),
-    summaryLevel: mysqlEnum(["document", "section", "chunk"]).notNull(),
-    summaryStyle: varchar({ length: 32 }).default("concise"), // 'concise', 'detailed', 'bullet'
-    content: text().notNull(),
-    wordCount: int(),
-    compressionRatio: int(), // Original words / summary words * 100
-    modelUsed: varchar({ length: 128 }),
-    preserveCitations: mysqlEnum(["true", "false"]).default("false"),
-    createdAt: timestamp({ mode: "string" })
-      .default("CURRENT_TIMESTAMP")
-      .notNull(),
+    summaryLevel: varchar("summaryLevel", { length: 20 }).notNull(), // document, section, chunk
+    summaryStyle: varchar("summaryStyle", { length: 32 }).default("concise"),
+    content: text("content").notNull(),
+    wordCount: integer("wordCount"),
+    compressionRatio: integer("compressionRatio"),
+    modelUsed: varchar("modelUsed", { length: 128 }),
+    preserveCitations: boolean("preserveCitations").default(false),
+    createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
   },
-  table => [
-    index("documentSummaries_documentId_idx").on(table.documentId),
-    index("documentSummaries_sectionId_idx").on(table.sectionId),
-  ]
+  (table) => ({
+    docIdIdx: index("documentSummaries_documentId_idx").on(table.documentId),
+    sectionIdIdx: index("documentSummaries_sectionId_idx").on(table.sectionId),
+  })
 );
 
-// Document entities - extracted named entities with relationships
-export const documentEntities = mysqlTable(
+export const documentEntities = pgTable(
   "documentEntities",
   {
-    id: int().autoincrement().notNull(),
-    documentId: int()
+    id: serial("id").primaryKey(),
+    documentId: integer("documentId")
       .notNull()
       .references(() => documents.id, { onDelete: "cascade" }),
-    entityType: varchar({ length: 64 }).notNull(), // 'PERSON', 'ORG', 'DATE', 'LOCATION', etc.
-    entityValue: varchar({ length: 512 }).notNull(),
-    normalizedValue: varchar({ length: 512 }), // Canonical form
-    occurrenceCount: int().default(1),
-    firstOccurrence: int(), // Character offset
-    confidence: int(), // 0-100
-    extractorModel: varchar({ length: 128 }),
-    metadata: text(), // JSON: aliases, relationships, context
-    createdAt: timestamp({ mode: "string" })
-      .default("CURRENT_TIMESTAMP")
-      .notNull(),
+    entityType: varchar("entityType", { length: 64 }).notNull(),
+    entityValue: varchar("entityValue", { length: 512 }).notNull(),
+    normalizedValue: varchar("normalizedValue", { length: 512 }),
+    occurrenceCount: integer("occurrenceCount").default(1),
+    firstOccurrence: integer("firstOccurrence"),
+    confidence: integer("confidence"),
+    extractorModel: varchar("extractorModel", { length: 128 }),
+    metadata: text("metadata"),
+    createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
   },
-  table => [
-    index("documentEntities_documentId_idx").on(table.documentId),
-    index("documentEntities_entityType_idx").on(table.entityType),
-    index("documentEntities_entityValue_idx").on(table.entityValue),
-  ]
+  (table) => ({
+    docIdIdx: index("documentEntities_documentId_idx").on(table.documentId),
+    entityTypeIdx: index("documentEntities_entityType_idx").on(
+      table.entityType
+    ),
+    entityValueIdx: index("documentEntities_entityValue_idx").on(
+      table.entityValue
+    ),
+  })
 );
 
-// Evidence chains - chain of custody tracking for forensic evidence
-export const evidenceChains = mysqlTable(
+export const evidenceChains = pgTable(
   "evidenceChains",
   {
-    id: int().autoincrement().notNull(),
-    userId: int()
+    id: serial("id").primaryKey(),
+    userId: integer("userId")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    evidenceId: varchar({ length: 64 }).notNull(), // EVD-xxx-xxx format
-    documentId: int().references(() => documents.id, { onDelete: "set null" }),
-    originalFilename: varchar({ length: 512 }).notNull(),
-    originalHash: varchar({ length: 64 }).notNull(),
-    mimeType: varchar({ length: 128 }),
-    fileSize: int(),
-    chainData: text().notNull(), // JSON: full chain of custody
-    isVerified: mysqlEnum(["true", "false"]).default("true").notNull(),
-    verificationErrors: text(),
-    metadata: text(), // JSON: case number, source, etc.
-    createdAt: timestamp({ mode: "string" })
-      .default("CURRENT_TIMESTAMP")
-      .notNull(),
-    updatedAt: timestamp({ mode: "string" })
-      .defaultNow()
-      .onUpdateNow()
-      .notNull(),
+    evidenceId: varchar("evidenceId", { length: 64 }).notNull(),
+    documentId: integer("documentId").references(() => documents.id, {
+      onDelete: "set null",
+    }),
+    originalFilename: varchar("originalFilename", { length: 512 }).notNull(),
+    originalHash: varchar("originalHash", { length: 64 }).notNull(),
+    mimeType: varchar("mimeType", { length: 128 }),
+    fileSize: integer("fileSize"),
+    chainData: text("chainData").notNull(),
+    isVerified: boolean("isVerified").default(true).notNull(),
+    verificationErrors: text("verificationErrors"),
+    metadata: text("metadata"),
+    createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+    updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
   },
-  table => [
-    index("evidenceChains_evidenceId_idx").on(table.evidenceId),
-    index("evidenceChains_userId_idx").on(table.userId),
-    index("evidenceChains_originalHash_idx").on(table.originalHash),
-  ]
+  (table) => ({
+    evidenceIdIdx: index("evidenceChains_evidenceId_idx").on(table.evidenceId),
+    userIdIdx: index("evidenceChains_userId_idx").on(table.userId),
+    originalHashIdx: index("evidenceChains_originalHash_idx").on(
+      table.originalHash
+    ),
+  })
 );
 
 // ============================================================================
-// SETTINGS & CONFIGURATION TABLES
+// SETTINGS
 // ============================================================================
 
-// User settings - NLP config, workflow config, general preferences
-export const userSettings = mysqlTable("userSettings", {
-  id: int().autoincrement().notNull(),
-  userId: int()
+export const userSettings = pgTable("userSettings", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  settingKey: varchar({ length: 100 }).notNull(),
-  settingValue: text().notNull(),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
+  settingKey: varchar("settingKey", { length: 100 }).notNull(),
+  settingValue: text("settingValue").notNull(),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
 });
 
-// LLM Providers - API keys for cloud LLM services
-export const llmProviders = mysqlTable("llmProviders", {
-  id: int().autoincrement().notNull(),
-  userId: int()
+export const llmProviders = pgTable("llmProviders", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  providerName: varchar({ length: 100 }).notNull(),
-  apiKeyEncrypted: text().notNull(),
-  baseUrl: varchar({ length: 512 }),
-  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-  priority: int().default(0).notNull(),
-  usageCount: int().default(0).notNull(),
-  totalCostCents: int().default(0).notNull(),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
+  providerName: varchar("providerName", { length: 100 }).notNull(),
+  apiKeyEncrypted: text("apiKeyEncrypted").notNull(),
+  baseUrl: varchar("baseUrl", { length: 512 }),
+  isActive: boolean("isActive").default(true).notNull(),
+  priority: integer("priority").default(0).notNull(),
+  usageCount: integer("usageCount").default(0).notNull(),
+  totalCostCents: integer("totalCostCents").default(0).notNull(),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
 });
 
-// Topic codes for message classification
-export const topicCodes = mysqlTable("topicCodes", {
-  id: int().autoincrement().notNull(),
-  userId: int()
+export const topicCodes = pgTable("topicCodes", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  code: varchar({ length: 50 }).notNull(),
-  description: text(),
-  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
+  code: varchar("code", { length: 50 }).notNull(),
+  description: text("description"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
 });
 
-// Platform codes for source platform identification
-export const platformCodes = mysqlTable("platformCodes", {
-  id: int().autoincrement().notNull(),
-  userId: int()
+export const platformCodes = pgTable("platformCodes", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  code: varchar({ length: 50 }).notNull(),
-  description: text(),
-  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
+  code: varchar("code", { length: 50 }).notNull(),
+  description: text("description"),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
 });
 
-// LLM routing rules - which provider for which task type
-export const routingRules = mysqlTable("routingRules", {
-  id: int().autoincrement().notNull(),
-  userId: int()
+export const routingRules = pgTable("routingRules", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
-  taskType: varchar({ length: 100 }).notNull(),
-  primaryProviderId: int()
+  taskType: varchar("taskType", { length: 100 }).notNull(),
+  primaryProviderId: integer("primaryProviderId")
     .notNull()
     .references(() => llmProviders.id, { onDelete: "cascade" }),
-  fallbackProviderId: int().references(() => llmProviders.id, {
-    onDelete: "set null",
-  }),
-  isActive: mysqlEnum(["true", "false"]).default("true").notNull(),
-  createdAt: timestamp({ mode: "string" })
-    .default("CURRENT_TIMESTAMP")
-    .notNull(),
-  updatedAt: timestamp({ mode: "string" }).defaultNow().onUpdateNow().notNull(),
+  fallbackProviderId: integer("fallbackProviderId").references(
+    () => llmProviders.id,
+    { onDelete: "set null" }
+  ),
+  isActive: boolean("isActive").default(true).notNull(),
+  createdAt: timestamp("createdAt", { mode: "string" }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "string" }).defaultNow().notNull(),
 });
 
-// Type exports for TypeScript
+// ============================================================================
+// TYPES
+// ============================================================================
+
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 export type ApiKey = typeof apiKeys.$inferSelect;

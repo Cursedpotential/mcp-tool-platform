@@ -2,7 +2,7 @@
 
 # MCP Preprocessing Tool Shop
 
-A token-efficient preprocessing platform designed for **85%+ token reduction** before data flows into final databases (Neo4j, Supabase, Vector DBs). This is the "Home Depot of preprocessing tools" - an intermediary system where heavy lifting happens so orchestrating agents receive pre-analyzed, structured data.
+A token-efficient preprocessing platform with **multi-store architecture** for forensic legal case management. Features hybrid storage (MySQL + PostgreSQL + Neo4j + Chroma + Redis + Directus) optimized for both high-concurrency site operations and complex evidence analysis.
 
 ## Architecture Overview
 

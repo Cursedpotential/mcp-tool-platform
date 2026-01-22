@@ -195,11 +195,13 @@ export default function Settings() {
     onError: (err: any) => toast.error(err.message),
   });
 
-  trpc.settings.getColabConfig.useQuery(undefined, {
-    onSuccess: (data) => {
-      if (data) setColabConfig(data);
+  const { data: savedColabConfig } = trpc.settings.getColabConfig.useQuery();
+
+  useEffect(() => {
+    if (savedColabConfig) {
+      setColabConfig(savedColabConfig);
     }
-  });
+  }, [savedColabConfig]);
 
   const testColab = trpc.settings.testColabConfig.useMutation({
     onSuccess: (res) => toast.success(res.message),

@@ -86,9 +86,9 @@ export async function createApiKey(
 
   const expiresAt = request.expiresInDays
     ? new Date(Date.now() + request.expiresInDays * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .slice(0, 19)
-        .replace("T", " ")
+      .toISOString()
+      .slice(0, 19)
+      .replace("T", " ")
     : null;
 
   const insertData: InsertApiKey = {
@@ -98,7 +98,7 @@ export async function createApiKey(
     keyPrefix,
     permissions: JSON.stringify(request.permissions || []),
     expiresAt: expiresAt || undefined,
-    isActive: "true",
+    isActive: true,
     usageCount: 0,
   };
 
@@ -159,7 +159,7 @@ export async function revokeApiKey(
 
   const result = await db
     .update(apiKeys)
-    .set({ isActive: "false" })
+    .set({ isActive: false })
     .where(and(eq(apiKeys.id, id), eq(apiKeys.userId, userId)));
 
   return result[0].affectedRows > 0;
@@ -241,7 +241,7 @@ export async function validateApiKey(
 
   const apiKey = result[0];
 
-  if (apiKey.isActive !== "true") {
+  if (!apiKey.isActive) {
     return { valid: false, reason: "Key is inactive" };
   }
 
@@ -351,14 +351,14 @@ export async function getApiKeyUsageStats(apiKeyId: number): Promise<{
     .where(eq(apiKeyUsageLogs.apiKeyId, apiKeyId));
 
   const totalCalls = logs.length;
-  const totalTokens = logs.reduce((sum, log) => sum + (log.tokensUsed || 0), 0);
-  const totalCost = logs.reduce((sum, log) => sum + (log.cost || 0), 0);
+  const totalTokens = logs.reduce((sum: number, log: any) => sum + (log.tokensUsed || 0), 0);
+  const totalCost = logs.reduce((sum: number, log: any) => sum + (log.cost || 0), 0);
   const avgLatencyMs =
     logs.length > 0
-      ? logs.reduce((sum, log) => sum + (log.latencyMs || 0), 0) / logs.length
+      ? logs.reduce((sum: number, log: any) => sum + (log.latencyMs || 0), 0) / logs.length
       : 0;
   const successfulCalls = logs.filter(
-    log => log.statusCode && log.statusCode >= 200 && log.statusCode < 300
+    (log: any) => log.statusCode && log.statusCode >= 200 && log.statusCode < 300
   ).length;
   const successRate = totalCalls > 0 ? successfulCalls / totalCalls : 0;
 

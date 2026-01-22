@@ -3,17 +3,11 @@
  *
  * Pluggable vector store supporting Chroma and FAISS for semantic search
  * and similarity matching in forensic analysis.
- *
- * Features:
- * - ChromaDB integration (primary)
- * - FAISS integration (alternative)
- * - Collection management
- * - Semantic search with metadata filtering
- * - Batch operations
  */
 
 import { ChromaClient, Collection } from 'chromadb';
-import * as faiss from 'faiss-node'; // For FAISS integration
+import * as faiss from 'faiss-node';
+import { cachedEmbeddingService } from '../loaders/real-embedding-service';
 
 // ============================================================================
 // TYPES
@@ -34,10 +28,10 @@ export interface SearchResult {
 
 export interface VectorStoreConfig {
   type: 'chroma' | 'faiss';
-  url?: string; // For Chroma
-  path?: string; // For FAISS
+  url?: string;
+  path?: string;
   collectionName: string;
-  dimension?: number; // For FAISS
+  dimension?: number;
 }
 
 export interface SearchOptions {
@@ -120,13 +114,13 @@ export class ChromaVectorStore implements IVectorStore {
 
     if (results.ids[0] && results.distances && results.documents) {
       for (let i = 0; i < results.ids[0].length; i++) {
-        const score = 1 - (results.distances[0][i] || 0); // Convert distance to similarity
+        const score = 1 - (results.distances[0][i] || 0);
 
         if (score >= threshold) {
           searchResults.push({
             document: {
               id: results.ids[0][i],
-              content: results.documents[0][i],
+              content: results.documents[0][i] || '',
               metadata: includeMetadata ? results.metadatas?.[0]?.[i] || {} : {}
             },
             score,
@@ -152,7 +146,7 @@ export class ChromaVectorStore implements IVectorStore {
 
   async clearCollection(): Promise<void> {
     if (!this.collection) throw new Error('Collection not initialized');
-    await this.collection.delete({}); // Delete all documents
+    await this.collection.delete({});
   }
 }
 
@@ -171,10 +165,8 @@ export class FaissVectorStore implements IVectorStore {
 
   async initialize(): Promise<void> {
     try {
-      // Initialize FAISS index
-      const dimension = this.config.dimension || 384; // Default BERT dimension
-      this.index = new faiss.IndexFlatIP(dimension); // Inner product (cosine similarity)
-
+      const dimension = this.config.dimension || cachedEmbeddingService.getDimensions();
+      this.index = new faiss.IndexFlatIP(dimension);
       console.log(`[FAISS] Initialized index with dimension: ${dimension}`);
     } catch (error) {
       console.error('[FAISS] Initialization failed:', error);
@@ -185,23 +177,17 @@ export class FaissVectorStore implements IVectorStore {
   async addDocuments(documents: VectorDocument[]): Promise<void> {
     if (!this.index) throw new Error('Index not initialized');
 
-    // Note: In a real implementation, you'd generate embeddings here
-    // For now, we'll use placeholder embeddings
-    const embeddings = documents.map(() => {
-      // Placeholder: random embeddings (replace with actual embedding generation)
-      return Array.from({ length: this.config.dimension || 384 }, () => Math.random());
-    });
+    const texts = documents.map(d => d.content);
+    const embeddings = await cachedEmbeddingService.generateEmbeddings(texts);
 
-    // Add to FAISS index
     const embeddingsFloat32 = new Float32Array(embeddings.flat());
     this.index.add(embeddingsFloat32);
 
-    // Store documents
     documents.forEach((doc, i) => {
       this.documents.set(doc.id, { ...doc, embedding: embeddings[i] });
     });
 
-    console.log(`[FAISS] Added ${documents.length} documents`);
+    console.log(`[FAISS] Added ${documents.length} documents with real embeddings`);
   }
 
   async search(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
@@ -209,19 +195,18 @@ export class FaissVectorStore implements IVectorStore {
 
     const { limit = 10, threshold = 0.0 } = options;
 
-    // Note: In a real implementation, you'd generate embedding for query
-    // For now, using placeholder
-    const queryEmbedding = Array.from({ length: this.config.dimension || 384 }, () => Math.random());
+    const queryEmbedding = await cachedEmbeddingService.generateEmbedding(query);
     const queryFloat32 = new Float32Array(queryEmbedding);
 
-    // Search FAISS index
     const { distances, labels } = this.index.search(queryFloat32, limit);
 
     const results: SearchResult[] = [];
+    const docIds = Array.from(this.documents.keys());
+
     for (let i = 0; i < labels.length; i++) {
       const score = distances[i];
       if (score >= threshold) {
-        const docId = Array.from(this.documents.keys())[labels[i]];
+        const docId = docIds[labels[i]];
         const document = this.documents.get(docId);
         if (document) {
           results.push({
@@ -236,7 +221,6 @@ export class FaissVectorStore implements IVectorStore {
   }
 
   async deleteDocuments(ids: string[]): Promise<void> {
-    // FAISS doesn't support deletion easily, so we'll mark as deleted
     ids.forEach(id => {
       const doc = this.documents.get(id);
       if (doc) {
@@ -251,7 +235,6 @@ export class FaissVectorStore implements IVectorStore {
 
   async clearCollection(): Promise<void> {
     this.documents.clear();
-    // Reinitialize index
     await this.initialize();
   }
 }
@@ -280,7 +263,6 @@ export class VectorStoreFactory {
       throw new Error('Vector database is disabled in environment');
     }
 
-    // Default to Chroma
     return new ChromaVectorStore({
       type: 'chroma',
       url: chromaUrl,
@@ -306,9 +288,6 @@ export class ForensicVectorStore {
     this.initialized = true;
   }
 
-  /**
-   * Add forensic documents with automatic metadata
-   */
   async addForensicDocuments(documents: Array<{
     id: string;
     content: string;
@@ -332,9 +311,6 @@ export class ForensicVectorStore {
     await this.store.addDocuments(vectorDocs);
   }
 
-  /**
-   * Semantic search for forensic analysis
-   */
   async searchForensic(
     query: string,
     options: SearchOptions & {
@@ -368,19 +344,13 @@ export class ForensicVectorStore {
     return await this.store.search(query, { ...options, filter });
   }
 
-  /**
-   * Find similar documents for pattern analysis
-   */
   async findSimilarDocuments(documentId: string, limit: number = 5): Promise<SearchResult[]> {
-    // In a real implementation, you'd get the document content and search for similar
-    // For now, this is a placeholder
-    console.warn('[VectorStore] findSimilarDocuments not fully implemented');
+    // This would require a getDocumentById method in the store
+    // For now, let's keep it simple
+    console.warn('[VectorStore] findSimilarDocuments requires document content lookup');
     return [];
   }
 
-  /**
-   * Get collection statistics
-   */
   async getStats(): Promise<{
     totalDocuments: number;
     collections: string[];
@@ -396,7 +366,6 @@ export class ForensicVectorStore {
   }
 }
 
-// Export convenience instances
 export const chromaStore = new ChromaVectorStore({
   type: 'chroma',
   collectionName: 'forensic_analysis'
@@ -408,10 +377,6 @@ export const faissStore = new FaissVectorStore({
 });
 
 export const forensicVectorStore = new ForensicVectorStore();
-
-// ============================================================================
-// MCP TOOL DEFINITIONS
-// ============================================================================
 
 export const vectorStoreTools = [
   {

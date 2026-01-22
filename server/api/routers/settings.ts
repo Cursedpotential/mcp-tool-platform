@@ -1,433 +1,94 @@
-// File: server/api/routers/settings.ts | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
 /**
- * Settings Router - Backend UI Wiring
- * Implements database connections, API key management, and configuration
+ * Settings Router - Complete Implementation
+ *
+ * Manages user settings, LLM provider API keys, topic/platform codes,
+ * workflow configuration, and routing rules.
  */
 
 import { z } from "zod";
 import { protectedProcedure, router } from "../../core/trpc";
+import { getMySqlDb } from "../../core/db.mysql";
 import {
-  getDb,
-  testConnection,
-  checkPgVector,
-  checkPostGIS,
-  checkExtensions,
-} from "../../core/db.postgres";
+  nlpConfig,
+  llmProviders,
+  topicCodes,
+  platformCodes,
+  llmRoutingRules,
+  llmCostTracking,
+} from "../../../drizzle/settings-schema";
+import { users } from "../../../drizzle/schema";
+import { eq, and, desc, sql } from "drizzle-orm";
 import {
   encryptApiKey,
   decryptApiKey,
   maskApiKey,
-  hashApiKey,
 } from "../../core/encryption";
-import { graphitiClient } from "../../mcp/storage/graphiti-client";
 
 // ============================================================================
-// Database Types (mirrors our SQL schema)
+// Default Values
 // ============================================================================
 
-interface ApiKey {
-  id: number;
-  providerName: string;
-  keyMasked: string;
-  baseUrl?: string;
-  isActive: boolean;
-  priority: number;
-  createdAt: Date;
-  lastUsedAt?: Date;
-}
+const DEFAULT_NLP_CONFIG = {
+  similarityThreshold: 75,
+  timeGapMinutes: 30,
+  chunkingStrategy: "semantic" as const,
+  chunkSize: 512,
+  chunkOverlap: 50,
+};
 
-interface DatabaseConfig {
-  type: "postgresql" | "mysql" | "supabase";
-  host: string;
-  port: number;
-  database: string;
-  pgVectorEnabled: boolean;
-  postGisEnabled: boolean;
-  connectionStatus: "connected" | "disconnected" | "error";
-  latency?: number;
-}
+const DEFAULT_WORKFLOW_CONFIG = {
+  passesEnabled: [0, 1, 2, 3, 4, 5, 6],
+  passWeights: {
+    "0": 1.0, // Initial parse
+    "1": 1.0, // Pattern matching
+    "2": 1.0, // Sentiment analysis
+    "3": 1.0, // Entity extraction
+    "4": 1.0, // Relationship mapping
+    "5": 1.0, // Contradiction detection
+    "6": 1.0, // Final aggregation
+  },
+  severityThreshold: 8,
+};
 
-interface NlpConfig {
-  similarityThreshold: number;
-  timeGapMinutes: number;
-  chunkingStrategy:
-    | "fixed_size"
-    | "semantic"
-    | "sliding_window"
-    | "conversation_turn"
-    | "paragraph";
-  chunkSize: number;
-  chunkOverlap: number;
-}
+const DEFAULT_COLAB_CONFIG = {
+  projectId: "",
+  region: "",
+  runtimeTemplate: "",
+  serviceAccountJson: "",
+  notebookPath: "",
+  syncBucket: "",
+};
 
-interface WorkflowConfig {
-  autoProcessing: boolean;
-  defaultWorkflow: string;
-  humanInTheLoop: boolean;
-  checkpointInterval: number;
-}
-
-interface ColabConfig {
-  projectId: string;
-  region: string;
-  runtimeTemplate: string;
-  serviceAccountJson?: string;
-  notebookPath?: string;
-  syncBucket?: string;
-}
-
-const REQUIRED_EXTENSIONS = [
-  "vector",
-  "postgis",
-  "postgis_raster",
-  "postgis_topology",
-  "postgis_sfcgal",
-  "pg_graphql",
-  "pg_net",
-  "pg_cron",
-  "pgsodium",
-  "wrappers",
-  "pgroonga",
-  "rum",
-  "bloom",
-  "pg_trgm",
-  "pg_stat_statements",
-  "citext",
-  "hstore",
-  "uuid-ossp",
-  "pgcrypto",
-  "btree_gin",
-  "btree_gist",
-  "pg_repack",
-  "pgmq",
-  "pg_walinspect",
-  "pgaudit",
-  "pg_prewarm",
-  "pg_hashids",
-  "pg_jsonschema",
-  "pg_stat_statements",
-];
 
 // ============================================================================
-// Helper Functions
-// ============================================================================
-
-async function getUserId(ctx: any): Promise<number> {
-  // In production, get user ID from session/JWT
-  // For now, return default user ID
-  return 1;
-}
-
-async function getApiKeysFromDb(userId: number): Promise<ApiKey[]> {
-  const db = await getDb();
-  if (!db) return [];
-
-  try {
-    // This would query from your api_keys table
-    // For now, return mock data structure
-    return [];
-  } catch {
-    return [];
-  }
-}
-
-async function saveApiKeyToDb(
-  userId: number,
-  providerName: string,
-  encryptedKey: string,
-  baseUrl?: string
-): Promise<number> {
-  const db = await getDb();
-  if (!db) throw new Error("Database not available");
-
-  // In production, insert into api_keys table
-  const keyHash = hashApiKey(encryptedKey);
-  const keyPrefix = maskApiKey(encryptedKey, 4);
-
-  console.log(`[Settings] Saving API key for ${providerName}`);
-  return 1; // Return new key ID
-}
-
-// ============================================================================
-// Router Implementation
+// Settings Router
 // ============================================================================
 
 export const settingsRouter = router({
   // ============================================================================
-  // Database Connection Testing
-  // ============================================================================
-
-  testConnection: protectedProcedure
-    .input(
-      z
-        .object({
-          connectionString: z.string().optional(),
-        })
-        .optional()
-    )
-    .mutation(async ({ ctx, input }) => {
-      console.log("[Settings] Testing database connection...");
-
-      const result = await testConnection();
-
-      if (result.success) {
-        // Check for extensions
-        const pgVector = await checkPgVector();
-        const postGis = await checkPostGIS();
-
-        return {
-          success: true,
-          latency: result.latency,
-          extensions: {
-            pgVector,
-            postGis,
-          },
-          message: "Database connected successfully",
-        };
-      } else {
-        return {
-          success: false,
-          error: result.error,
-          message: "Failed to connect to database",
-        };
-      }
-    }),
-
-  getDatabaseConfig: protectedProcedure.query(
-    async ({ ctx }): Promise<DatabaseConfig> => {
-      console.log("[Settings] Fetching database configuration...");
-
-      const connectionTest = await testConnection();
-
-      return {
-        type: "postgresql",
-        host: process.env.POSTGRES_HOST || "localhost",
-        port: parseInt(process.env.POSTGRES_PORT || "5432"),
-        database: process.env.POSTGRES_DB || "salem",
-        pgVectorEnabled: await checkPgVector(),
-        postGisEnabled: await checkPostGIS(),
-        connectionStatus: connectionTest.success ? "connected" : "disconnected",
-        latency: connectionTest.latency,
-      };
-    }
-  ),
-
-  testGraphConnection: protectedProcedure.mutation(async () => {
-    const result = await graphitiClient.testConnection();
-    return result;
-  }),
-
-  listPostgresExtensions: protectedProcedure.query(async () => {
-    const { installed, missing } = await checkExtensions(REQUIRED_EXTENSIONS);
-    return { installed, missing };
-  }),
-
-  // ============================================================================
-  // Colab Enterprise (headless GPU jobs)
-  // ============================================================================
-
-  testColab: protectedProcedure
-    .input(
-      z.object({
-        projectId: z.string().min(1),
-        region: z.string().min(1),
-        runtimeTemplate: z.string().min(1),
-        serviceAccountJson: z.string().min(1).optional(),
-        notebookPath: z.string().optional(),
-        syncBucket: z.string().optional(),
-      })
-    )
-    .mutation(
-      async ({ input }): Promise<{ success: boolean; message: string }> => {
-        console.log("[Settings] Testing Colab Enterprise config");
-        // Stub: assume success; real implementation would call Colab API
-        return {
-          success: true,
-          message: `Colab config accepted for project ${input.projectId} in ${input.region}`,
-        };
-      }
-    ),
-
-  saveColabConfig: protectedProcedure
-    .input(
-      z.object({
-        projectId: z.string().min(1),
-        region: z.string().min(1),
-        runtimeTemplate: z.string().min(1),
-        serviceAccountJson: z.string().min(1).optional(),
-        notebookPath: z.string().optional(),
-        syncBucket: z.string().optional(),
-      })
-    )
-    .mutation(
-      async ({ input }): Promise<{ success: boolean; message: string }> => {
-        console.log("[Settings] Saving Colab Enterprise config");
-        // Stub persistence; to be stored in DB/secret manager later
-        return {
-          success: true,
-          message: `Colab config saved for project ${input.projectId}`,
-        };
-      }
-    ),
-
-  // ============================================================================
-  // API Keys (LLM Providers)
-  // ============================================================================
-
-  getApiKeys: protectedProcedure.query(async ({ ctx }): Promise<ApiKey[]> => {
-    console.log("[Settings] Fetching API keys...");
-    const userId = await getUserId(ctx);
-
-    const apiKeys = await getApiKeysFromDb(userId);
-
-    // If no keys in database, return mock data for demonstration
-    if (apiKeys.length === 0) {
-      return [
-        {
-          id: 1,
-          providerName: "OpenAI",
-          keyMasked: "sk-...abcd",
-          baseUrl: "https://api.openai.com/v1",
-          isActive: true,
-          priority: 1,
-          createdAt: new Date(),
-        },
-        {
-          id: 2,
-          providerName: "Anthropic",
-          keyMasked: "sk-ant...xyz",
-          baseUrl: "https://api.anthropic.com",
-          isActive: true,
-          priority: 2,
-          createdAt: new Date(),
-        },
-      ];
-    }
-
-    return apiKeys;
-  }),
-
-  addApiKey: protectedProcedure
-    .input(
-      z.object({
-        providerName: z.string().min(1),
-        apiKey: z.string().min(1),
-        baseUrl: z.string().url().optional(),
-        priority: z.number().min(1).max(10).optional(),
-      })
-    )
-    .mutation(
-      async ({
-        ctx,
-        input,
-      }): Promise<{ success: boolean; keyId?: number; error?: string }> => {
-        console.log(`[Settings] Adding API key for ${input.providerName}...`);
-
-        try {
-          const userId = await getUserId(ctx);
-
-          // Encrypt the API key before storage
-          const encryptedKey = encryptApiKey(input.apiKey);
-
-          const keyId = await saveApiKeyToDb(
-            userId,
-            input.providerName,
-            encryptedKey,
-            input.baseUrl
-          );
-
-          return {
-            success: true,
-            keyId,
-          };
-        } catch (error) {
-          console.error("[Settings] Failed to add API key:", error);
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error",
-          };
-        }
-      }
-    ),
-
-  updateApiKey: protectedProcedure
-    .input(
-      z.object({
-        id: z.number(),
-        apiKey: z.string().min(1).optional(),
-        baseUrl: z.string().url().optional(),
-        isActive: z.boolean().optional(),
-        priority: z.number().min(1).max(10).optional(),
-      })
-    )
-    .mutation(
-      async ({ ctx, input }): Promise<{ success: boolean; error?: string }> => {
-        console.log(`[Settings] Updating API key ${input.id}...`);
-
-        try {
-          const userId = await getUserId(ctx);
-
-          // In production, update the database
-          console.log(
-            `[Settings] Updated API key ${input.id} for user ${userId}`
-          );
-
-          return { success: true };
-        } catch (error) {
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error",
-          };
-        }
-      }
-    ),
-
-  deleteApiKey: protectedProcedure
-    .input(
-      z.object({
-        id: z.number(),
-      })
-    )
-    .mutation(
-      async ({ ctx, input }): Promise<{ success: boolean; error?: string }> => {
-        console.log(`[Settings] Deleting API key ${input.id}...`);
-
-        try {
-          const userId = await getUserId(ctx);
-
-          // In production, delete from database
-          console.log(
-            `[Settings] Deleted API key ${input.id} for user ${userId}`
-          );
-
-          return { success: true };
-        } catch (error) {
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error",
-          };
-        }
-      }
-    ),
-
-  // ============================================================================
   // NLP Configuration
   // ============================================================================
 
-  getNlpConfig: protectedProcedure.query(
-    async ({ ctx }): Promise<NlpConfig> => {
-      console.log("[Settings] Fetching NLP configuration...");
+  getNlpConfig: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getMySqlDb();
+    if (!db) return DEFAULT_NLP_CONFIG;
 
-      // Return default NLP config
-      return {
-        similarityThreshold: 70,
-        timeGapMinutes: 5,
-        chunkingStrategy: "semantic",
-        chunkSize: 512,
-        chunkOverlap: 50,
-      };
-    }
-  ),
+    const config = await db
+      .select()
+      .from(nlpConfig)
+      .where(eq(nlpConfig.userId, ctx.user.id))
+      .limit(1);
+
+    if (config.length === 0) return DEFAULT_NLP_CONFIG;
+
+    return {
+      similarityThreshold: config[0].similarityThreshold,
+      timeGapMinutes: config[0].timeGapMinutes,
+      chunkingStrategy: config[0].chunkingStrategy,
+      chunkSize: config[0].chunkSize,
+      chunkOverlap: config[0].chunkOverlap,
+    };
+  }),
 
   updateNlpConfig: protectedProcedure
     .input(
@@ -445,75 +106,689 @@ export const settingsRouter = router({
         chunkOverlap: z.number().min(0).max(512),
       })
     )
-    .mutation(
-      async ({ ctx, input }): Promise<{ success: boolean; error?: string }> => {
-        console.log("[Settings] Updating NLP configuration...");
+    .mutation(async ({ ctx, input }) => {
+      const db = await getMySqlDb();
+      if (!db) throw new Error("Database not available");
 
-        try {
-          const userId = await getUserId(ctx);
+      const existing = await db
+        .select()
+        .from(nlpConfig)
+        .where(eq(nlpConfig.userId, ctx.user.id))
+        .limit(1);
 
-          // In production, save to database
-          console.log(
-            `[Settings] Updated NLP config for user ${userId}:`,
-            input
-          );
-
-          return { success: true };
-        } catch (error) {
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error",
-          };
-        }
+      if (existing.length > 0) {
+        await db
+          .update(nlpConfig)
+          .set(input)
+          .where(eq(nlpConfig.id, existing[0].id));
+      } else {
+        await db.insert(nlpConfig).values({
+          userId: ctx.user.id,
+          ...input,
+        });
       }
-    ),
+
+      return input;
+    }),
+
+  // ============================================================================
+  // API Keys (LLM Providers)
+  // ============================================================================
+
+  getApiKeys: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getMySqlDb();
+    if (!db) return [];
+
+    const providers = await db
+      .select()
+      .from(llmProviders)
+      .where(eq(llmProviders.userId, ctx.user.id))
+      .orderBy(desc(llmProviders.priority));
+
+    return providers.map((p) => ({
+      id: p.id,
+      providerName: p.providerName,
+      apiKeyMasked: maskApiKey(decryptApiKey(p.apiKeyEncrypted)),
+      baseUrl: p.baseUrl,
+      isActive: p.isActive === "true",
+      priority: p.priority,
+    }));
+  }),
+
+  addApiKey: protectedProcedure
+    .input(
+      z.object({
+        providerName: z.string(),
+        apiKey: z.string(),
+        baseUrl: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getMySqlDb();
+      if (!db) throw new Error("Database not available");
+
+      const encrypted = encryptApiKey(input.apiKey);
+
+      const [result] = await db.insert(llmProviders).values({
+        userId: ctx.user.id,
+        providerName: input.providerName,
+        apiKeyEncrypted: encrypted,
+        baseUrl: input.baseUrl || null,
+        isActive: "true",
+        priority: 0,
+      });
+
+      return {
+        id: result.insertId,
+        providerName: input.providerName,
+        apiKeyMasked: maskApiKey(input.apiKey),
+      };
+    }),
+
+  updateApiKey: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        apiKey: z.string().optional(),
+        baseUrl: z.string().optional(),
+        isActive: z.boolean().optional(),
+        priority: z.number().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getMySqlDb();
+      if (!db) throw new Error("Database not available");
+
+      // Verify ownership
+      const existing = await db
+        .select()
+        .from(llmProviders)
+        .where(
+          and(eq(llmProviders.id, input.id), eq(llmProviders.userId, ctx.user.id))
+        )
+        .limit(1);
+
+      if (existing.length === 0) {
+        throw new Error("API key not found or not authorized");
+      }
+
+      const updateData: any = {};
+      if (input.apiKey) updateData.apiKeyEncrypted = encryptApiKey(input.apiKey);
+      if (input.baseUrl !== undefined) updateData.baseUrl = input.baseUrl;
+      if (input.isActive !== undefined)
+        updateData.isActive = input.isActive ? "true" : "false";
+      if (input.priority !== undefined) updateData.priority = input.priority;
+
+      await db
+        .update(llmProviders)
+        .set(updateData)
+        .where(eq(llmProviders.id, input.id));
+
+      return { success: true };
+    }),
+
+  deleteApiKey: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getMySqlDb();
+      if (!db) throw new Error("Database not available");
+
+      await db
+        .delete(llmProviders)
+        .where(
+          and(eq(llmProviders.id, input.id), eq(llmProviders.userId, ctx.user.id))
+        );
+
+      return { success: true };
+    }),
+
+  testSystemConnectivity: protectedProcedure
+    .input(
+      z.object({
+        type: z.enum(["mysql", "neo4j", "llm_provider"]),
+        providerId: z.number().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const { type, providerId } = input;
+      let result = { success: false, message: "" };
+
+      try {
+        if (type === "mysql") {
+          const db = await getMySqlDb();
+          if (!db) throw new Error("MySQL database not available");
+          await db.execute(sql`SELECT 1`);
+          result = { success: true, message: "MySQL connection successful" };
+        } else if (type === "neo4j") {
+          const neo4j = await import("neo4j-driver");
+          const uri = process.env.NEO4J_URI;
+          const user = process.env.NEO4J_USERNAME;
+          const password = process.env.NEO4J_PASSWORD;
+
+          if (!uri || !user || !password) throw new Error("Missing Neo4j credentials in environment");
+
+          const driver = neo4j.driver(uri, neo4j.auth.basic(user, password));
+          const session = driver.session();
+
+          try {
+            await session.run("RETURN 1");
+            result = { success: true, message: "Neo4j connection successful" };
+          } finally {
+            await session.close();
+            await driver.close();
+          }
+
+        } else if (type === "llm_provider") {
+          if (!providerId) throw new Error("Provider ID required for LLM test");
+
+          const db = await getMySqlDb();
+          if (!db) throw new Error("Database not available");
+
+          const provider = await db
+            .select()
+            .from(llmProviders)
+            .where(eq(llmProviders.id, providerId))
+            .limit(1);
+
+          if (provider.length === 0) throw new Error("Provider not found");
+
+          const apiKey = decryptApiKey(provider[0].apiKeyEncrypted);
+          const baseUrl = provider[0].baseUrl || "https://api.openai.com/v1"; // Default fallbacks
+
+          // Simple test request (list models is standard usually, or a tiny completion)
+          // Using axios directly to avoid dependency on specific SDKs
+          const axios = (await import("axios")).default;
+
+          // Construct request based on likely standards (OpenAI-compatible)
+          await axios.get(`${baseUrl}/models`, {
+            headers: { Authorization: `Bearer ${apiKey}` },
+          });
+
+          result = { success: true, message: `Connected to ${provider[0].providerName}` };
+        }
+      } catch (error: any) {
+        result = {
+          success: false,
+          message: `Connection failed: ${error.message || "Unknown error"}`
+        };
+      }
+
+      return result;
+    }),
+
+  // ============================================================================
+  // Database Connections
+  // ============================================================================
+
+  getDatabaseConfig: protectedProcedure.query(async ({ ctx }) => {
+    // Return masked versions of database connection info
+    return {
+      mysql: {
+        host: process.env.MYSQL_HOST || "localhost",
+        user: process.env.MYSQL_USER || "root",
+      },
+      neo4j: {
+        url: process.env.NEO4J_URI
+          ? maskApiKey(process.env.NEO4J_URI)
+          : "Not configured",
+        username: process.env.NEO4J_USERNAME || "Not configured",
+      },
+      chroma: {
+        path: process.env.CHROMA_PATH || "./chroma_data",
+      },
+    };
+  }),
 
   // ============================================================================
   // Workflow Configuration
   // ============================================================================
 
-  getWorkflowConfig: protectedProcedure.query(
-    async ({ ctx }): Promise<WorkflowConfig> => {
-      console.log("[Settings] Fetching workflow configuration...");
+  getWorkflowConfig: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getMySqlDb();
+    if (!db) return DEFAULT_WORKFLOW_CONFIG;
 
-      return {
-        autoProcessing: false,
-        defaultWorkflow: "forensic-analysis",
-        humanInTheLoop: true,
-        checkpointInterval: 100,
-      };
+    const workflows = await db
+      .select()
+      .from(workflowDefinitions)
+      .where(
+        and(
+          eq(workflowDefinitions.userId, ctx.user.id),
+          eq(workflowDefinitions.isActive, "true")
+        )
+      )
+      .limit(1);
+
+    if (workflows.length === 0) return DEFAULT_WORKFLOW_CONFIG;
+
+    try {
+      return JSON.parse(workflows[0].workflowJson);
+    } catch {
+      return DEFAULT_WORKFLOW_CONFIG;
     }
-  ),
+  }),
 
   updateWorkflowConfig: protectedProcedure
     .input(
       z.object({
-        autoProcessing: z.boolean(),
-        defaultWorkflow: z.string(),
-        humanInTheLoop: z.boolean(),
-        checkpointInterval: z.number().min(10).max(1000),
+        workflowName: z.string(),
+        workflowJson: z.string(),
+        isActive: z.boolean().optional(),
       })
     )
-    .mutation(
-      async ({ ctx, input }): Promise<{ success: boolean; error?: string }> => {
-        console.log("[Settings] Updating workflow configuration...");
+    .mutation(async ({ ctx, input }) => {
+      const db = await getMySqlDb();
+      if (!db) throw new Error("Database not available");
 
+      const existing = await db
+        .select()
+        .from(workflowDefinitions)
+        .where(
+          and(
+            eq(workflowDefinitions.userId, ctx.user.id),
+            eq(workflowDefinitions.workflowName, input.workflowName)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        await db
+          .update(workflowDefinitions)
+          .set({
+            workflowJson: input.workflowJson,
+            isActive: input.isActive ? "true" : "false",
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          })
+          .where(eq(workflowDefinitions.id, existing[0].id));
+      } else {
+        await db.insert(workflowDefinitions).values({
+          userId: ctx.user.id,
+          workflowName: input.workflowName,
+          workflowJson: input.workflowJson,
+          isActive: input.isActive ? "true" : "false",
+        });
+      }
+
+      return input;
+    }),
+
+  // ============================================================================
+  // Colab Enterprise Configuration
+  // ============================================================================
+
+  getColabConfig: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getMySqlDb();
+    if (!db) return DEFAULT_COLAB_CONFIG;
+
+    const agents = await db
+      .select()
+      .from(agentConfigurations)
+      .where(
+        and(
+          eq(agentConfigurations.userId, ctx.user.id),
+          eq(agentConfigurations.agentType, "colab")
+        )
+      )
+      .limit(1);
+
+    if (agents.length === 0) return DEFAULT_COLAB_CONFIG;
+
+    try {
+      return JSON.parse(agents[0].memoryConfig || "{}");
+    } catch {
+      return DEFAULT_COLAB_CONFIG;
+    }
+  }),
+
+  saveColabConfig: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+        region: z.string(),
+        runtimeTemplate: z.string(),
+        serviceAccountJson: z.string().optional(),
+        notebookPath: z.string().optional(),
+        syncBucket: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getMySqlDb();
+      if (!db) throw new Error("Database not available");
+
+      const existing = await db
+        .select()
+        .from(agentConfigurations)
+        .where(
+          and(
+            eq(agentConfigurations.userId, ctx.user.id),
+            eq(agentConfigurations.agentType, "colab")
+          )
+        )
+        .limit(1);
+
+      const memoryConfig = JSON.stringify(input);
+
+      if (existing.length > 0) {
+        await db
+          .update(agentConfigurations)
+          .set({
+            memoryConfig,
+            updatedAt: sql`CURRENT_TIMESTAMP`,
+          })
+          .where(eq(agentConfigurations.id, existing[0].id));
+      } else {
+        await db.insert(agentConfigurations).values({
+          userId: ctx.user.id,
+          agentName: "Colab Enterprise",
+          agentType: "colab",
+          tools: "[]",
+          memoryConfig,
+          isActive: "true",
+        });
+      }
+
+      return { success: true, message: "Colab configuration saved" };
+    }),
+
+  testColabConfig: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+        region: z.string(),
+        runtimeTemplate: z.string(),
+        serviceAccountJson: z.string().optional(),
+        notebookPath: z.string().optional(),
+        syncBucket: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      // Perform validation check
+      if (!input.projectId || !input.region) {
+        throw new Error("Project ID and Region are required");
+      }
+
+      // Validate Service Account JSON if provided
+      if (input.serviceAccountJson) {
         try {
-          const userId = await getUserId(ctx);
-
-          // In production, save to database
-          console.log(
-            `[Settings] Updated workflow config for user ${userId}:`,
-            input
-          );
-
-          return { success: true };
-        } catch (error) {
-          return {
-            success: false,
-            error: error instanceof Error ? error.message : "Unknown error",
-          };
+          const sa = JSON.parse(input.serviceAccountJson);
+          if (!sa.project_id || !sa.private_key || !sa.client_email) {
+            throw new Error("Invalid Service Account JSON format");
+          }
+          if (sa.project_id !== input.projectId) {
+            throw new Error("Service Account project_id does not match configuration");
+          }
+        } catch (e: any) {
+          throw new Error(`Service Account JSON error: ${e.message}`);
         }
       }
-    ),
+
+      return { success: true, message: "Colab configuration is valid (Validation Only)" };
+    }),
+
+  // ============================================================================
+  // Topic & Platform Codes
+  // ============================================================================
+
+  getTopicCodes: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getMySqlDb();
+    if (!db) return [];
+
+    const codes = await db
+      .select()
+      .from(topicCodes)
+      .where(eq(topicCodes.userId, ctx.user.id))
+      .orderBy(topicCodes.code);
+
+    return codes.map((c) => ({
+      id: c.id,
+      code: c.code,
+      description: c.description,
+      isActive: c.isActive === "true",
+    }));
+  }),
+
+  addTopicCode: protectedProcedure
+    .input(
+      z.object({
+        code: z.string(),
+        description: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getMySqlDb();
+      if (!db) throw new Error("Database not available");
+
+      const [result] = await db.insert(topicCodes).values({
+        userId: ctx.user.id,
+        code: input.code,
+        description: input.description || null,
+        isActive: "true",
+      });
+
+      return {
+        id: result.insertId,
+        code: input.code,
+        description: input.description || null,
+        isActive: true,
+      };
+    }),
+
+  updateTopicCode: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        code: z.string().optional(),
+        description: z.string().optional(),
+        isActive: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getMySqlDb();
+      if (!db) throw new Error("Database not available");
+
+      const updateData: any = {};
+      if (input.code !== undefined) updateData.code = input.code;
+      if (input.description !== undefined)
+        updateData.description = input.description;
+      if (input.isActive !== undefined)
+        updateData.isActive = input.isActive ? "true" : "false";
+
+      await db
+        .update(topicCodes)
+        .set(updateData)
+        .where(
+          and(eq(topicCodes.id, input.id), eq(topicCodes.userId, ctx.user.id))
+        );
+
+      return { success: true };
+    }),
+
+  deleteTopicCode: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const db = await getMySqlDb();
+      if (!db) throw new Error("Database not available");
+
+      await db
+        .delete(topicCodes)
+        .where(
+          and(eq(topicCodes.id, input.id), eq(topicCodes.userId, ctx.user.id))
+        );
+
+      return { success: true };
+    }),
+
+  getPlatformCodes: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getMySqlDb();
+    if (!db) return [];
+
+    const codes = await db
+      .select()
+      .from(platformCodes)
+      .where(eq(platformCodes.userId, ctx.user.id))
+      .orderBy(platformCodes.code);
+
+    return codes.map((c) => ({
+      id: c.id,
+      code: c.code,
+      description: c.description,
+      isActive: c.isActive === "true",
+    }));
+  }),
+
+  addPlatformCode: protectedProcedure
+    .input(
+      z.object({
+        code: z.string(),
+        description: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getMySqlDb();
+      if (!db) throw new Error("Database not available");
+
+      const [result] = await db.insert(platformCodes).values({
+        userId: ctx.user.id,
+        code: input.code,
+        description: input.description || null,
+        isActive: "true",
+      });
+
+      return {
+        id: result.insertId,
+        code: input.code,
+        description: input.description || null,
+        isActive: true,
+      };
+    }),
+
+  // ============================================================================
+  // LLM Routing Rules
+  // ============================================================================
+
+  getRoutingRules: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getMySqlDb();
+    if (!db) return [];
+
+    const rules = await db
+      .select()
+      .from(llmRoutingRules)
+      .where(eq(llmRoutingRules.userId, ctx.user.id));
+
+    // Get provider names for the rules
+    const providers = await db
+      .select()
+      .from(llmProviders)
+      .where(eq(llmProviders.userId, ctx.user.id));
+
+    const providerMap = new Map(providers.map((p) => [p.id, p.providerName]));
+
+    return rules.map((r) => ({
+      id: r.id,
+      taskType: r.taskType,
+      primaryProvider: providerMap.get(r.primaryProviderId) || "Unknown",
+      fallbackProvider: r.fallbackProviderId
+        ? providerMap.get(r.fallbackProviderId) || null
+        : null,
+      isActive: r.isActive === "true",
+    }));
+  }),
+
+  updateRoutingRules: protectedProcedure
+    .input(
+      z.object({
+        rules: z.array(
+          z.object({
+            taskType: z.string(),
+            primaryProviderId: z.number(),
+            fallbackProviderId: z.number().optional(),
+          })
+        ),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getMySqlDb();
+      if (!db) throw new Error("Database not available");
+
+      // Delete existing rules for this user
+      await db
+        .delete(llmRoutingRules)
+        .where(eq(llmRoutingRules.userId, ctx.user.id));
+
+      // Insert new rules
+      if (input.rules.length > 0) {
+        await db.insert(llmRoutingRules).values(
+          input.rules.map((rule) => ({
+            userId: ctx.user.id,
+            taskType: rule.taskType,
+            primaryProviderId: rule.primaryProviderId,
+            fallbackProviderId: rule.fallbackProviderId || null,
+            isActive: "true",
+          }))
+        );
+      }
+
+      return { success: true };
+    }),
+
+  // ============================================================================
+  // Cost Tracking
+  // ============================================================================
+
+  getCostTracking: protectedProcedure
+    .input(
+      z.object({
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        providerId: z.number().optional(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      const db = await getMySqlDb();
+      if (!db) return { totalCostCents: 0, byProvider: {}, byTaskType: {} };
+
+      // Build where clause
+      const whereClauses = [eq(llmCostTracking.userId, ctx.user.id)];
+      if (input.providerId) {
+        whereClauses.push(eq(llmCostTracking.providerId, input.providerId));
+      }
+      if (input.startDate) {
+        whereClauses.push(sql`${llmCostTracking.timestamp} >= ${input.startDate}`);
+      }
+      if (input.endDate) {
+        whereClauses.push(sql`${llmCostTracking.timestamp} <= ${input.endDate}`);
+      }
+
+      const costs = await db
+        .select()
+        .from(llmCostTracking)
+        .where(and(...whereClauses));
+
+      const providers = await db
+        .select()
+        .from(llmProviders)
+        .where(eq(llmProviders.userId, ctx.user.id));
+
+      const providerMap = new Map(providers.map((p) => [p.id, p.providerName]));
+
+      const totalCostCents = costs.reduce((acc, curr) => acc + curr.costCents, 0);
+
+      const byProvider: Record<string, number> = {};
+      const byTaskType: Record<string, number> = {};
+
+      costs.forEach((c) => {
+        const providerName = providerMap.get(c.providerId) || "Unknown";
+        byProvider[providerName] = (byProvider[providerName] || 0) + c.costCents;
+
+        if (c.taskType) {
+          byTaskType[c.taskType] =
+            (byTaskType[c.taskType] || 0) + c.costCents;
+        }
+      });
+
+      return {
+        totalCostCents,
+        byProvider,
+        byTaskType,
+      };
+    }),
 });

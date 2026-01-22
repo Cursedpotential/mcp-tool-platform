@@ -17,7 +17,8 @@ import { execSync } from 'child_process';
 import { readFileSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
-import * as pdfParse from 'pdf-parse';
+// @ts-ignore
+import pdfParse from 'pdf-parse';
 
 // ============================================================================
 // TYPES
@@ -28,6 +29,8 @@ export interface OCRResult {
   confidence: number;
   language?: string;
   regions?: TextRegion[];
+  handwritingDetected?: boolean;
+  handwritingConfidence?: number;
 }
 
 export interface TextRegion {
@@ -62,7 +65,7 @@ export class OCRProcessor {
       execSync('tesseract --version', { stdio: 'pipe' });
       this.tesseractAvailable = true;
       console.log('[OCR] Tesseract OCR engine available');
-    } catch (error) {
+    } catch (error: any) {
       console.warn('[OCR] Tesseract OCR engine not available:', error.message);
       this.tesseractAvailable = false;
     }
@@ -117,14 +120,15 @@ export class OCRProcessor {
         regions = hocrResult.regions;
         confidence = hocrResult.confidence;
 
-      } catch (error) {
-        console.warn('[OCR] Could not read OCR output files:', error);
+      } catch (error: any) {
+        console.warn('[OCR] Could not read OCR output files:', error.message);
       }
 
       // Clean up temp files
       try {
+        // Use cross-platform cleanup if needed, but here assuming Windows given user_information
         execSync(`del "${tempFile}" "${textFile}" "${hocrFile}"`, { stdio: 'pipe' });
-      } catch (cleanupError) {
+      } catch (cleanupError: any) {
         // Ignore cleanup errors
       }
 
@@ -135,7 +139,7 @@ export class OCRProcessor {
         regions
       };
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('[OCR] Text extraction failed:', error);
       throw new Error(`OCR text extraction failed: ${error.message}`);
     }
@@ -155,7 +159,8 @@ export class OCRProcessor {
       // Use pdf-parse to extract text from PDF
       const pdfDataBuffer = Buffer.isBuffer(pdfData) ? pdfData : Buffer.from(pdfData);
 
-      const pdfResult = await pdfParse(pdfDataBuffer);
+      // @ts-ignore - Handle ESM Interop for pdf-parse
+      const pdfResult = await (pdfParse.default || pdfParse)(pdfDataBuffer);
 
       // Extract text from all pages or specific pages
       let extractedText = pdfResult.text;
@@ -163,8 +168,6 @@ export class OCRProcessor {
 
       // If specific pages requested, filter the content
       if (pages && pages.length > 0) {
-        // pdf-parse gives us all text at once, so we can't easily split by pages
-        // For now, return all text but note the requested pages
         console.log(`[OCR] Requested pages ${pages.join(', ')} but extracted all ${totalPages} pages`);
       }
 
@@ -175,13 +178,13 @@ export class OCRProcessor {
 
       return {
         text: extractedText.trim(),
-        confidence: 0.9, // High confidence for native PDF text extraction
+        confidence: 0.9,
         language,
-        pages: [], // Could be enhanced to split by pages
+        pages: [],
         totalPages
       };
 
-    } catch (error) {
+    } catch (error: any) {
       console.error('[OCR] PDF extraction failed:', error);
       throw new Error(`PDF OCR extraction failed: ${error.message}`);
     }
@@ -199,29 +202,19 @@ export class OCRProcessor {
    * Detect handwritten text using pattern analysis and OCR confidence
    */
   async detectHandwriting(imageData: Buffer | string): Promise<OCRResult> {
-    // First, extract text normally
-    const ocrResult = await this.extractText(imageData, { language: 'eng', psm: 6 }); // PSM 6 is good for uniform text
+    const ocrResult = await this.extractText(imageData, { language: 'eng', psm: 6 });
 
-    // Analyze the result for handwriting characteristics
     const text = ocrResult.text;
     const confidence = ocrResult.confidence;
 
-    // Simple heuristics for handwriting detection:
-    // 1. Lower OCR confidence often indicates handwriting
-    // 2. More variable character spacing
-    // 3. Connected characters
-    // 4. Slanted or irregular text
-
     let handwritingScore = 0;
 
-    // Low confidence suggests handwriting
     if (confidence < 0.7) {
       handwritingScore += 2;
     } else if (confidence < 0.85) {
       handwritingScore += 1;
     }
 
-    // Check for irregular spacing patterns (handwriting often has variable spacing)
     const words = text.split(/\s+/);
     if (words.length > 5) {
       const wordLengths = words.map(w => w.length);
@@ -229,50 +222,41 @@ export class OCRProcessor {
       const variance = wordLengths.reduce((sum, len) => sum + Math.pow(len - avgLength, 2), 0) / wordLengths.length;
       const stdDev = Math.sqrt(variance);
 
-      // High standard deviation in word lengths suggests handwriting
       if (stdDev > avgLength * 0.5) {
         handwritingScore += 1;
       }
     }
 
-    // Check for common handwriting indicators
     const handwritingIndicators = [
-      /\b[iI]\b/g, // Single letters often handwritten
-      /[a-z]{3,}/g, // Lowercase sequences
-      /[A-Z][a-z]+/g, // Mixed case words
+      /\b[iI]\b/g,
+      /[a-z]{3,}/g,
+      /[A-Z][a-z]+/g,
     ];
 
     handwritingIndicators.forEach(pattern => {
       const matches = text.match(pattern);
-      if (matches && matches.length > text.length / 100) { // More than 1% matches
+      if (matches && matches.length > text.length / 100) {
         handwritingScore += 0.5;
       }
     });
 
-    // Determine if this is likely handwriting
     const isLikelyHandwriting = handwritingScore >= 2;
-
-    console.log(`[OCR] Handwriting analysis: score=${handwritingScore.toFixed(1)}, confidence=${confidence.toFixed(2)}, likely=${isLikelyHandwriting}`);
 
     return {
       text: ocrResult.text,
-      confidence: isLikelyHandwriting ? Math.max(confidence * 0.8, 0.3) : confidence, // Reduce confidence for handwriting
+      confidence: isLikelyHandwriting ? Math.max(confidence * 0.8, 0.3) : confidence,
       language: ocrResult.language,
       regions: ocrResult.regions,
       handwritingDetected: isLikelyHandwriting,
-      handwritingConfidence: Math.min(handwritingScore / 4, 1) // Normalize to 0-1
-    } as OCRResult & { handwritingDetected: boolean; handwritingConfidence: number };
+      handwritingConfidence: Math.min(handwritingScore / 4, 1)
+    };
   }
 
-  /**
-   * Parse HOCR output for text regions and confidence
-   */
   private parseHOCR(hocrContent: string): { regions: TextRegion[]; confidence: number } {
     const regions: TextRegion[] = [];
     let totalConfidence = 0;
     let regionCount = 0;
 
-    // Basic HOCR parsing - would need more robust implementation
     const titleRegex = /title="bbox (\d+) (\d+) (\d+) (\d+).*?confidence: (\d+)/g;
     const textRegex = /<span[^>]*>([^<]+)<\/span>/g;
 
@@ -284,14 +268,13 @@ export class OCRProcessor {
       const height = parseInt(match[4]) - y;
       const confidence = parseInt(match[5]);
 
-      // Get text content
       const textMatch = textRegex.exec(hocrContent);
       const text = textMatch ? textMatch[1].trim() : '';
 
       if (text) {
         regions.push({
           text,
-          confidence: confidence / 100, // Convert to 0-1 scale
+          confidence: confidence / 100,
           bbox: { x, y, width, height }
         });
 
@@ -307,15 +290,7 @@ export class OCRProcessor {
   }
 }
 
-// ============================================================================
-// EXPORT SINGLETON
-// ============================================================================
-
 export const ocrProcessor = new OCRProcessor();
-
-// ============================================================================
-// MCP TOOL DEFINITIONS
-// ============================================================================
 
 export const ocrTools = [
   {

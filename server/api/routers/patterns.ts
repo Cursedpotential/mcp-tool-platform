@@ -1,9 +1,12 @@
-// File: server/api/routers/patterns.ts | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
+// File: server/api/routers/patterns.ts | Date: 2026-01-22 | Agent: Antigravity
 import { z } from "zod";
 import { protectedProcedure, router } from "../../core/trpc";
-import { getDb } from "../../core/db";
-import { behavioralPatterns, patternCategories } from "../../../drizzle/schema";
-import { eq, and, or, isNull, like, count, gt, lte } from "drizzle-orm";
+import { getMySqlDb } from "../../core/db.mysql";
+import {
+  behavioralPatterns,
+  patternCategories,
+} from "../../../drizzle/patterns-schema";
+import { eq, and, or, isNull, like, count, gt, lte, sql, desc } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 export const patternsRouter = router({
@@ -23,7 +26,7 @@ export const patternsRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const db = await getDb();
+      const db = await getMySqlDb();
       if (!db) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -68,14 +71,14 @@ export const patternsRouter = router({
         .limit(input.pageSize)
         .offset((input.page - 1) * input.pageSize);
 
-      const total = await db
+      const [totalResult] = await db
         .select({ count: count() })
         .from(behavioralPatterns)
         .where(whereClauses);
 
       return {
         patterns,
-        total: total[0]?.count || 0,
+        total: totalResult?.count || 0,
         page: input.page,
         pageSize: input.pageSize,
       };
@@ -84,7 +87,7 @@ export const patternsRouter = router({
   getById: protectedProcedure
     .input(z.object({ id: z.number() }))
     .query(async ({ ctx, input }) => {
-      const db = await getDb();
+      const db = await getMySqlDb();
       if (!db) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -130,7 +133,7 @@ export const patternsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
+      const db = await getMySqlDb();
       if (!db) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -138,7 +141,7 @@ export const patternsRouter = router({
         });
       }
 
-      const result = await db.insert(behavioralPatterns).values({
+      const [result] = await db.insert(behavioralPatterns).values({
         userId: ctx.user.id,
         name: input.name,
         category: input.category,
@@ -147,15 +150,14 @@ export const patternsRouter = router({
         severity: input.severity,
         mclFactors: JSON.stringify(input.mclFactors || []),
         examples: JSON.stringify(input.examples || []),
-        isCustom: "true",
-        isActive: "true",
+        isCustom: true,
+        isActive: true,
       });
 
-      const insertId = Number((result as any).insertId);
       const [newPattern] = await db
         .select()
         .from(behavioralPatterns)
-        .where(eq(behavioralPatterns.id, insertId))
+        .where(eq(behavioralPatterns.id, result.insertId))
         .limit(1);
 
       return newPattern;
@@ -176,7 +178,7 @@ export const patternsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
+      const db = await getMySqlDb();
       if (!db) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -206,48 +208,21 @@ export const patternsRouter = router({
         });
       }
 
-      if (firstPattern.userId === null) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Cannot update built-in patterns",
-        });
-      }
+      const updateValues: any = {};
 
-      const updateValues: {
-        name?: string;
-        category?: string;
-        pattern?: string;
-        description?: string;
-        severity?: number;
-        mclFactors?: string;
-        examples?: string;
-        isActive?: "true" | "false";
-      } = {};
-
-      if (input.name !== undefined) {
-        updateValues.name = input.name;
-      }
-      if (input.category !== undefined) {
-        updateValues.category = input.category;
-      }
-      if (input.pattern !== undefined) {
-        updateValues.pattern = input.pattern;
-      }
-      if (input.description !== undefined) {
+      if (input.name !== undefined) updateValues.name = input.name;
+      if (input.category !== undefined) updateValues.category = input.category;
+      if (input.pattern !== undefined) updateValues.pattern = input.pattern;
+      if (input.description !== undefined)
         updateValues.description = input.description;
-      }
-      if (input.severity !== undefined) {
-        updateValues.severity = input.severity;
-      }
-      if (input.mclFactors !== undefined) {
+      if (input.severity !== undefined) updateValues.severity = input.severity;
+      if (input.mclFactors !== undefined)
         updateValues.mclFactors = JSON.stringify(input.mclFactors);
-      }
-      if (input.examples !== undefined) {
+      if (input.examples !== undefined)
         updateValues.examples = JSON.stringify(input.examples);
-      }
-      if (input.isActive !== undefined) {
-        updateValues.isActive = input.isActive ? "true" : "false";
-      }
+      if (input.isActive !== undefined) updateValues.isActive = input.isActive;
+
+      updateValues.updatedAt = sql`CURRENT_TIMESTAMP`;
 
       await db
         .update(behavioralPatterns)
@@ -266,7 +241,7 @@ export const patternsRouter = router({
   delete: protectedProcedure
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
+      const db = await getMySqlDb();
       if (!db) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -287,19 +262,10 @@ export const patternsRouter = router({
         });
       }
 
-      const firstPattern = existingPattern[0];
-
-      if (firstPattern.userId !== ctx.user.id) {
+      if (existingPattern[0].userId !== ctx.user.id) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "You do not own this pattern",
-        });
-      }
-
-      if (firstPattern.userId === null) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Cannot delete built-in patterns",
         });
       }
 
@@ -321,14 +287,17 @@ export const patternsRouter = router({
         sampleText: z.string(),
       })
     )
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ input }) => {
       try {
         const regex = new RegExp(input.pattern, "gi");
         const matches = [];
         let match;
 
         while ((match = regex.exec(input.sampleText)) !== null) {
-          matches.push(match[0]);
+          matches.push({
+            text: match[0],
+            index: match.index,
+          });
         }
 
         return { matches, matchCount: matches.length };
@@ -341,174 +310,11 @@ export const patternsRouter = router({
     }),
 
   // ============================================================================
-  // Pattern Import/Export
-  // ============================================================================
-
-  import: protectedProcedure
-    .input(
-      z.object({
-        patterns: z.array(
-          z.object({
-            name: z.string(),
-            category: z.string(),
-            pattern: z.string(),
-            description: z.string().optional(),
-            severity: z.number(),
-            mclFactors: z.array(z.string()).optional(),
-            examples: z.array(z.string()).optional(),
-          })
-        ),
-        conflictResolution: z.enum(["overwrite", "skip", "rename"]),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database not available",
-        });
-      }
-
-      let imported = 0;
-      let skipped = 0;
-      const errors: string[] = [];
-
-      for (const patternData of input.patterns) {
-        try {
-          const existingPattern = await db
-            .select()
-            .from(behavioralPatterns)
-            .where(eq(behavioralPatterns.name, patternData.name))
-            .limit(1);
-
-          if (existingPattern.length > 0) {
-            const existing = existingPattern[0];
-            if (input.conflictResolution === "skip") {
-              skipped++;
-              continue;
-            } else if (input.conflictResolution === "overwrite") {
-              await db
-                .update(behavioralPatterns)
-                .set({
-                  category: patternData.category,
-                  pattern: patternData.pattern,
-                  description: patternData.description,
-                  severity: patternData.severity,
-                  mclFactors: JSON.stringify(patternData.mclFactors || []),
-                  examples: JSON.stringify(patternData.examples || []),
-                })
-                .where(eq(behavioralPatterns.id, existing.id));
-              imported++;
-            } else if (input.conflictResolution === "rename") {
-              let newName = patternData.name + " (imported)";
-              let counter = 1;
-              while (true) {
-                const checkName = await db
-                  .select()
-                  .from(behavioralPatterns)
-                  .where(eq(behavioralPatterns.name, newName))
-                  .limit(1);
-                if (checkName.length === 0) break;
-                newName = patternData.name + ` (imported ${counter++})`;
-              }
-
-              await db.insert(behavioralPatterns).values({
-                userId: ctx.user.id,
-                name: newName,
-                category: patternData.category,
-                pattern: patternData.pattern,
-                description: patternData.description,
-                severity: patternData.severity,
-                mclFactors: JSON.stringify(patternData.mclFactors || []),
-                examples: JSON.stringify(patternData.examples || []),
-                isCustom: "true",
-                isActive: "true",
-              });
-              imported++;
-            }
-          } else {
-            await db.insert(behavioralPatterns).values({
-              userId: ctx.user.id,
-              name: patternData.name,
-              category: patternData.category,
-              pattern: patternData.pattern,
-              description: patternData.description,
-              severity: patternData.severity,
-              mclFactors: JSON.stringify(patternData.mclFactors || []),
-              examples: JSON.stringify(patternData.examples || []),
-              isCustom: "true",
-              isActive: "true",
-            });
-            imported++;
-          }
-        } catch (error: any) {
-          errors.push(`Error importing ${patternData.name}: ${error.message}`);
-        }
-      }
-
-      return { imported, skipped, errors };
-    }),
-
-  export: protectedProcedure
-    .input(
-      z.object({
-        format: z.enum(["json", "csv"]),
-        includeBuiltIn: z.boolean().default(false),
-      })
-    )
-    .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database not available",
-        });
-      }
-
-      const whereClauses = input.includeBuiltIn
-        ? or(
-            eq(behavioralPatterns.userId, ctx.user.id),
-            isNull(behavioralPatterns.userId)
-          )
-        : eq(behavioralPatterns.userId, ctx.user.id);
-
-      const patterns = await db
-        .select()
-        .from(behavioralPatterns)
-        .where(whereClauses);
-
-      if (input.format === "json") {
-        return JSON.stringify(patterns, null, 2);
-      } else if (input.format === "csv") {
-        if (patterns.length === 0) return "";
-        const header = Object.keys(patterns[0]).join(",");
-        const rows = patterns
-          .map(pattern =>
-            Object.values(pattern)
-              .map(value =>
-                typeof value === "string"
-                  ? `"${value.replace(/"/g, '""')}"`
-                  : value
-              )
-              .join(",")
-          )
-          .join("\n");
-        return `${header}\n${rows}`;
-      }
-
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Invalid format",
-      });
-    }),
-
-  // ============================================================================
   // Pattern Statistics
   // ============================================================================
 
   getStats: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
+    const db = await getMySqlDb();
     if (!db) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
@@ -516,14 +322,14 @@ export const patternsRouter = router({
       });
     }
 
-    const totalPatterns = await db
+    const [totalRes] = await db
       .select({ count: count() })
       .from(behavioralPatterns);
-    const customPatterns = await db
+    const [customRes] = await db
       .select({ count: count() })
       .from(behavioralPatterns)
       .where(eq(behavioralPatterns.userId, ctx.user.id));
-    const builtInPatterns = await db
+    const [builtInRes] = await db
       .select({ count: count() })
       .from(behavioralPatterns)
       .where(isNull(behavioralPatterns.userId));
@@ -531,21 +337,21 @@ export const patternsRouter = router({
     const categories = await db
       .select({ category: behavioralPatterns.category })
       .from(behavioralPatterns);
-    const byCategory: { [key: string]: number } = {};
-    categories.forEach(c => {
+    const byCategory: Record<string, number> = {};
+    categories.forEach((c) => {
       byCategory[c.category] = (byCategory[c.category] || 0) + 1;
     });
 
     const topMatched = await db
       .select()
       .from(behavioralPatterns)
-      .orderBy(behavioralPatterns.matchCount)
+      .orderBy(desc(behavioralPatterns.matchCount))
       .limit(10);
 
     return {
-      totalPatterns: totalPatterns[0]?.count || 0,
-      customPatterns: customPatterns[0]?.count || 0,
-      builtInPatterns: builtInPatterns[0]?.count || 0,
+      totalPatterns: totalRes?.count || 0,
+      customPatterns: customRes?.count || 0,
+      builtInPatterns: builtInRes?.count || 0,
       byCategory,
       topMatched,
     };
@@ -556,7 +362,7 @@ export const patternsRouter = router({
   // ============================================================================
 
   getCategories: protectedProcedure.query(async ({ ctx }) => {
-    const db = await getDb();
+    const db = await getMySqlDb();
     if (!db) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
@@ -572,14 +378,10 @@ export const patternsRouter = router({
         color: patternCategories.color,
         icon: patternCategories.icon,
         defaultSeverity: patternCategories.defaultSeverity,
-        patternCount: count(behavioralPatterns.id),
+        isActive: patternCategories.isActive,
       })
       .from(patternCategories)
-      .leftJoin(
-        behavioralPatterns,
-        eq(patternCategories.name, behavioralPatterns.category)
-      )
-      .groupBy(patternCategories.id);
+      .where(eq(patternCategories.isActive, true));
 
     return categories;
   }),
@@ -595,7 +397,7 @@ export const patternsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
+      const db = await getMySqlDb();
       if (!db) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -603,38 +405,29 @@ export const patternsRouter = router({
         });
       }
 
-      const result = await db.insert(patternCategories).values({
+      const [result] = await db.insert(patternCategories).values({
+        userId: ctx.user.id,
         name: input.name,
         description: input.description,
         color: input.color,
         icon: input.icon,
         defaultSeverity: input.defaultSeverity,
+        isActive: true,
       });
 
-      const insertId = Number((result as any).insertId);
       const [newCategory] = await db
         .select()
         .from(patternCategories)
-        .where(eq(patternCategories.id, insertId))
+        .where(eq(patternCategories.id, result.insertId))
         .limit(1);
 
       return newCategory;
     }),
 
-  updateCategory: protectedProcedure
-    .input(
-      z.object({
-        id: z.number(),
-        name: z.string().optional(),
-        description: z.string().optional(),
-        color: z.string().optional(),
-        icon: z.string().optional(),
-        defaultSeverity: z.number().min(1).max(10).optional(),
-        isActive: z.boolean().optional(),
-      })
-    )
+  deleteCategory: protectedProcedure
+    .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
+      const db = await getMySqlDb();
       if (!db) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -642,75 +435,17 @@ export const patternsRouter = router({
         });
       }
 
-      const updateValues: {
-        name?: string;
-        description?: string;
-        color?: string;
-        icon?: string;
-        defaultSeverity?: number;
-      } = {};
-
-      if (input.name !== undefined) {
-        updateValues.name = input.name;
-      }
-      if (input.description !== undefined) {
-        updateValues.description = input.description;
-      }
-      if (input.color !== undefined) {
-        updateValues.color = input.color;
-      }
-      if (input.icon !== undefined) {
-        updateValues.icon = input.icon;
-      }
-      if (input.defaultSeverity !== undefined) {
-        updateValues.defaultSeverity = input.defaultSeverity;
-      }
-
-      await db
-        .update(patternCategories)
-        .set(updateValues)
-        .where(eq(patternCategories.id, input.id));
-
-      const [updatedCategory] = await db
+      // Check if category has patterns (optional depending on UX requirements, but good safety)
+      const existing = await db
         .select()
         .from(patternCategories)
         .where(eq(patternCategories.id, input.id))
         .limit(1);
 
-      return updatedCategory;
-    }),
-
-  deleteCategory: protectedProcedure
-    .input(z.object({ id: z.number() }))
-    .mutation(async ({ ctx, input }) => {
-      const db = await getDb();
-      if (!db) {
+      if (existing.length === 0 || existing[0].userId !== ctx.user.id) {
         throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "Database not available",
-        });
-      }
-
-      const patternCount = await db
-        .select({ count: count() })
-        .from(behavioralPatterns)
-        .where(
-          eq(
-            behavioralPatterns.category,
-            (
-              await db
-                .select()
-                .from(patternCategories)
-                .where(eq(patternCategories.id, input.id))
-                .limit(1)
-            )[0]?.name || ""
-          )
-        );
-
-      if (patternCount[0]?.count && patternCount[0].count > 0) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Cannot delete category with existing patterns",
+          code: "FORBIDDEN",
+          message: "Not authorized to delete this category",
         });
       }
 
