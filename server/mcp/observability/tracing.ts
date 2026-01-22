@@ -1,6 +1,6 @@
 /**
  * Observability & Tracing Module
- * 
+ *
  * Provides distributed tracing and metrics for:
  * - Task execution monitoring
  * - Tool invocation tracking
@@ -8,8 +8,12 @@
  * - Error tracking
  */
 
-import { nanoid } from 'nanoid';
-import type { TraceContext, TraceLog, Metrics } from '../../../shared/mcp-types';
+import { nanoid } from "nanoid";
+import type {
+  TraceContext,
+  TraceLog,
+  Metrics,
+} from "../../../shared/mcp-types";
 
 // ============================================================================
 // Trace Store
@@ -83,7 +87,7 @@ export function addTag(spanId: string, key: string, value: string): void {
  */
 export function addLog(
   spanId: string,
-  level: TraceLog['level'],
+  level: TraceLog["level"],
   message: string,
   fields?: Record<string, unknown>
 ): void {
@@ -110,7 +114,7 @@ export function getSpan(spanId: string): TraceContext | null {
  */
 export function getTrace(traceId: string): TraceContext[] {
   const spans: TraceContext[] = [];
-  traceStore.forEach((context) => {
+  traceStore.forEach(context => {
     if (context.traceId === traceId) {
       spans.push(context);
     }
@@ -130,7 +134,7 @@ export function incrementCounter(
   value: number = 1,
   tags: Record<string, string> = {}
 ): void {
-  recordMetric(name, value, 'counter', tags);
+  recordMetric(name, value, "counter", tags);
 }
 
 /**
@@ -141,7 +145,7 @@ export function setGauge(
   value: number,
   tags: Record<string, string> = {}
 ): void {
-  recordMetric(name, value, 'gauge', tags);
+  recordMetric(name, value, "gauge", tags);
 }
 
 /**
@@ -152,13 +156,13 @@ export function recordHistogram(
   value: number,
   tags: Record<string, string> = {}
 ): void {
-  recordMetric(name, value, 'histogram', tags);
+  recordMetric(name, value, "histogram", tags);
 }
 
 function recordMetric(
   name: string,
   value: number,
-  type: Metrics['type'],
+  type: Metrics["type"],
   tags: Record<string, string>
 ): void {
   metricsStore.push({
@@ -187,7 +191,7 @@ export function getMetrics(
   const end = endTime ?? Date.now();
 
   return metricsStore.filter(
-    (m) => m.name === name && m.timestamp >= start && m.timestamp <= end
+    m => m.name === name && m.timestamp >= start && m.timestamp <= end
   );
 }
 
@@ -211,7 +215,7 @@ export function getAggregatedMetrics(
     return { count: 0, sum: 0, avg: 0, min: 0, max: 0 };
   }
 
-  const values = metrics.map((m) => m.value);
+  const values = metrics.map(m => m.value);
   const sum = values.reduce((a, b) => a + b, 0);
 
   return {
@@ -235,20 +239,20 @@ export async function traceToolInvocation<T>(
   args: Record<string, unknown>,
   fn: () => Promise<T>
 ): Promise<{ result: T; spanId: string; durationMs: number }> {
-  const span = startTrace('mcp-gateway', `tool:${toolName}`);
-  addTag(span.spanId, 'tool.name', toolName);
-  addTag(span.spanId, 'tool.args_size', JSON.stringify(args).length.toString());
+  const span = startTrace("mcp-gateway", `tool:${toolName}`);
+  addTag(span.spanId, "tool.name", toolName);
+  addTag(span.spanId, "tool.args_size", JSON.stringify(args).length.toString());
 
   const startTime = Date.now();
-  incrementCounter('tool.invocations', 1, { tool: toolName });
+  incrementCounter("tool.invocations", 1, { tool: toolName });
 
   try {
     const result = await fn();
     const durationMs = Date.now() - startTime;
 
-    addTag(span.spanId, 'tool.status', 'success');
-    addLog(span.spanId, 'info', `Tool ${toolName} completed`, { durationMs });
-    recordHistogram('tool.duration_ms', durationMs, { tool: toolName });
+    addTag(span.spanId, "tool.status", "success");
+    addLog(span.spanId, "info", `Tool ${toolName} completed`, { durationMs });
+    recordHistogram("tool.duration_ms", durationMs, { tool: toolName });
 
     endSpan(span.spanId);
 
@@ -256,13 +260,17 @@ export async function traceToolInvocation<T>(
   } catch (error) {
     const durationMs = Date.now() - startTime;
 
-    addTag(span.spanId, 'tool.status', 'error');
-    addTag(span.spanId, 'error', error instanceof Error ? error.message : 'Unknown error');
-    addLog(span.spanId, 'error', `Tool ${toolName} failed`, {
-      error: error instanceof Error ? error.message : 'Unknown error',
+    addTag(span.spanId, "tool.status", "error");
+    addTag(
+      span.spanId,
+      "error",
+      error instanceof Error ? error.message : "Unknown error"
+    );
+    addLog(span.spanId, "error", `Tool ${toolName} failed`, {
+      error: error instanceof Error ? error.message : "Unknown error",
       durationMs,
     });
-    incrementCounter('tool.errors', 1, { tool: toolName });
+    incrementCounter("tool.errors", 1, { tool: toolName });
 
     endSpan(span.spanId);
     throw error;
@@ -277,20 +285,20 @@ export async function traceTaskExecution<T>(
   taskType: string,
   fn: () => Promise<T>
 ): Promise<{ result: T; spanId: string; durationMs: number }> {
-  const span = startTrace('task-executor', `task:${taskType}`);
-  addTag(span.spanId, 'task.id', taskId);
-  addTag(span.spanId, 'task.type', taskType);
+  const span = startTrace("task-executor", `task:${taskType}`);
+  addTag(span.spanId, "task.id", taskId);
+  addTag(span.spanId, "task.type", taskType);
 
   const startTime = Date.now();
-  incrementCounter('task.executions', 1, { type: taskType });
+  incrementCounter("task.executions", 1, { type: taskType });
 
   try {
     const result = await fn();
     const durationMs = Date.now() - startTime;
 
-    addTag(span.spanId, 'task.status', 'success');
-    addLog(span.spanId, 'info', `Task ${taskId} completed`, { durationMs });
-    recordHistogram('task.duration_ms', durationMs, { type: taskType });
+    addTag(span.spanId, "task.status", "success");
+    addLog(span.spanId, "info", `Task ${taskId} completed`, { durationMs });
+    recordHistogram("task.duration_ms", durationMs, { type: taskType });
 
     endSpan(span.spanId);
 
@@ -298,13 +306,17 @@ export async function traceTaskExecution<T>(
   } catch (error) {
     const durationMs = Date.now() - startTime;
 
-    addTag(span.spanId, 'task.status', 'error');
-    addTag(span.spanId, 'error', error instanceof Error ? error.message : 'Unknown error');
-    addLog(span.spanId, 'error', `Task ${taskId} failed`, {
-      error: error instanceof Error ? error.message : 'Unknown error',
+    addTag(span.spanId, "task.status", "error");
+    addTag(
+      span.spanId,
+      "error",
+      error instanceof Error ? error.message : "Unknown error"
+    );
+    addLog(span.spanId, "error", `Task ${taskId} failed`, {
+      error: error instanceof Error ? error.message : "Unknown error",
       durationMs,
     });
-    incrementCounter('task.errors', 1, { type: taskType });
+    incrementCounter("task.errors", 1, { type: taskType });
 
     endSpan(span.spanId);
     throw error;
@@ -322,33 +334,42 @@ export function getDashboardSummary(): {
   activeSpans: number;
   totalTraces: number;
   recentErrors: number;
-  toolStats: Record<string, { invocations: number; errors: number; avgDurationMs: number }>;
-  taskStats: Record<string, { executions: number; errors: number; avgDurationMs: number }>;
+  toolStats: Record<
+    string,
+    { invocations: number; errors: number; avgDurationMs: number }
+  >;
+  taskStats: Record<
+    string,
+    { executions: number; errors: number; avgDurationMs: number }
+  >;
 } {
   const now = Date.now();
   const oneHourAgo = now - 60 * 60 * 1000;
 
   // Count active spans (no endTime)
   let activeSpans = 0;
-  traceStore.forEach((ctx) => {
+  traceStore.forEach(ctx => {
     if (!ctx.endTime) activeSpans++;
   });
 
   // Count recent errors
   const recentErrors = metricsStore.filter(
-    (m) =>
-      (m.name === 'tool.errors' || m.name === 'task.errors') &&
+    m =>
+      (m.name === "tool.errors" || m.name === "task.errors") &&
       m.timestamp >= oneHourAgo
   ).length;
 
   // Aggregate tool stats
-  const toolStats: Record<string, { invocations: number; errors: number; avgDurationMs: number }> = {};
-  const toolInvocations = getMetrics('tool.invocations', oneHourAgo);
-  const toolErrors = getMetrics('tool.errors', oneHourAgo);
-  const toolDurations = getMetrics('tool.duration_ms', oneHourAgo);
+  const toolStats: Record<
+    string,
+    { invocations: number; errors: number; avgDurationMs: number }
+  > = {};
+  const toolInvocations = getMetrics("tool.invocations", oneHourAgo);
+  const toolErrors = getMetrics("tool.errors", oneHourAgo);
+  const toolDurations = getMetrics("tool.duration_ms", oneHourAgo);
 
   for (const m of toolInvocations) {
-    const tool = m.tags.tool ?? 'unknown';
+    const tool = m.tags.tool ?? "unknown";
     if (!toolStats[tool]) {
       toolStats[tool] = { invocations: 0, errors: 0, avgDurationMs: 0 };
     }
@@ -356,14 +377,14 @@ export function getDashboardSummary(): {
   }
 
   for (const m of toolErrors) {
-    const tool = m.tags.tool ?? 'unknown';
+    const tool = m.tags.tool ?? "unknown";
     if (toolStats[tool]) {
       toolStats[tool].errors += m.value;
     }
   }
 
   for (const tool of Object.keys(toolStats)) {
-    const durations = toolDurations.filter((m) => m.tags.tool === tool);
+    const durations = toolDurations.filter(m => m.tags.tool === tool);
     if (durations.length > 0) {
       const sum = durations.reduce((a, b) => a + b.value, 0);
       toolStats[tool].avgDurationMs = Math.round(sum / durations.length);
@@ -371,13 +392,16 @@ export function getDashboardSummary(): {
   }
 
   // Aggregate task stats
-  const taskStats: Record<string, { executions: number; errors: number; avgDurationMs: number }> = {};
-  const taskExecutions = getMetrics('task.executions', oneHourAgo);
-  const taskErrors = getMetrics('task.errors', oneHourAgo);
-  const taskDurations = getMetrics('task.duration_ms', oneHourAgo);
+  const taskStats: Record<
+    string,
+    { executions: number; errors: number; avgDurationMs: number }
+  > = {};
+  const taskExecutions = getMetrics("task.executions", oneHourAgo);
+  const taskErrors = getMetrics("task.errors", oneHourAgo);
+  const taskDurations = getMetrics("task.duration_ms", oneHourAgo);
 
   for (const m of taskExecutions) {
-    const type = m.tags.type ?? 'unknown';
+    const type = m.tags.type ?? "unknown";
     if (!taskStats[type]) {
       taskStats[type] = { executions: 0, errors: 0, avgDurationMs: 0 };
     }
@@ -385,14 +409,14 @@ export function getDashboardSummary(): {
   }
 
   for (const m of taskErrors) {
-    const type = m.tags.type ?? 'unknown';
+    const type = m.tags.type ?? "unknown";
     if (taskStats[type]) {
       taskStats[type].errors += m.value;
     }
   }
 
   for (const type of Object.keys(taskStats)) {
-    const durations = taskDurations.filter((m) => m.tags.type === type);
+    const durations = taskDurations.filter(m => m.tags.type === type);
     if (durations.length > 0) {
       const sum = durations.reduce((a, b) => a + b.value, 0);
       taskStats[type].avgDurationMs = Math.round(sum / durations.length);
@@ -428,7 +452,7 @@ export function exportTraces(
   const end = endTime ?? Date.now();
   const traces: TraceContext[] = [];
 
-  traceStore.forEach((ctx) => {
+  traceStore.forEach(ctx => {
     if (ctx.startTime >= start && ctx.startTime <= end) {
       traces.push(ctx);
     }

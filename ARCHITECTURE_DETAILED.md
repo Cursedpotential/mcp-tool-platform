@@ -3,6 +3,7 @@
 ## 🏗️ **COMPLETE SYSTEM ARCHITECTURE**
 
 ### **Data Flow Overview**
+
 ```
 RAW FILES → DIRECTUS (Evidentiary Storage)
      ↓
@@ -22,9 +23,10 @@ AUTOMATION → N8N (Workflow Coordination)
 ## 🎯 **3-TIER VECTOR STORAGE ARCHITECTURE**
 
 ### **Tier 1: PGVector (PostgreSQL) - LONG-TERM PERSISTENT**
+
 - **Purpose**: Permanent vector storage for all evidence, documents, analysis
 - **Scope**: Everything searchable forever
-- **Use Cases**: 
+- **Use Cases**:
   - 8 years of message embeddings
   - Document analysis results
   - Case context and timeline
@@ -32,6 +34,7 @@ AUTOMATION → N8N (Workflow Coordination)
   - Cross-evidence relationships
 
 ### **Tier 2: Chroma VPS (72-Hour TTL) - SHORT-TERM PROCESSING**
+
 - **Purpose**: Mimic human short-term memory during evidence processing
 - **Scope**: Only what's currently being analyzed
 - **TTL**: 72 hours automatic expiration
@@ -42,6 +45,7 @@ AUTOMATION → N8N (Workflow Coordination)
   - "What was I just looking at?" memory
 
 ### **Tier 3: Chroma In-Process - MULTI-AGENT COORDINATION**
+
 - **Purpose**: Session-only scratch space for agent-to-agent communication
 - **Scope**: Single processing session
 - **TTL**: Session duration only
@@ -56,6 +60,7 @@ AUTOMATION → N8N (Workflow Coordination)
 ## 🔄 **BIDIRECTIONAL MCP ARCHITECTURE**
 
 ### **INTERNAL FLOW (VPS Services → Platform)**
+
 ```
 Docker Containers → MetaMCP (Internal:4001) → Platform
      ↓                ↓                    ↓
@@ -67,6 +72,7 @@ PhotoPrism Images
 ```
 
 ### **EXTERNAL FLOW (Platform → External Clients)**
+
 ```
 Platform → MetaMCP (External:4002) → External Clients
     ↓              ↓                    ↓
@@ -81,18 +87,21 @@ Engine          client               Qwen Code
 ## 🧠 **CONTEXT PERSISTENCE STRATEGY**
 
 ### **Human Memory Simulation**
+
 - **Challenge**: Human analysts can only hold so much context in mind
 - **Solution**: 72-hour TTL mimics human short-term memory
 - **Benefit**: When full picture emerges, compare initial analysis vs. final analysis
 - **Use Case**: Detect gaslighting/manipulation patterns that become obvious in hindsight
 
 ### **Permanent Context Storage**
+
 - **Project State**: What has been processed, reviewed, analyzed
-- **Timeline Tracking**: Chronological case progression  
+- **Timeline Tracking**: Chronological case progression
 - **Analysis History**: Previous findings and conclusions
 - **Cross-Reference**: How initial context changes over time
 
 ### **Storage Location**
+
 - **Primary**: PostgreSQL tables (structured metadata)
 - **Secondary**: PGVector (embeddings for semantic search)
 - **Tertiary**: Directus (raw files + file metadata)
@@ -102,6 +111,7 @@ Engine          client               Qwen Code
 ## 🛠️ **MESSAGE PROCESSING PIPELINE (8 Years of Data)**
 
 ### **Step 1: Raw Message Ingestion**
+
 ```
 SMS/Facebook/iMessage Exports → Directus (Evidentiary Storage)
      ↓
@@ -110,6 +120,7 @@ Metadata Extraction (Sender, Recipient, Timestamp, Platform)
 ```
 
 ### **Step 2: Message Parsing & Classification**
+
 ```
 Raw Messages → Multi-Pass NLP Classifier (6 passes)
      ↓
@@ -118,6 +129,7 @@ Platform Detection → Content Analysis → Behavioral Pattern Matching
 ```
 
 ### **Step 3: Vector Embeddings & Storage**
+
 ```
 Processed Messages → Embeddings (OpenAI/sentence-transformers)
      ↓
@@ -126,6 +138,7 @@ PGVector Storage → Long-term Searchable Context
 ```
 
 ### **Step 4: Relationship Analysis**
+
 ```
 Messages → Entity Extraction → Neo4j Graph Database
      ↓
@@ -138,6 +151,7 @@ Temporal Relationships → Graphiti Analysis → Pattern Detection
 ## 🎨 **COMPONENT FEATURE MAP**
 
 ### **Frontend (React 19 + Tailwind 4)**
+
 - **Home Dashboard**: System status, quick actions, recent activity
 - **Tools Page**: Tool discovery and invocation
 - **Settings Page**: 🔧 **WIRING NEEDED** (API keys, database config, LLM routing)
@@ -147,6 +161,7 @@ Temporal Relationships → Graphiti Analysis → Pattern Detection
 - **MCP Config**: Internal/External MetaMCP configuration
 
 ### **Backend (Node.js 22 + tRPC 11.6)**
+
 - **MCP Gateway**: 4 core endpoints (search, describe, invoke, getRef)
 - **Tool Registry**: 65 tools (20 working, 45 stubbed)
 - **Task Executor**: Content-addressed deduplication, checkpoint/resume
@@ -155,12 +170,14 @@ Temporal Relationships → Graphiti Analysis → Pattern Detection
 - **AI Framework Integration**: LangGraph, LangChain, LlamaIndex
 
 ### **Database Layer**
+
 - **PostgreSQL**: Main relational database (metadata, messages, case context)
 - **PGVector**: Vector embeddings for semantic search
 - **Neo4j Aura**: Graph relationships and temporal analysis
 - **Chroma**: Short-term and session-only vector storage
 
 ### **Infrastructure Layer**
+
 - **Docker Compose**: 9 microservices orchestration
 - **Kasm Workspace**: Debian desktop + CLI tools (Claude Code, Gemini CLI, etc.)
 - **LiteLLM**: Universal LLM proxy (100+ models)
@@ -173,8 +190,9 @@ Temporal Relationships → Graphiti Analysis → Pattern Detection
 ## 🔗 **INTEGRATION POINTS**
 
 ### **External Service Connections**
+
 - **Claude Pro**: Via CLI tools in Kasm workspace
-- **Gemini Pro**: Via CLI tools in Kasm workspace  
+- **Gemini Pro**: Via CLI tools in Kasm workspace
 - **ChatGPT Pro**: Via CLI tools in Kasm workspace
 - **Perplexity Pro**: Via CLI tools in Kasm workspace
 - **OpenAI API**: Direct API integration
@@ -185,6 +203,7 @@ Temporal Relationships → Graphiti Analysis → Pattern Detection
 - **AWS/GCP/Azure**: Cloud services integration
 
 ### **CLI Tool Integration**
+
 ```
 Platform → Kasm CLI Tools → Pro Accounts
      ↓            ↓               ↓
@@ -200,6 +219,7 @@ Tools       Qwen Code          ChatGPT Pro
 ## ⚙️ **DATA FLOW DETAILS**
 
 ### **Document Processing Flow**
+
 ```
 1. File Upload → Directus (evidentiary storage)
 2. Metadata Extraction → PostgreSQL tables
@@ -211,6 +231,7 @@ Tools       Qwen Code          ChatGPT Pro
 ```
 
 ### **Tool Invocation Flow**
+
 ```
 1. User selects tool → Platform
 2. Smart Router → Optimal service selection
@@ -221,6 +242,7 @@ Tools       Qwen Code          ChatGPT Pro
 ```
 
 ### **External Client Flow**
+
 ```
 1. External LLM → MetaMCP (External:4002)
 2. Tool discovery → Available forensic tools
@@ -234,6 +256,7 @@ Tools       Qwen Code          ChatGPT Pro
 ## 🚨 **CRITICAL ARCHITECTURAL GAPS**
 
 ### **Current Issues**
+
 - 🔴 drizzle.config.ts shows MySQL but needs PostgreSQL
 - 🔴 Router layer has TODOs in all major functions
 - 🔴 45/65 tool handlers are stubbed
@@ -242,6 +265,7 @@ Tools       Qwen Code          ChatGPT Pro
 - 🔴 OOM errors in document loaders
 
 ### **Immediate Fixes Required**
+
 1. ✅ **Drizzle Config**: MySQL → PostgreSQL (FIXED)
 2. ⏳ **PostgreSQL Service**: Added to docker-compose
 3. ⏳ **PGVector Integration**: Extensions and schemas
@@ -255,6 +279,7 @@ Tools       Qwen Code          ChatGPT Pro
 ## 🎯 **SUCCESS CRITERIA**
 
 ### **Phase 1 Goals (Document Processing)**
+
 - ✅ PostgreSQL + PGVector running
 - ✅ Settings page functional (API key management)
 - ✅ Pattern Library functional (CRUD operations)
@@ -262,18 +287,21 @@ Tools       Qwen Code          ChatGPT Pro
 - ✅ Vector search operational
 
 ### **Phase 2 Goals (Tool Integration)**
+
 - ⏳ 45 missing tool handlers implemented
 - ⏳ OOM errors resolved
 - ⏳ Streaming document processing
 - ⏳ Large file support (5GB XML, 100-page PDFs)
 
 ### **Phase 3 Goals (LLM Integration)**
+
 - ⏳ Smart router with failover
 - ⏳ Pro account integration via CLI tools
 - ⏳ External MetaMCP operational
 - ⏳ Cross-platform context sync
 
 ### **Phase 4 Goals (Production Ready)**
+
 - ⏳ Complete bidirectional MCP architecture
 - ⏳ Security hardening (API key encryption)
 - ⏳ Performance optimization

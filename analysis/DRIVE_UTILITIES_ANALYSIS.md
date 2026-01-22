@@ -19,11 +19,13 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 **Purpose**: Parse ChatGPT conversation exports into structured data.
 
 **Key Features**:
+
 - Extracts messages, timestamps, roles
 - Handles multi-turn conversations
 - Outputs structured JSON
 
 **Integration Opportunity**:
+
 - Add as `forensics.parse_chatgpt_export` tool
 - Wire to document intelligence schema
 - Enable timeline reconstruction from chat logs
@@ -37,11 +39,13 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 **Purpose**: Compare two versions of a document/conversation and highlight changes.
 
 **Key Features**:
+
 - Line-by-line diff with timestamps
 - Detects additions, deletions, modifications
 - Useful for evidence chain verification
 
 **Integration Opportunity**:
+
 - Add as `forensics.compare_versions` tool
 - Integrate with `evidenceChains` table
 - Support temporal contradiction detection
@@ -55,11 +59,13 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 **Purpose**: Intelligently chunk large files for LLM processing.
 
 **Key Features**:
+
 - Semantic chunking (not just character count)
 - Preserves context across boundaries
 - Configurable chunk size and overlap
 
 **Integration Opportunity**:
+
 - Enhance existing `document.chunk` tool
 - Replace naive chunking with semantic approach
 - Integrate with Chroma for chunk embeddings
@@ -73,11 +79,13 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 **Purpose**: Convert conversation JSON to formatted Word documents.
 
 **Key Features**:
+
 - Preserves formatting, timestamps, roles
 - Generates table of contents
 - Exports to DOCX
 
 **Integration Opportunity**:
+
 - Add as `format_converter.json_to_docx` tool
 - Complement existing format conversion tools
 - Enable export workflows
@@ -91,11 +99,13 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 **Purpose**: Benchmark NLTK vs. custom agent for NLP tasks.
 
 **Key Features**:
+
 - Compares tokenization, NER, sentiment
 - Measures accuracy and performance
 - Generates comparison reports
 
 **Integration Opportunity**:
+
 - Use as validation tool for NLP handlers
 - Add as `nlp.benchmark` tool
 - Help users choose best NLP approach
@@ -109,11 +119,13 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 **Purpose**: Generate JSON schemas from sample data.
 
 **Key Features**:
+
 - Infers schema from examples
 - Validates data against schema
 - Exports to JSON Schema format
 
 **Integration Opportunity**:
+
 - Add as `schema_resolver.infer_schema` tool
 - Complement existing schema resolution
 - Enable auto-schema generation
@@ -127,11 +139,13 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 **Purpose**: Comprehensive document conversion using Pandoc.
 
 **Key Features**:
+
 - Supports 20+ formats (MD, DOCX, PDF, HTML, LaTeX)
 - Batch conversion
 - Template support
 
 **Integration Opportunity**:
+
 - Enhance `format_converter` plugin
 - Add Pandoc as optional backend
 - Support more formats
@@ -145,11 +159,13 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 **Purpose**: Deep file analysis (metadata, structure, content preview).
 
 **Key Features**:
+
 - Detects file type, encoding, size
 - Extracts metadata (EXIF, PDF info, etc.)
 - Generates file fingerprint
 
 **Integration Opportunity**:
+
 - Add as `forensics.analyze_file` tool
 - Integrate with evidence chain
 - Support provenance tracking
@@ -163,11 +179,13 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 **Purpose**: Find duplicate files using content hashing.
 
 **Key Features**:
+
 - MD5/SHA256 hashing
 - Fuzzy matching for near-duplicates
 - Batch processing
 
 **Integration Opportunity**:
+
 - Add as `forensics.find_duplicates` tool
 - Integrate with evidence deduplication
 - Support semantic deduplication via Chroma
@@ -181,11 +199,13 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 **Purpose**: Split large JSON files into manageable chunks.
 
 **Key Features**:
+
 - Preserves structure
 - Configurable split strategy (by size, by key, by array)
 - Batch processing
 
 **Integration Opportunity**:
+
 - Add as `document.split_json` tool
 - Support large dataset preprocessing
 - Enable parallel processing
@@ -198,12 +218,12 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 
 ### Document Conversion Tools
 
-| Script | Purpose | Integration |
-|--------|---------|-------------|
+| Script                        | Purpose             | Integration                               |
+| ----------------------------- | ------------------- | ----------------------------------------- |
 | `clean_markdown_converter.py` | Clean MD conversion | Enhance `format_converter.parse_markdown` |
-| `markdown_to_pdf.py` | MD to PDF | Add PDF export option |
-| `docx_to_pdf.py` | DOCX to PDF | Add PDF export option |
-| `improved_md_to_pdf.py` | Better MD to PDF | Replace naive implementation |
+| `markdown_to_pdf.py`          | MD to PDF           | Add PDF export option                     |
+| `docx_to_pdf.py`              | DOCX to PDF         | Add PDF export option                     |
+| `improved_md_to_pdf.py`       | Better MD to PDF    | Replace naive implementation              |
 
 **Reusability**: ⭐⭐⭐ (Nice-to-have exports)
 
@@ -211,11 +231,11 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 
 ### JSON Processing Tools
 
-| Script | Purpose | Integration |
-|--------|---------|-------------|
-| `json_merger.py` | Merge split JSON | Complement `json_splitter` |
+| Script                    | Purpose            | Integration                  |
+| ------------------------- | ------------------ | ---------------------------- |
+| `json_merger.py`          | Merge split JSON   | Complement `json_splitter`   |
 | `simple_json_splitter.py` | Simpler JSON split | Fallback for `json_splitter` |
-| `json_to_markdown.py` | JSON to MD | Add to format converters |
+| `json_to_markdown.py`     | JSON to MD         | Add to format converters     |
 
 **Reusability**: ⭐⭐⭐ (Workflow completion)
 
@@ -223,11 +243,11 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 
 ### Conversation Processing Tools
 
-| Script | Purpose | Integration |
-|--------|---------|-------------|
-| `conversation_splitter.py` | Split conversations | Add to `forensics` |
+| Script                             | Purpose              | Integration        |
+| ---------------------------------- | -------------------- | ------------------ |
+| `conversation_splitter.py`         | Split conversations  | Add to `forensics` |
 | `robust_conversation_extractor.py` | Extract from exports | Add to `forensics` |
-| `process_real_session.py` | Process session data | Add to `forensics` |
+| `process_real_session.py`          | Process session data | Add to `forensics` |
 
 **Reusability**: ⭐⭐⭐ (Forensic workflows)
 
@@ -235,14 +255,14 @@ Analyzed 40+ Python and JavaScript scripts from the user's Google Drive. These a
 
 ## Low-Value Scripts (Skip)
 
-| Script | Reason |
-|--------|--------|
-| `organize_downloads_smart.py` | Filesystem organization (not preprocessing) |
-| `unzip_and_organize.py` | File management (not preprocessing) |
-| `ssh_cmd.py` | Infrastructure (not preprocessing) |
-| `test_*.py` | Test scripts (not tools) |
-| `fix_triggers.py` | Database maintenance (specific to user's DB) |
-| `analyze_triggers.py` | Database analysis (specific to user's DB) |
+| Script                        | Reason                                       |
+| ----------------------------- | -------------------------------------------- |
+| `organize_downloads_smart.py` | Filesystem organization (not preprocessing)  |
+| `unzip_and_organize.py`       | File management (not preprocessing)          |
+| `ssh_cmd.py`                  | Infrastructure (not preprocessing)           |
+| `test_*.py`                   | Test scripts (not tools)                     |
+| `fix_triggers.py`             | Database maintenance (specific to user's DB) |
+| `analyze_triggers.py`         | Database analysis (specific to user's DB)    |
 
 ---
 
@@ -298,7 +318,7 @@ from file_analyzer import analyze_file
 def main():
     command = sys.argv[1]
     args = json.loads(sys.argv[2])
-    
+
     if command == 'parse_chatgpt':
         result = parse_export(args['file_path'])
     elif command == 'compare_versions':
@@ -307,7 +327,7 @@ def main():
         result = analyze_file(args['file_path'])
     else:
         result = {'error': 'Unknown command'}
-    
+
     print(json.dumps(result))
 
 if __name__ == '__main__':
@@ -317,24 +337,24 @@ if __name__ == '__main__':
 ### Step 3: Register Handlers in Executor
 
 ```typescript
-this.registerHandler('forensics.parse_chatgpt_export', async (args) => {
-  const result = await callPython('parse_chatgpt', {
-    file_path: args.filePath
+this.registerHandler("forensics.parse_chatgpt_export", async args => {
+  const result = await callPython("parse_chatgpt", {
+    file_path: args.filePath,
   });
   return result.data;
 });
 
-this.registerHandler('forensics.compare_versions', async (args) => {
-  const result = await callPython('compare_versions', {
+this.registerHandler("forensics.compare_versions", async args => {
+  const result = await callPython("compare_versions", {
     file1: args.file1,
-    file2: args.file2
+    file2: args.file2,
   });
   return result.data;
 });
 
-this.registerHandler('forensics.analyze_file', async (args) => {
-  const result = await callPython('analyze_file', {
-    file_path: args.filePath
+this.registerHandler("forensics.analyze_file", async args => {
+  const result = await callPython("analyze_file", {
+    file_path: args.filePath,
   });
   return result.data;
 });
@@ -344,27 +364,27 @@ this.registerHandler('forensics.analyze_file', async (args) => {
 
 ```typescript
 registry.registerTool({
-  name: 'forensics.parse_chatgpt_export',
-  category: 'forensics',
-  description: 'Parse ChatGPT conversation export into structured timeline',
-  version: '1.0.0',
-  tags: ['forensics', 'chatgpt', 'conversation', 'timeline'],
+  name: "forensics.parse_chatgpt_export",
+  category: "forensics",
+  description: "Parse ChatGPT conversation export into structured timeline",
+  version: "1.0.0",
+  tags: ["forensics", "chatgpt", "conversation", "timeline"],
   inputSchema: {
-    type: 'object',
+    type: "object",
     properties: {
-      filePath: { type: 'string', description: 'Path to ChatGPT export file' }
+      filePath: { type: "string", description: "Path to ChatGPT export file" },
     },
-    required: ['filePath']
+    required: ["filePath"],
   },
   outputSchema: {
-    type: 'object',
+    type: "object",
     properties: {
-      messages: { type: 'array' },
-      timeline: { type: 'array' },
-      participants: { type: 'array' }
-    }
+      messages: { type: "array" },
+      timeline: { type: "array" },
+      participants: { type: "array" },
+    },
   },
-  permissions: ['read:filesystem']
+  permissions: ["read:filesystem"],
 });
 ```
 
@@ -375,6 +395,7 @@ registry.registerTool({
 Found `Workspace_Indexer/` folder with TypeScript MCP server:
 
 **Files**:
+
 - `mcp-server.ts` - MCP server implementation
 - `indexer.ts` - Workspace indexing logic
 - `search.ts` - Full-text search
@@ -385,6 +406,7 @@ Found `Workspace_Indexer/` folder with TypeScript MCP server:
 **Purpose**: Index local workspace, enable semantic search.
 
 **Integration Opportunity**:
+
 - This is a **complete MCP server** for filesystem indexing
 - Could be deployed as a remote MCP server
 - Or: Extract core logic and integrate into platform
@@ -398,6 +420,7 @@ Found `Workspace_Indexer/` folder with TypeScript MCP server:
 Found `MCP_Tools/` folder with agent configs:
 
 **Tools**:
+
 - `file_investigator` - Deep file analysis
 - `text_miner` - Text extraction and analysis
 - `doc_alchemist` - Document transformation
@@ -406,6 +429,7 @@ Found `MCP_Tools/` folder with agent configs:
 **Format**: Claude/Gemini prompt configs
 
 **Integration Opportunity**:
+
 - These are **prompt templates** for agents
 - Extract tool logic and implement as handlers
 - Use prompts as documentation

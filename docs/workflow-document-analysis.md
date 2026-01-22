@@ -1,18 +1,18 @@
 # Document Analysis Workflow
 
 **NAME**
-    document-analysis-workflow - End-to-end document processing pipeline for forensic evidence
+document-analysis-workflow - End-to-end document processing pipeline for forensic evidence
 
 **SYNOPSIS**
-    Complete document analysis workflow that processes raw files through OCR, entity extraction, sentiment analysis, and behavioral pattern detection for court-admissible forensic evidence.
+Complete document analysis workflow that processes raw files through OCR, entity extraction, sentiment analysis, and behavioral pattern detection for court-admissible forensic evidence.
 
 **DESCRIPTION**
-    The Document Analysis Workflow is a comprehensive 7-stage pipeline that transforms raw evidence files into structured, searchable forensic data. It handles multi-format documents (PDFs, images, text files) and produces court-admissible analysis with full audit trails.
+The Document Analysis Workflow is a comprehensive 7-stage pipeline that transforms raw evidence files into structured, searchable forensic data. It handles multi-format documents (PDFs, images, text files) and produces court-admissible analysis with full audit trails.
 
 **WORKFLOW STAGES**
 
 **Stage 1: Document Ingestion**
-    Accepts and validates raw evidence files.
+Accepts and validates raw evidence files.
 
     **Supported Formats:**
     - **Text Files**: SMS exports, chat logs, emails
@@ -28,7 +28,7 @@
     - Metadata extraction (timestamps, sources)
 
 **Stage 2: Content Extraction**
-    Extracts readable text from documents.
+Extracts readable text from documents.
 
     **Processing Logic:**
     ```typescript
@@ -50,7 +50,7 @@
     - **Confidence Scoring**: Quality assessment per page
 
 **Stage 3: Text Normalization**
-    Standardizes extracted text for consistent analysis.
+Standardizes extracted text for consistent analysis.
 
     **Normalization Steps:**
     - **Encoding**: Convert to UTF-8
@@ -60,7 +60,7 @@
     - **Special Characters**: Preserve Unicode characters
 
 **Stage 4: Entity Extraction**
-    Identifies people, organizations, dates, and locations.
+Identifies people, organizations, dates, and locations.
 
     **Entity Types:**
     - **PERSON**: Names of individuals
@@ -85,7 +85,7 @@
     ```
 
 **Stage 5: Sentiment Analysis**
-    Analyzes emotional tone and intensity.
+Analyzes emotional tone and intensity.
 
     **Sentiment Metrics:**
     - **Polarity**: Positive/negative (-1.0 to +1.0)
@@ -99,7 +99,7 @@
     - **Transformers**: BERT-based sentiment models
 
 **Stage 6: Behavioral Pattern Analysis**
-    Detects 256 forensic patterns using multi-pass classification.
+Detects 256 forensic patterns using multi-pass classification.
 
     **Analysis Passes:**
     1. **Priority Screener (Pass 0)**: Immediate red flags
@@ -118,7 +118,7 @@
     - **Emotional Abuse**: Psychological control patterns
 
 **Stage 7: Results Compilation**
-    Generates court-admissible forensic reports.
+Generates court-admissible forensic reports.
 
     **Output Formats:**
     - **JSON Report**: Complete analysis data
@@ -130,7 +130,7 @@
 **DATA STRUCTURES**
 
 **DocumentAnalysis**
-    Complete analysis result for a single document.
+Complete analysis result for a single document.
 
     ```typescript
     interface DocumentAnalysis {
@@ -167,7 +167,7 @@
     ```
 
 **Entity**
-    Named entity extracted from document.
+Named entity extracted from document.
 
     ```typescript
     interface Entity {
@@ -181,7 +181,7 @@
     ```
 
 **DetectedPattern**
-    Behavioral pattern detected in analysis.
+Behavioral pattern detected in analysis.
 
     ```typescript
     interface DetectedPattern {
@@ -197,7 +197,7 @@
     ```
 
 **EvidenceChain**
-    Court-admissible chain of custody.
+Court-admissible chain of custody.
 
     ```typescript
     interface EvidenceChain {
@@ -215,7 +215,7 @@
 **WORKFLOW EXECUTION**
 
 **Sequential Processing**
-    Each document processed through all 7 stages.
+Each document processed through all 7 stages.
 
     **Execution Flow:**
     ```
@@ -235,7 +235,7 @@
     ```
 
 **Error Handling**
-    Robust error handling with recovery mechanisms.
+Robust error handling with recovery mechanisms.
 
     **Error Recovery:**
     - **OCR Failures**: Fallback to alternative engines
@@ -244,7 +244,7 @@
     - **Storage Failures**: Retry with exponential backoff
 
 **Progress Tracking**
-    Real-time progress updates for long-running analyses.
+Real-time progress updates for long-running analyses.
 
     **Progress Stages:**
     - 10%: Document ingested
@@ -257,7 +257,7 @@
 **RESOURCE MANAGEMENT**
 
 **Memory Optimization**
-    Handles large documents efficiently.
+Handles large documents efficiently.
 
     **Strategies:**
     - **Streaming Processing**: Process documents in chunks
@@ -266,7 +266,7 @@
     - **Memory Limits**: Configurable per-stage limits
 
 **Concurrent Processing**
-    Multiple documents processed simultaneously.
+Multiple documents processed simultaneously.
 
     **Concurrency Control:**
     - **Worker Pool**: Configurable number of concurrent analyses
@@ -276,70 +276,34 @@
 
 **PERFORMANCE METRICS**
 
-**Processing Times**
-    - **Small Document** (<1MB): 5-15 seconds
-    - **Medium Document** (1-10MB): 30-120 seconds
-    - **Large Document** (10-100MB): 5-15 minutes
-    - **Batch Processing**: 2-5x faster with concurrency
+**Processing Times** - **Small Document** (<1MB): 5-15 seconds - **Medium Document** (1-10MB): 30-120 seconds - **Large Document** (10-100MB): 5-15 minutes - **Batch Processing**: 2-5x faster with concurrency
 
-**Accuracy Benchmarks**
-    - **OCR Accuracy**: 95-98% for clean documents
-    - **Entity Recognition**: 90-95% precision/recall
-    - **Sentiment Analysis**: 85-90% accuracy
-    - **Pattern Detection**: 92-96% detection rate
+**Accuracy Benchmarks** - **OCR Accuracy**: 95-98% for clean documents - **Entity Recognition**: 90-95% precision/recall - **Sentiment Analysis**: 85-90% accuracy - **Pattern Detection**: 92-96% detection rate
 
-**Resource Usage**
-    - **CPU**: 1-2 cores per concurrent analysis
-    - **Memory**: 512MB-2GB per document
-    - **Storage**: 2-5x original file size for analysis data
+**Resource Usage** - **CPU**: 1-2 cores per concurrent analysis - **Memory**: 512MB-2GB per document - **Storage**: 2-5x original file size for analysis data
 
 **INTEGRATION POINTS**
 
-**File Upload Systems**
-    - **Directus**: Raw file storage with metadata
-    - **Local Upload**: Direct file processing
-    - **Cloud Storage**: S3, R2 integration
+**File Upload Systems** - **Directus**: Raw file storage with metadata - **Local Upload**: Direct file processing - **Cloud Storage**: S3, R2 integration
 
-**Database Storage**
-    - **PostgreSQL**: Structured analysis results
-    - **PGVector**: Embeddings for semantic search
-    - **Neo4j**: Entity relationship graphs
+**Database Storage** - **PostgreSQL**: Structured analysis results - **PGVector**: Embeddings for semantic search - **Neo4j**: Entity relationship graphs
 
-**External Tools**
-    - **OCR Services**: Tesseract, Google Vision, AWS Textract
-    - **NLP Engines**: spaCy, NLTK, HuggingFace Transformers
-    - **Analysis APIs**: Custom forensic analysis services
+**External Tools** - **OCR Services**: Tesseract, Google Vision, AWS Textract - **NLP Engines**: spaCy, NLTK, HuggingFace Transformers - **Analysis APIs**: Custom forensic analysis services
 
-**Report Generation**
-    - **JSON Export**: Complete structured data
-    - **PDF Reports**: Human-readable summaries
-    - **Timeline Views**: Chronological visualizations
-    - **Evidence Packages**: Court-ready documentation
+**Report Generation** - **JSON Export**: Complete structured data - **PDF Reports**: Human-readable summaries - **Timeline Views**: Chronological visualizations - **Evidence Packages**: Court-ready documentation
 
 **QUALITY ASSURANCE**
 
-**Validation Checks**
-    - **Data Integrity**: SHA-256 hash verification
-    - **Format Validation**: Schema compliance checking
-    - **Completeness**: Required field verification
-    - **Consistency**: Cross-reference validation
+**Validation Checks** - **Data Integrity**: SHA-256 hash verification - **Format Validation**: Schema compliance checking - **Completeness**: Required field verification - **Consistency**: Cross-reference validation
 
-**Audit Trails**
-    - **Processing Logs**: Step-by-step execution records
-    - **Error Tracking**: Failure analysis and recovery
-    - **Performance Metrics**: Timing and resource usage
-    - **User Attribution**: Analysis ownership tracking
+**Audit Trails** - **Processing Logs**: Step-by-step execution records - **Error Tracking**: Failure analysis and recovery - **Performance Metrics**: Timing and resource usage - **User Attribution**: Analysis ownership tracking
 
-**Court Admissibility**
-    - **Chain of Custody**: Complete evidence handling trail
-    - **Hash Verification**: Data integrity proof
-    - **Timestamping**: Analysis timing records
-    - **Operator Identity**: Analyst identification
+**Court Admissibility** - **Chain of Custody**: Complete evidence handling trail - **Hash Verification**: Data integrity proof - **Timestamping**: Analysis timing records - **Operator Identity**: Analyst identification
 
 **CONFIGURATION OPTIONS**
 
 **Workflow Customization**
-    Configure which stages to run and their parameters.
+Configure which stages to run and their parameters.
 
     ```typescript
     const workflowConfig = {
@@ -361,7 +325,7 @@
     ```
 
 **Pattern Library Configuration**
-    Customize which behavioral patterns to detect.
+Customize which behavioral patterns to detect.
 
     ```typescript
     const patternConfig = {
@@ -380,13 +344,13 @@
     ```
 
 **SEE ALSO**
-    tools-document(7), workflow-message-processing(7), content-store(7)
+tools-document(7), workflow-message-processing(7), content-store(7)
 
 **AUTHOR**
-    Claude Code - Opus 4.1
+Claude Code - Opus 4.1
 
 **VERSION**
-    1.0.0
+1.0.0
 
 **DATE**
-    January 11, 2026
+January 11, 2026

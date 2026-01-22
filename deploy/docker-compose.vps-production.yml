@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 # ============================================================================
 # MCP Tool Platform - VPS Production Deployment
@@ -81,8 +81,8 @@ services:
     container_name: salem-neo4j
     hostname: salem-neo4j
     ports:
-      - "7474:7474"  # HTTP
-      - "7687:7687"  # Bolt
+      - "7474:7474" # HTTP
+      - "7687:7687" # Bolt
     environment:
       - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
       - NEO4J_PLUGINS=["apoc"]
@@ -335,7 +335,7 @@ services:
     container_name: salem-kasm-workspace
     hostname: salem-kasm-workspace
     ports:
-      - "6901:6901"  # VNC web interface
+      - "6901:6901" # VNC web interface
     environment:
       - VNC_PW=${KASM_VNC_PASSWORD}
       - VNC_RESOLUTION=1920x1080
@@ -418,8 +418,8 @@ services:
     container_name: salem-traefik
     hostname: salem-traefik
     ports:
-      - "80:80"      # HTTP
-      - "443:443"    # HTTPS
+      - "80:80" # HTTP
+      - "443:443" # HTTPS
       - "443:443/udp" # HTTP/3
     command:
       - "--providers.docker=true"
@@ -444,29 +444,29 @@ volumes:
   # Database
   postgres_data:
   redis_data:
-  
+
   # Graph Database
   neo4j_data:
   neo4j_logs:
   neo4j_import:
   neo4j_plugins:
-  
+
   # Vector Storage
   chroma_data:
-  
+
   # Application Data
   app_data:
   directus_data:
-  
+
   # Workspace
   kasm_home:
   kasm_config:
   kasm_tools:
-  
+
   # Tools
   jupyter_config:
   n8n_data:
-  
+
   # Configuration
   traefik_data:
   metamcp_data:

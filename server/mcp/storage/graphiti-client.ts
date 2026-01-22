@@ -1,12 +1,11 @@
 // File: server/mcp/storage/graphiti-client.ts | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
 /**
  * Graphiti Client for Neo4j Entity Storage
- * 
+ *
  * Stores entities and relationships extracted from messages.
  */
 
-
-import neo4j, { Driver, Session } from 'neo4j-driver';
+import neo4j, { Driver, Session } from "neo4j-driver";
 
 export interface Entity {
   id: string;
@@ -34,19 +33,22 @@ export class GraphitiClient {
   private driver: Driver | null = null;
 
   constructor() {
-    this.neo4jUrl = process.env.NEO4J_URL || process.env.NEO4J_AURA_URL || '';
-    this.neo4jUsername = process.env.NEO4J_USERNAME || 'neo4j';
-    this.neo4jPassword = process.env.NEO4J_PASSWORD || '';
-    this.neo4jDatabase = process.env.NEO4J_DATABASE || 'neo4j';
+    this.neo4jUrl = process.env.NEO4J_URL || process.env.NEO4J_AURA_URL || "";
+    this.neo4jUsername = process.env.NEO4J_USERNAME || "neo4j";
+    this.neo4jPassword = process.env.NEO4J_PASSWORD || "";
+    this.neo4jDatabase = process.env.NEO4J_DATABASE || "neo4j";
 
     if (this.neo4jUrl) {
-      this.driver = neo4j.driver(this.neo4jUrl, neo4j.auth.basic(this.neo4jUsername, this.neo4jPassword));
+      this.driver = neo4j.driver(
+        this.neo4jUrl,
+        neo4j.auth.basic(this.neo4jUsername, this.neo4jPassword)
+      );
     }
   }
 
   private getSession(): Session {
     if (!this.driver) {
-      throw new Error('Neo4j driver not initialized');
+      throw new Error("Neo4j driver not initialized");
     }
     return this.driver.session({ database: this.neo4jDatabase });
   }
@@ -54,19 +56,25 @@ export class GraphitiClient {
   async testConnection(): Promise<{ success: boolean; message?: string }> {
     try {
       const session = this.getSession();
-      await session.run('RETURN 1');
+      await session.run("RETURN 1");
       await session.close();
       return { success: true, message: `Connected to ${this.neo4jUrl}` };
     } catch (error) {
-      return { success: false, message: error instanceof Error ? error.message : 'Unknown Neo4j error' };
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : "Unknown Neo4j error",
+      };
     }
   }
 
-  async runQuery<T = any>(query: string, params: Record<string, any> = {}): Promise<T[]> {
+  async runQuery<T = any>(
+    query: string,
+    params: Record<string, any> = {}
+  ): Promise<T[]> {
     const session = this.getSession();
     try {
       const result = await session.run(query, params);
-      return result.records.map((record) => record.toObject() as T);
+      return result.records.map(record => record.toObject() as T);
     } finally {
       await session.close();
     }
@@ -105,7 +113,14 @@ export class GraphitiClient {
          MATCH (to:Entity {id: r.toEntityId})
          MERGE (from)-[rel:RELATIONSHIP {id: r.id}]->(to)
          SET rel.type = r.type, rel += r.properties, rel.timestamp = r.timestamp`,
-        { rels: relationships.map((r) => ({ ...r, timestamp: r.timestamp ? r.timestamp.toISOString?.() ?? r.timestamp : null })) }
+        {
+          rels: relationships.map(r => ({
+            ...r,
+            timestamp: r.timestamp
+              ? (r.timestamp.toISOString?.() ?? r.timestamp)
+              : null,
+          })),
+        }
       );
     } finally {
       await session.close();
@@ -116,8 +131,11 @@ export class GraphitiClient {
    * Query entities by type
    */
   async queryEntitiesByType(type: string): Promise<Entity[]> {
-    const rows = await this.runQuery<{ e: any }>(`MATCH (e:Entity {type: $type}) RETURN e`, { type });
-    return rows.map((row) => {
+    const rows = await this.runQuery<{ e: any }>(
+      `MATCH (e:Entity {type: $type}) RETURN e`,
+      { type }
+    );
+    return rows.map(row => {
       const node: any = (row as any).e;
       return {
         id: node.properties.id,
@@ -160,4 +178,3 @@ export class GraphitiClient {
 }
 
 export const graphitiClient = new GraphitiClient();
-

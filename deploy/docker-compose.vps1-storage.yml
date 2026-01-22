@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 # ============================================================================
 # VPS1 - Storage & Database Backend (Hetzner 8c/16GB + 50GB block storage)
@@ -120,7 +120,6 @@ services:
       - "traefik.tcp.services.postgres.loadbalancer.server.port=5432"
       - "coolify.managed=true"
       - "coolify.type=database"
-
 
   # ============================================================================
   # FerretDB - MongoDB Compatibility Layer

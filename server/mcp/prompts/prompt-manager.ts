@@ -1,13 +1,20 @@
 /**
  * System Prompts Manager
- * 
+ *
  * Manages editable system prompts for tools and workflows
  * with versioning, A/B testing, and performance tracking.
  */
 
-import { getDb } from '../../core/db';
-import { systemPrompts, workflowTemplates, type SystemPrompt, type InsertSystemPrompt, type WorkflowTemplate, type InsertWorkflowTemplate } from '../../../drizzle/schema';
-import { eq, and, desc, like } from 'drizzle-orm';
+import { getDb } from "../../core/db";
+import {
+  systemPrompts,
+  workflowTemplates,
+  type SystemPrompt,
+  type InsertSystemPrompt,
+  type WorkflowTemplate,
+  type InsertWorkflowTemplate,
+} from "../../../drizzle/schema";
+import { eq, and, desc, like } from "drizzle-orm";
 
 // ============================================================================
 // Types
@@ -63,7 +70,7 @@ export interface CreateWorkflowRequest {
 // ============================================================================
 
 export const DEFAULT_TOOL_PROMPTS: Record<string, string> = {
-  'document.convert': `Convert the document to the specified format.
+  "document.convert": `Convert the document to the specified format.
 Input: {{filePath}} - Path to the source document
 Output format: {{format}} - Target format (markdown, text, html)
 
@@ -73,7 +80,7 @@ Guidelines:
 - Maintain code blocks with proper syntax highlighting
 - Clean up formatting artifacts`,
 
-  'document.ocr': `Extract text from image or scanned document using OCR.
+  "document.ocr": `Extract text from image or scanned document using OCR.
 Input: {{filePath}} - Path to image or PDF
 Language: {{language}} - Expected language (default: auto-detect)
 
@@ -83,7 +90,7 @@ Guidelines:
 - Flag low-confidence regions
 - Handle multi-column layouts`,
 
-  'nlp.extract_entities': `Extract named entities from the provided text.
+  "nlp.extract_entities": `Extract named entities from the provided text.
 Text: {{text}}
 Entity types: {{entityTypes}} - Types to extract (PERSON, ORG, LOCATION, DATE, etc.)
 
@@ -93,7 +100,7 @@ Guidelines:
 - Handle coreference (he/she/they → actual entity)
 - Deduplicate entities across the text`,
 
-  'nlp.extract_keywords': `Extract important keywords and phrases from text.
+  "nlp.extract_keywords": `Extract important keywords and phrases from text.
 Text: {{text}}
 Max keywords: {{maxKeywords}} - Maximum number to return (default: 20)
 
@@ -103,7 +110,7 @@ Guidelines:
 - Return with relevance scores
 - Filter out common stop words`,
 
-  'summarization.map_reduce': `Summarize a large document using hierarchical map-reduce.
+  "summarization.map_reduce": `Summarize a large document using hierarchical map-reduce.
 Document ref: {{documentRef}}
 Target length: {{targetLength}} - Approximate output length
 Style: {{style}} - Summary style (executive, detailed, bullet-points)
@@ -114,7 +121,7 @@ Guidelines:
 - Maintain logical flow
 - Aim for 85%+ token reduction`,
 
-  'search.ripgrep': `Search files using ripgrep with the given pattern.
+  "search.ripgrep": `Search files using ripgrep with the given pattern.
 Pattern: {{pattern}} - Regex or literal search pattern
 Path: {{path}} - Directory or file to search
 Options: {{options}} - Additional ripgrep flags
@@ -133,9 +140,11 @@ Guidelines:
 /**
  * Create a new system prompt
  */
-export async function createPrompt(request: CreatePromptRequest): Promise<SystemPrompt> {
+export async function createPrompt(
+  request: CreatePromptRequest
+): Promise<SystemPrompt> {
   const db = await getDb();
-  if (!db) throw new Error('Database not available');
+  if (!db) throw new Error("Database not available");
 
   const insertData: InsertSystemPrompt = {
     userId: request.userId,
@@ -143,16 +152,22 @@ export async function createPrompt(request: CreatePromptRequest): Promise<System
     description: request.description,
     toolName: request.toolName,
     promptText: request.promptText,
-    variables: request.variables ? JSON.stringify(request.variables) : undefined,
+    variables: request.variables
+      ? JSON.stringify(request.variables)
+      : undefined,
     version: 1,
-    isActive: 'true',
+    isActive: "true",
   };
 
   const result = await db.insert(systemPrompts).values(insertData);
   const insertedId = Number(result[0].insertId);
 
-  const created = await db.select().from(systemPrompts).where(eq(systemPrompts.id, insertedId)).limit(1);
-  if (!created[0]) throw new Error('Failed to retrieve created prompt');
+  const created = await db
+    .select()
+    .from(systemPrompts)
+    .where(eq(systemPrompts.id, insertedId))
+    .limit(1);
+  if (!created[0]) throw new Error("Failed to retrieve created prompt");
 
   return created[0];
 }
@@ -160,16 +175,28 @@ export async function createPrompt(request: CreatePromptRequest): Promise<System
 /**
  * List prompts for a user
  */
-export async function listPrompts(userId: number, toolName?: string): Promise<SystemPrompt[]> {
+export async function listPrompts(
+  userId: number,
+  toolName?: string
+): Promise<SystemPrompt[]> {
   const db = await getDb();
   if (!db) return [];
 
-  let query = db.select().from(systemPrompts).where(eq(systemPrompts.userId, userId));
-  
+  let query = db
+    .select()
+    .from(systemPrompts)
+    .where(eq(systemPrompts.userId, userId));
+
   if (toolName) {
-    query = db.select().from(systemPrompts).where(
-      and(eq(systemPrompts.userId, userId), eq(systemPrompts.toolName, toolName))
-    );
+    query = db
+      .select()
+      .from(systemPrompts)
+      .where(
+        and(
+          eq(systemPrompts.userId, userId),
+          eq(systemPrompts.toolName, toolName)
+        )
+      );
   }
 
   return query.orderBy(desc(systemPrompts.createdAt));
@@ -182,24 +209,36 @@ export async function getPromptById(id: number): Promise<SystemPrompt | null> {
   const db = await getDb();
   if (!db) return null;
 
-  const result = await db.select().from(systemPrompts).where(eq(systemPrompts.id, id)).limit(1);
+  const result = await db
+    .select()
+    .from(systemPrompts)
+    .where(eq(systemPrompts.id, id))
+    .limit(1);
   return result[0] || null;
 }
 
 /**
  * Get active prompt for a tool
  */
-export async function getActivePromptForTool(userId: number, toolName: string): Promise<SystemPrompt | null> {
+export async function getActivePromptForTool(
+  userId: number,
+  toolName: string
+): Promise<SystemPrompt | null> {
   const db = await getDb();
   if (!db) return null;
 
-  const result = await db.select().from(systemPrompts).where(
-    and(
-      eq(systemPrompts.userId, userId),
-      eq(systemPrompts.toolName, toolName),
-      eq(systemPrompts.isActive, 'true')
+  const result = await db
+    .select()
+    .from(systemPrompts)
+    .where(
+      and(
+        eq(systemPrompts.userId, userId),
+        eq(systemPrompts.toolName, toolName),
+        eq(systemPrompts.isActive, "true")
+      )
     )
-  ).orderBy(desc(systemPrompts.version)).limit(1);
+    .orderBy(desc(systemPrompts.version))
+    .limit(1);
 
   return result[0] || null;
 }
@@ -228,24 +267,33 @@ export async function updatePrompt(
     variables: existing.variables,
     version: existing.version + 1,
     parentId: existing.id,
-    isActive: 'true',
+    isActive: "true",
   };
 
   // Deactivate old version
-  await db.update(systemPrompts).set({ isActive: 'false' }).where(eq(systemPrompts.id, id));
+  await db
+    .update(systemPrompts)
+    .set({ isActive: "false" })
+    .where(eq(systemPrompts.id, id));
 
   // Insert new version
   const result = await db.insert(systemPrompts).values(newVersion);
   const insertedId = Number(result[0].insertId);
 
-  const created = await db.select().from(systemPrompts).where(eq(systemPrompts.id, insertedId)).limit(1);
+  const created = await db
+    .select()
+    .from(systemPrompts)
+    .where(eq(systemPrompts.id, insertedId))
+    .limit(1);
   return created[0] || null;
 }
 
 /**
  * Get version history for a prompt
  */
-export async function getPromptVersionHistory(promptId: number): Promise<PromptVersion[]> {
+export async function getPromptVersionHistory(
+  promptId: number
+): Promise<PromptVersion[]> {
   const db = await getDb();
   if (!db) return [];
 
@@ -285,7 +333,10 @@ export async function getPromptVersionHistory(promptId: number): Promise<PromptV
       });
 
       // Find children
-      const children = await db.select().from(systemPrompts).where(eq(systemPrompts.parentId, id));
+      const children = await db
+        .select()
+        .from(systemPrompts)
+        .where(eq(systemPrompts.parentId, id));
       for (const child of children) {
         queue.push(child.id);
       }
@@ -298,13 +349,16 @@ export async function getPromptVersionHistory(promptId: number): Promise<PromptV
 /**
  * Delete a prompt
  */
-export async function deletePrompt(id: number, userId: number): Promise<boolean> {
+export async function deletePrompt(
+  id: number,
+  userId: number
+): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
 
-  const result = await db.delete(systemPrompts).where(
-    and(eq(systemPrompts.id, id), eq(systemPrompts.userId, userId))
-  );
+  const result = await db
+    .delete(systemPrompts)
+    .where(and(eq(systemPrompts.id, id), eq(systemPrompts.userId, userId)));
 
   return result[0].affectedRows > 0;
 }
@@ -324,17 +378,23 @@ export async function recordPromptUsage(
   if (!prompt) return;
 
   const newUsageCount = (prompt.usageCount || 0) + 1;
-  const successCount = ((prompt.successRate || 0) / 100) * (prompt.usageCount || 0) + (success ? 1 : 0);
+  const successCount =
+    ((prompt.successRate || 0) / 100) * (prompt.usageCount || 0) +
+    (success ? 1 : 0);
   const newSuccessRate = Math.round((successCount / newUsageCount) * 100);
   const newAvgLatency = Math.round(
-    ((prompt.avgLatencyMs || 0) * (prompt.usageCount || 0) + latencyMs) / newUsageCount
+    ((prompt.avgLatencyMs || 0) * (prompt.usageCount || 0) + latencyMs) /
+      newUsageCount
   );
 
-  await db.update(systemPrompts).set({
-    usageCount: newUsageCount,
-    successRate: newSuccessRate,
-    avgLatencyMs: newAvgLatency,
-  }).where(eq(systemPrompts.id, promptId));
+  await db
+    .update(systemPrompts)
+    .set({
+      usageCount: newUsageCount,
+      successRate: newSuccessRate,
+      avgLatencyMs: newAvgLatency,
+    })
+    .where(eq(systemPrompts.id, promptId));
 }
 
 // ============================================================================
@@ -344,9 +404,11 @@ export async function recordPromptUsage(
 /**
  * Create a new workflow template
  */
-export async function createWorkflow(request: CreateWorkflowRequest): Promise<WorkflowTemplate> {
+export async function createWorkflow(
+  request: CreateWorkflowRequest
+): Promise<WorkflowTemplate> {
   const db = await getDb();
-  if (!db) throw new Error('Database not available');
+  if (!db) throw new Error("Database not available");
 
   const insertData: InsertWorkflowTemplate = {
     userId: request.userId,
@@ -355,14 +417,18 @@ export async function createWorkflow(request: CreateWorkflowRequest): Promise<Wo
     category: request.category,
     steps: JSON.stringify(request.steps),
     systemPromptId: request.systemPromptId,
-    isPublic: request.isPublic ? 'true' : 'false',
+    isPublic: request.isPublic ? "true" : "false",
   };
 
   const result = await db.insert(workflowTemplates).values(insertData);
   const insertedId = Number(result[0].insertId);
 
-  const created = await db.select().from(workflowTemplates).where(eq(workflowTemplates.id, insertedId)).limit(1);
-  if (!created[0]) throw new Error('Failed to retrieve created workflow');
+  const created = await db
+    .select()
+    .from(workflowTemplates)
+    .where(eq(workflowTemplates.id, insertedId))
+    .limit(1);
+  if (!created[0]) throw new Error("Failed to retrieve created workflow");
 
   return created[0];
 }
@@ -370,27 +436,47 @@ export async function createWorkflow(request: CreateWorkflowRequest): Promise<Wo
 /**
  * List workflows for a user
  */
-export async function listWorkflows(userId: number, category?: string): Promise<WorkflowTemplate[]> {
+export async function listWorkflows(
+  userId: number,
+  category?: string
+): Promise<WorkflowTemplate[]> {
   const db = await getDb();
   if (!db) return [];
 
   if (category) {
-    return db.select().from(workflowTemplates).where(
-      and(eq(workflowTemplates.userId, userId), eq(workflowTemplates.category, category))
-    ).orderBy(desc(workflowTemplates.createdAt));
+    return db
+      .select()
+      .from(workflowTemplates)
+      .where(
+        and(
+          eq(workflowTemplates.userId, userId),
+          eq(workflowTemplates.category, category)
+        )
+      )
+      .orderBy(desc(workflowTemplates.createdAt));
   }
 
-  return db.select().from(workflowTemplates).where(eq(workflowTemplates.userId, userId)).orderBy(desc(workflowTemplates.createdAt));
+  return db
+    .select()
+    .from(workflowTemplates)
+    .where(eq(workflowTemplates.userId, userId))
+    .orderBy(desc(workflowTemplates.createdAt));
 }
 
 /**
  * Get workflow by ID
  */
-export async function getWorkflowById(id: number): Promise<WorkflowTemplate | null> {
+export async function getWorkflowById(
+  id: number
+): Promise<WorkflowTemplate | null> {
   const db = await getDb();
   if (!db) return null;
 
-  const result = await db.select().from(workflowTemplates).where(eq(workflowTemplates.id, id)).limit(1);
+  const result = await db
+    .select()
+    .from(workflowTemplates)
+    .where(eq(workflowTemplates.id, id))
+    .limit(1);
   return result[0] || null;
 }
 
@@ -410,13 +496,19 @@ export async function updateWorkflow(
 
   const updateData: Partial<InsertWorkflowTemplate> = {};
   if (updates.name) updateData.name = updates.name;
-  if (updates.description !== undefined) updateData.description = updates.description;
+  if (updates.description !== undefined)
+    updateData.description = updates.description;
   if (updates.category !== undefined) updateData.category = updates.category;
   if (updates.steps) updateData.steps = JSON.stringify(updates.steps);
-  if (updates.systemPromptId !== undefined) updateData.systemPromptId = updates.systemPromptId;
-  if (updates.isPublic !== undefined) updateData.isPublic = updates.isPublic ? 'true' : 'false';
+  if (updates.systemPromptId !== undefined)
+    updateData.systemPromptId = updates.systemPromptId;
+  if (updates.isPublic !== undefined)
+    updateData.isPublic = updates.isPublic ? "true" : "false";
 
-  await db.update(workflowTemplates).set(updateData).where(eq(workflowTemplates.id, id));
+  await db
+    .update(workflowTemplates)
+    .set(updateData)
+    .where(eq(workflowTemplates.id, id));
 
   return getWorkflowById(id);
 }
@@ -424,13 +516,18 @@ export async function updateWorkflow(
 /**
  * Delete a workflow
  */
-export async function deleteWorkflow(id: number, userId: number): Promise<boolean> {
+export async function deleteWorkflow(
+  id: number,
+  userId: number
+): Promise<boolean> {
   const db = await getDb();
   if (!db) return false;
 
-  const result = await db.delete(workflowTemplates).where(
-    and(eq(workflowTemplates.id, id), eq(workflowTemplates.userId, userId))
-  );
+  const result = await db
+    .delete(workflowTemplates)
+    .where(
+      and(eq(workflowTemplates.id, id), eq(workflowTemplates.userId, userId))
+    );
 
   return result[0].affectedRows > 0;
 }
@@ -442,11 +539,14 @@ export async function deleteWorkflow(id: number, userId: number): Promise<boolea
 /**
  * Render a prompt template with variables
  */
-export function renderPrompt(template: string, variables: Record<string, string>): string {
+export function renderPrompt(
+  template: string,
+  variables: Record<string, string>
+): string {
   let rendered = template;
-  
+
   for (const [key, value] of Object.entries(variables)) {
-    const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+    const regex = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, "g");
     rendered = rendered.replace(regex, value);
   }
 

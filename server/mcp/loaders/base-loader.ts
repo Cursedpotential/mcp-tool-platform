@@ -1,6 +1,6 @@
 /**
  * Base Document Loader for LlamaIndex Integration
- * 
+ *
  * Provides common interface for platform-specific parsers (SMS, Facebook, iMessage, etc.)
  * Supports schema detection, auto-mapping, and modular chunking strategies.
  */
@@ -14,7 +14,14 @@
  */
 export interface LoadedDocument {
   id: string;
-  platform: 'sms' | 'facebook' | 'imessage' | 'chatgpt' | 'email' | 'whatsapp' | 'generic';
+  platform:
+    | "sms"
+    | "facebook"
+    | "imessage"
+    | "chatgpt"
+    | "email"
+    | "whatsapp"
+    | "generic";
   content: string;
   metadata: DocumentMetadata;
   chunks?: DocumentChunk[];
@@ -77,7 +84,7 @@ export interface DetectedSchema {
  */
 export interface SchemaField {
   name: string;
-  type: 'string' | 'number' | 'boolean' | 'date' | 'array' | 'object';
+  type: "string" | "number" | "boolean" | "date" | "array" | "object";
   required: boolean;
   description?: string;
   example?: any;
@@ -90,12 +97,12 @@ export interface SchemaField {
 /**
  * Chunking strategy type
  */
-export type ChunkingStrategy = 
-  | 'fixed_size'
-  | 'semantic'
-  | 'sliding_window'
-  | 'conversation_turn'
-  | 'paragraph';
+export type ChunkingStrategy =
+  | "fixed_size"
+  | "semantic"
+  | "sliding_window"
+  | "conversation_turn"
+  | "paragraph";
 
 /**
  * Chunking options
@@ -117,22 +124,25 @@ export interface ChunkingOptions {
  * All platform-specific loaders extend this
  */
 export abstract class BaseDocumentLoader {
-  protected platform: LoadedDocument['platform'];
-  
-  constructor(platform: LoadedDocument['platform']) {
+  protected platform: LoadedDocument["platform"];
+
+  constructor(platform: LoadedDocument["platform"]) {
     this.platform = platform;
   }
-  
+
   /**
    * Load document from file path
    */
   abstract load(filePath: string): Promise<LoadedDocument>;
-  
+
   /**
    * Load document from raw content
    */
-  abstract loadFromContent(content: string, metadata: Partial<DocumentMetadata>): Promise<LoadedDocument>;
-  
+  abstract loadFromContent(
+    content: string,
+    metadata: Partial<DocumentMetadata>
+  ): Promise<LoadedDocument>;
+
   /**
    * Detect schema from sample data
    */
@@ -141,33 +151,35 @@ export abstract class BaseDocumentLoader {
       return {
         fields: [],
         confidence: 0,
-        sample_records: []
+        sample_records: [],
       };
     }
-    
+
     // Extract field names from first record
     const firstRecord = sampleData[0];
     const fields: SchemaField[] = [];
-    
+
     for (const [key, value] of Object.entries(firstRecord)) {
       const type = this.inferType(value);
-      const required = sampleData.every(record => record[key] !== undefined && record[key] !== null);
-      
+      const required = sampleData.every(
+        record => record[key] !== undefined && record[key] !== null
+      );
+
       fields.push({
         name: key,
         type,
         required,
-        example: value
+        example: value,
       });
     }
-    
+
     return {
       fields,
       confidence: 0.9,
-      sample_records: sampleData.slice(0, 5)
+      sample_records: sampleData.slice(0, 5),
     };
   }
-  
+
   /**
    * Chunk document using specified strategy
    */
@@ -176,26 +188,34 @@ export abstract class BaseDocumentLoader {
     options: ChunkingOptions
   ): Promise<DocumentChunk[]> {
     switch (options.strategy) {
-      case 'fixed_size':
-        return this.chunkFixedSize(document, options.chunk_size || 512, options.chunk_overlap || 0);
-      
-      case 'sliding_window':
-        return this.chunkSlidingWindow(document, options.chunk_size || 512, options.chunk_overlap || 128);
-      
-      case 'semantic':
-        return this.chunkSemantic(document, options.separator || '\n\n');
-      
-      case 'conversation_turn':
+      case "fixed_size":
+        return this.chunkFixedSize(
+          document,
+          options.chunk_size || 512,
+          options.chunk_overlap || 0
+        );
+
+      case "sliding_window":
+        return this.chunkSlidingWindow(
+          document,
+          options.chunk_size || 512,
+          options.chunk_overlap || 128
+        );
+
+      case "semantic":
+        return this.chunkSemantic(document, options.separator || "\n\n");
+
+      case "conversation_turn":
         return this.chunkConversationTurn(document);
-      
-      case 'paragraph':
+
+      case "paragraph":
         return this.chunkParagraph(document);
-      
+
       default:
         throw new Error(`Unknown chunking strategy: ${options.strategy}`);
     }
   }
-  
+
   /**
    * Extract entities from document
    */
@@ -203,42 +223,45 @@ export abstract class BaseDocumentLoader {
     // Placeholder - would integrate with spaCy or other NER
     return [];
   }
-  
+
   // ============================================================================
   // PRIVATE HELPERS
   // ============================================================================
-  
+
   /**
    * Infer type from value
    */
-  private inferType(value: any): SchemaField['type'] {
+  private inferType(value: any): SchemaField["type"] {
     if (value === null || value === undefined) {
-      return 'string';
+      return "string";
     }
-    
+
     if (Array.isArray(value)) {
-      return 'array';
+      return "array";
     }
-    
-    if (typeof value === 'object') {
+
+    if (typeof value === "object") {
       // Check if it's a date
-      if (value instanceof Date || (typeof value === 'string' && !isNaN(Date.parse(value)))) {
-        return 'date';
+      if (
+        value instanceof Date ||
+        (typeof value === "string" && !isNaN(Date.parse(value)))
+      ) {
+        return "date";
       }
-      return 'object';
+      return "object";
     }
-    
-    if (typeof value === 'number') {
-      return 'number';
+
+    if (typeof value === "number") {
+      return "number";
     }
-    
-    if (typeof value === 'boolean') {
-      return 'boolean';
+
+    if (typeof value === "boolean") {
+      return "boolean";
     }
-    
-    return 'string';
+
+    return "string";
   }
-  
+
   /**
    * Chunk with fixed size
    */
@@ -251,11 +274,11 @@ export abstract class BaseDocumentLoader {
     const text = document.content;
     let index = 0;
     let offset = 0;
-    
+
     while (offset < text.length) {
       const end = Math.min(offset + chunkSize, text.length);
       const chunkText = text.slice(offset, end);
-      
+
       chunks.push({
         chunk_id: `${document.id}_chunk_${index}`,
         document_id: document.id,
@@ -265,17 +288,17 @@ export abstract class BaseDocumentLoader {
         end_offset: end,
         metadata: {
           platform: document.platform,
-          chunk_size: chunkText.length
-        }
+          chunk_size: chunkText.length,
+        },
       });
-      
+
       index++;
       offset = end - overlap;
     }
-    
+
     return chunks;
   }
-  
+
   /**
    * Chunk with sliding window
    */
@@ -286,7 +309,7 @@ export abstract class BaseDocumentLoader {
   ): DocumentChunk[] {
     return this.chunkFixedSize(document, windowSize, overlap);
   }
-  
+
   /**
    * Chunk by semantic separator
    */
@@ -297,13 +320,13 @@ export abstract class BaseDocumentLoader {
     const chunks: DocumentChunk[] = [];
     const parts = document.content.split(separator);
     let offset = 0;
-    
+
     parts.forEach((part, index) => {
       if (part.trim().length === 0) {
         offset += part.length + separator.length;
         return;
       }
-      
+
       chunks.push({
         chunk_id: `${document.id}_chunk_${index}`,
         document_id: document.id,
@@ -313,31 +336,31 @@ export abstract class BaseDocumentLoader {
         end_offset: offset + part.length,
         metadata: {
           platform: document.platform,
-          separator
-        }
+          separator,
+        },
       });
-      
+
       offset += part.length + separator.length;
     });
-    
+
     return chunks;
   }
-  
+
   /**
    * Chunk by conversation turn (for chat platforms)
    */
   private chunkConversationTurn(document: LoadedDocument): DocumentChunk[] {
     // Placeholder - would parse conversation structure
-    return this.chunkSemantic(document, '\n---\n');
+    return this.chunkSemantic(document, "\n---\n");
   }
-  
+
   /**
    * Chunk by paragraph
    */
   private chunkParagraph(document: LoadedDocument): DocumentChunk[] {
-    return this.chunkSemantic(document, '\n\n');
+    return this.chunkSemantic(document, "\n\n");
   }
-  
+
   /**
    * Generate unique document ID
    */
@@ -355,21 +378,21 @@ export abstract class BaseDocumentLoader {
  */
 export class DocumentLoaderRegistry {
   private loaders: Map<string, typeof BaseDocumentLoader> = new Map();
-  
+
   /**
    * Register a loader for a platform
    */
   register(platform: string, loader: typeof BaseDocumentLoader): void {
     this.loaders.set(platform, loader);
   }
-  
+
   /**
    * Get loader for platform
    */
   get(platform: string): typeof BaseDocumentLoader | undefined {
     return this.loaders.get(platform);
   }
-  
+
   /**
    * List all registered platforms
    */

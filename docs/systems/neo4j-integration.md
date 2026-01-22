@@ -48,7 +48,9 @@ Neo4j serves as the **graph layer** for relationship queries, pattern matching, 
 ## How It Works
 
 ### 1. Entity Extraction
+
 During document processing, the multi-pass NLP classifier extracts entities from messages:
+
 - **People:** Names, aliases, relationships
 - **Places:** Addresses, locations, venues
 - **Organizations:** Companies, agencies, institutions
@@ -56,7 +58,9 @@ During document processing, the multi-pass NLP classifier extracts entities from
 - **Contact Info:** Phone numbers, email addresses
 
 ### 2. Relationship Detection
+
 The system detects relationships between entities:
+
 - **Familial:** Parent-child, siblings, extended family
 - **Romantic:** Dating, marriage, divorce, affairs
 - **Professional:** Employment, coworkers, supervision
@@ -66,14 +70,18 @@ The system detects relationships between entities:
 - **Temporal:** Event participation, timeline overlaps
 
 ### 3. Graph Storage
+
 Entities and relationships are stored in Neo4j using Graphiti's temporal knowledge graph framework:
+
 - **Nodes:** Entities with properties (Person, Address, Place, Organization, Event, etc.)
 - **Edges:** Relationships with temporal metadata (start_date, end_date, source)
 - **Constraints:** Unique IDs, spatial indexes for proximity queries
 - **Temporal Tracking:** All relationships have timestamps for evolution tracking
 
 ### 4. Query & Analysis
+
 The system provides tools for graph analysis:
+
 - **Search Entities:** Find entities by name, type, or properties
 - **Get Timeline:** Retrieve entity history with all relationships
 - **Detect Contradictions:** Find conflicting statements across time
@@ -84,15 +92,18 @@ The system provides tools for graph analysis:
 ## Node Labels (Entities)
 
 ### Person
+
 Primary entity for all individuals in the case ecosystem.
 
 **Properties:**
+
 - **Identity:** `id`, `canonical_name`, `full_name`, `first_name`, `middle_name`, `last_name`, `suffix`, `aliases`
 - **Demographics:** `dob_month`, `dob_year`, `age`, `gender`, `alive`
 - **Classification:** `type`, `subtype`, `relationship_to_user`, `lookup_status`, `case_relevant`, `case_role`, `impact_on_case`
 - **Metadata:** `source_app`, `source_urls`, `created_at`, `updated_at`
 
 **Subtypes:**
+
 - `opposing_party` - The respondent/defendant
 - `child` - Minor child involved in case
 - `witness` - Potential witness
@@ -104,6 +115,7 @@ Primary entity for all individuals in the case ecosystem.
 - `professional` - Attorney, judge, FOC worker
 
 **Relevance Tiers:**
+
 - **Tier 1 (`subject`):** Direct lookup targets (Katrina, key witnesses) - Highest priority
 - **Tier 2 (`promoted`):** Derived person manually flagged as important - High priority
 - **Tier 3 (`derived`):** Auto-extracted (relatives, neighbors, associates) - Medium priority
@@ -111,9 +123,11 @@ Primary entity for all individuals in the case ecosystem.
 ---
 
 ### Address
+
 Physical addresses with geocoding for spatial queries.
 
 **Properties:**
+
 - **Identity:** `id`, `full_address`, `street`, `city`, `state`, `zip`, `county`, `unit`
 - **Precise Coordinates:** `lat`, `lon`, `location` (Neo4j Point type)
 - **Fuzzy Coordinates:** `lat_fuzzy`, `lon_fuzzy` (rounded ~100m grid)
@@ -131,12 +145,15 @@ Physical addresses with geocoding for spatial queries.
 ---
 
 ### Place
+
 Named locations (not residential addresses).
 
 **Properties:**
+
 - `id`, `canonical_name`, `type`, `subtype`, `address`, `lat`, `lon`, `source_app`
 
 **Subtypes:**
+
 - `court` - Courthouse, FOC office
 - `school` - Schools, daycare
 - `workplace` - Employers
@@ -147,12 +164,15 @@ Named locations (not residential addresses).
 ---
 
 ### Organization
+
 Companies, agencies, institutions.
 
 **Properties:**
+
 - `id`, `canonical_name`, `type`, `subtype`, `address`, `phone`, `source_app`
 
 **Subtypes:**
+
 - `court_agency` - FOC, Probation
 - `employer` - Companies where parties work
 - `school` - Schools, districts
@@ -163,9 +183,11 @@ Companies, agencies, institutions.
 ---
 
 ### Property
+
 Real estate property details (linked to Address).
 
 **Properties:**
+
 - **Structure:** `bedrooms`, `bathrooms`, `sqft`, `year_built`, `lot_sqft`
 - **Value:** `estimated_value`, `estimated_equity`, `last_sale_amount`, `last_sale_date`
 - **Classification:** `land_use`, `property_class`, `subdivision`, `apn`, `occupancy_type`, `ownership_type`, `school_district`
@@ -173,9 +195,11 @@ Real estate property details (linked to Address).
 ---
 
 ### GpsPoint
+
 Individual GPS location records from timeline data.
 
 **Properties:**
+
 - **Identity:** `point_id`
 - **Coordinates:** `lat`, `lon`, `location` (Neo4j Point type)
 - **Quality:** `accuracy`
@@ -185,6 +209,7 @@ Individual GPS location records from timeline data.
 - **Fuzzy:** `geohash_7`
 
 **Activity Types:**
+
 - `STILL` - Stationary
 - `WALKING` - On foot
 - `RUNNING` - Running/jogging
@@ -195,12 +220,15 @@ Individual GPS location records from timeline data.
 ---
 
 ### Phone
+
 Phone number records.
 
 **Properties:**
+
 - `number`, `type`, `carrier`, `first_reported`
 
 **Types:**
+
 - `wireless` - Cell phone
 - `landline` - Wired phone
 - `voip` - Internet-based (Google Voice, etc.)
@@ -208,25 +236,31 @@ Phone number records.
 ---
 
 ### Email
+
 Email address records.
 
 **Properties:**
+
 - `address`, `domain`, `first_reported`
 
 ---
 
 ### VoterRecord
+
 Public voter registration data.
 
 **Properties:**
+
 - `voter_id`, `registration_date`, `status`, `party`, `precinct`, `jurisdiction`, `county`, `state_house_district`, `state_senate_district`, `us_congress_district`, `school_district`
 
 ---
 
 ### Event
+
 Discrete events that can be linked to people/places.
 
 **Properties:**
+
 - **Identity:** `id`, `event_type`, `description`
 - **Temporal:** `date`, `date_raw`
 - **Spatial:** `location`
@@ -238,6 +272,7 @@ Discrete events that can be linked to people/places.
 ## Edge Types (Relationships)
 
 ### Familial Relationships
+
 ```cypher
 -- Parent-child
 (parent:Person)-[:PARENT_OF {
@@ -259,6 +294,7 @@ Discrete events that can be linked to people/places.
 ---
 
 ### Romantic Relationships
+
 ```cypher
 -- Dating
 (a:Person)-[:DATED {
@@ -288,6 +324,7 @@ Discrete events that can be linked to people/places.
 ---
 
 ### Professional Relationships
+
 ```cypher
 -- Employment
 (person:Person)-[:EMPLOYED_BY {
@@ -308,6 +345,7 @@ Discrete events that can be linked to people/places.
 ---
 
 ### Residential Relationships
+
 ```cypher
 -- Residence history
 (person:Person)-[:RESIDED_AT {
@@ -336,6 +374,7 @@ Discrete events that can be linked to people/places.
 ---
 
 ### Contact Relationships
+
 ```cypher
 -- Phone ownership
 (person:Person)-[:HAS_PHONE {
@@ -365,6 +404,7 @@ Discrete events that can be linked to people/places.
 ---
 
 ### Spatial Relationships
+
 ```cypher
 -- Location visits
 (person:Person)-[:VISITED {
@@ -385,6 +425,7 @@ Discrete events that can be linked to people/places.
 ---
 
 ### Temporal Relationships
+
 ```cypher
 -- Event participation
 (person:Person)-[:PARTICIPATED_IN {
@@ -406,11 +447,13 @@ Discrete events that can be linked to people/places.
 ## Parameters/Configuration
 
 ### Connection Configuration
+
 - **NEO4J_URL:** Neo4j Aura connection URI (e.g., `neo4j+s://xxxxx.databases.neo4j.io`)
 - **NEO4J_USERNAME:** Neo4j username (default: `neo4j`)
 - **NEO4J_PASSWORD:** Neo4j password
 
 ### Graphiti Configuration
+
 - **Temporal Tracking:** All relationships have `start_date` and `end_date` for evolution tracking
 - **Source Tracking:** All entities have `source_app` and `source_urls` for provenance
 - **Spatial Indexing:** Geohash precision tiers for fast proximity queries
@@ -420,64 +463,70 @@ Discrete events that can be linked to people/places.
 ## Usage Examples
 
 ### Example 1: Add Entity
-```typescript
-import { graphitiRunner } from './server/python-tools/graphiti_runner';
 
-const result = await graphitiRunner('add_entity', {
-  entity_type: 'Person',
+```typescript
+import { graphitiRunner } from "./server/python-tools/graphiti_runner";
+
+const result = await graphitiRunner("add_entity", {
+  entity_type: "Person",
   properties: {
-    canonical_name: 'Katrina Kinzel',
-    subtype: 'opposing_party',
-    case_relevant: true
-  }
+    canonical_name: "Katrina Kinzel",
+    subtype: "opposing_party",
+    case_relevant: true,
+  },
 });
 ```
 
 ### Example 2: Add Relationship
+
 ```typescript
-const result = await graphitiRunner('add_relationship', {
-  source_entity_id: 'person_uuid_1',
-  target_entity_id: 'person_uuid_2',
-  relationship_type: 'DATED',
+const result = await graphitiRunner("add_relationship", {
+  source_entity_id: "person_uuid_1",
+  target_entity_id: "person_uuid_2",
+  relationship_type: "DATED",
   properties: {
-    start_date: '2016-03-01',
-    end_date: '2024-08-15',
-    source_app: 'chronicle'
-  }
+    start_date: "2016-03-01",
+    end_date: "2024-08-15",
+    source_app: "chronicle",
+  },
 });
 ```
 
 ### Example 3: Search Entities
+
 ```typescript
-const result = await graphitiRunner('search_entities', {
-  query: 'Katrina',
-  entity_type: 'Person',
-  limit: 10
+const result = await graphitiRunner("search_entities", {
+  query: "Katrina",
+  entity_type: "Person",
+  limit: 10,
 });
 ```
 
 ### Example 4: Get Entity Timeline
+
 ```typescript
-const result = await graphitiRunner('get_entity_timeline', {
-  entity_id: 'person_uuid',
-  start_date: '2024-01-01',
-  end_date: '2024-12-31'
+const result = await graphitiRunner("get_entity_timeline", {
+  entity_id: "person_uuid",
+  start_date: "2024-01-01",
+  end_date: "2024-12-31",
 });
 ```
 
 ### Example 5: Detect Contradictions
+
 ```typescript
-const result = await graphitiRunner('detect_contradictions', {
-  entity_id: 'person_uuid',
-  property_name: 'location'
+const result = await graphitiRunner("detect_contradictions", {
+  entity_id: "person_uuid",
+  property_name: "location",
 });
 ```
 
 ### Example 6: Query As Of Date
+
 ```typescript
-const result = await graphitiRunner('query_as_of', {
-  entity_id: 'person_uuid',
-  as_of_date: '2024-06-15'
+const result = await graphitiRunner("query_as_of", {
+  entity_id: "person_uuid",
+  as_of_date: "2024-06-15",
 });
 ```
 
@@ -486,6 +535,7 @@ const result = await graphitiRunner('query_as_of', {
 ## Return Values/Output
 
 All Graphiti operations return:
+
 ```typescript
 {
   success: boolean;
@@ -495,6 +545,7 @@ All Graphiti operations return:
 ```
 
 **Example Success Response:**
+
 ```json
 {
   "success": true,
@@ -526,21 +577,25 @@ All Graphiti operations return:
 ## Troubleshooting
 
 ### Issue: Connection Failed
+
 **Symptom:** `Neo4jError: Unable to connect to Neo4j`  
 **Cause:** Invalid credentials or network issue  
 **Solution:** Verify `NEO4J_URL`, `NEO4J_USERNAME`, `NEO4J_PASSWORD` in environment variables. Ensure Neo4j Aura instance is running.
 
 ### Issue: Duplicate Entities
+
 **Symptom:** Multiple entities with same name  
 **Cause:** Entity deduplication not enabled  
 **Solution:** Use `canonical_name` for entity matching. Implement entity resolution logic before adding to graph.
 
 ### Issue: Slow Proximity Queries
+
 **Symptom:** Geohash queries taking >1s  
 **Cause:** Missing spatial indexes  
 **Solution:** Ensure spatial indexes are created: `CREATE POINT INDEX gps_location IF NOT EXISTS FOR (g:GpsPoint) ON (g.location);`
 
 ### Issue: Temporal Queries Returning Wrong Data
+
 **Symptom:** `query_as_of` returns incorrect graph state  
 **Cause:** Missing `start_date` or `end_date` on relationships  
 **Solution:** Ensure all relationships have temporal metadata. Use `datetime()` for timestamps.

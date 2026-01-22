@@ -18,6 +18,7 @@ The Pattern Router (`server/api/routers/patterns.ts`) has all 13 endpoints stubb
 Tables to use (from `drizzle/schema.ts`):
 
 ### `behavioralPatterns`
+
 ```typescript
 {
   id: int (autoincrement, primary key)
@@ -38,6 +39,7 @@ Tables to use (from `drizzle/schema.ts`):
 ```
 
 ### `patternCategories`
+
 ```typescript
 {
   id: int (autoincrement, primary key)
@@ -56,6 +58,7 @@ Tables to use (from `drizzle/schema.ts`):
 ## Implementation Requirements
 
 ### 1. Import Database Helper
+
 ```typescript
 import { getDb } from "../../core/db";
 ```
@@ -63,6 +66,7 @@ import { getDb } from "../../core/db";
 ### 2. Implement All 13 Endpoints
 
 #### `patterns.list`
+
 - Query `behavioralPatterns` table
 - Filter by `search` query (name, description)
 - Filter by `category` if provided
@@ -71,12 +75,14 @@ import { getDb } from "../../core/db";
 - Return: `{ patterns: [...], total: number, page: number, pageSize: number }`
 
 #### `patterns.getById`
+
 - Fetch single pattern by ID
 - Verify user has access (either owns it OR it's built-in with `userId = null`)
 - Throw 403 if user doesn't own and it's not built-in
 - Return pattern object
 
 #### `patterns.create`
+
 - Insert into `behavioralPatterns` table
 - Set `userId = ctx.user.id`
 - Set `isCustom = 'true'`
@@ -84,6 +90,7 @@ import { getDb } from "../../core/db";
 - Return new pattern object
 
 #### `patterns.update`
+
 - Verify user owns this pattern (`userId = ctx.user.id`)
 - Throw 403 if not owner
 - Cannot update built-in patterns (`userId = null`)
@@ -92,6 +99,7 @@ import { getDb } from "../../core/db";
 - Return updated pattern object
 
 #### `patterns.delete`
+
 - Verify user owns this pattern (`userId = ctx.user.id`)
 - Throw 403 if not owner
 - Cannot delete built-in patterns (`userId = null`)
@@ -99,12 +107,14 @@ import { getDb } from "../../core/db";
 - Return `{ success: true }`
 
 #### `patterns.testPattern`
+
 - Test regex pattern against sample text
 - Use `new RegExp(pattern, 'gi')` for case-insensitive global matching
 - Return `{ matches: [...], matchCount: number }`
 - Handle regex errors gracefully (invalid regex syntax)
 
 #### `patterns.import`
+
 - Iterate through patterns array
 - Check for existing patterns with same name
 - Handle conflicts based on `conflictResolution` strategy:
@@ -116,6 +126,7 @@ import { getDb } from "../../core/db";
 - Return `{ imported: number, skipped: number, errors: [...] }`
 
 #### `patterns.export`
+
 - Fetch all patterns for current user
 - Optionally include built-in patterns if `includeBuiltIn = true`
 - Convert to requested format:
@@ -125,6 +136,7 @@ import { getDb } from "../../core/db";
 - Return file data or download URL
 
 #### `patterns.getStats`
+
 - Fetch pattern usage statistics
 - Group by category
 - Calculate:
@@ -136,19 +148,23 @@ import { getDb } from "../../core/db";
 - Return stats object
 
 #### `patterns.getCategories`
+
 - Fetch all pattern categories from `patternCategories` table
 - Include pattern count per category (JOIN with `behavioralPatterns`)
 - Return array of `{ id, name, description, color, icon, defaultSeverity, patternCount }`
 
 #### `patterns.createCategory`
+
 - Insert into `patternCategories` table
 - Return new category object
 
 #### `patterns.updateCategory`
+
 - Update `patternCategories` table
 - Return updated category object
 
 #### `patterns.deleteCategory`
+
 - Check if category has patterns (COUNT from `behavioralPatterns` WHERE `category = name`)
 - If yes, throw error: "Cannot delete category with existing patterns"
 - Delete from `patternCategories` table
@@ -159,11 +175,13 @@ import { getDb } from "../../core/db";
 ## Database Query Examples
 
 ### Using Drizzle ORM
+
 ```typescript
 const db = await getDb();
 
 // SELECT with filter
-const patterns = await db.select()
+const patterns = await db
+  .select()
   .from(behavioralPatterns)
   .where(
     and(
@@ -171,14 +189,15 @@ const patterns = await db.select()
         eq(behavioralPatterns.userId, ctx.user.id),
         isNull(behavioralPatterns.userId)
       ),
-      eq(behavioralPatterns.isActive, 'true')
+      eq(behavioralPatterns.isActive, "true")
     )
   )
   .limit(input.pageSize)
   .offset((input.page - 1) * input.pageSize);
 
 // INSERT
-const [newPattern] = await db.insert(behavioralPatterns)
+const [newPattern] = await db
+  .insert(behavioralPatterns)
   .values({
     userId: ctx.user.id,
     name: input.name,
@@ -188,13 +207,14 @@ const [newPattern] = await db.insert(behavioralPatterns)
     severity: input.severity,
     mclFactors: JSON.stringify(input.mclFactors || []),
     examples: JSON.stringify(input.examples || []),
-    isCustom: 'true',
-    isActive: 'true',
+    isCustom: "true",
+    isActive: "true",
   })
   .returning();
 
 // UPDATE
-const [updated] = await db.update(behavioralPatterns)
+const [updated] = await db
+  .update(behavioralPatterns)
   .set({
     name: input.name,
     pattern: input.pattern,
@@ -204,8 +224,7 @@ const [updated] = await db.update(behavioralPatterns)
   .returning();
 
 // DELETE
-await db.delete(behavioralPatterns)
-  .where(eq(behavioralPatterns.id, input.id));
+await db.delete(behavioralPatterns).where(eq(behavioralPatterns.id, input.id));
 ```
 
 ---
@@ -213,12 +232,13 @@ await db.delete(behavioralPatterns)
 ## Error Handling
 
 - Use `TRPCError` for errors:
+
 ```typescript
-import { TRPCError } from '@trpc/server';
+import { TRPCError } from "@trpc/server";
 
 throw new TRPCError({
-  code: 'FORBIDDEN',
-  message: 'You do not own this pattern',
+  code: "FORBIDDEN",
+  message: "You do not own this pattern",
 });
 ```
 
@@ -233,6 +253,7 @@ throw new TRPCError({
 ## Testing Checklist
 
 After implementation, test:
+
 - [ ] Can list patterns (both custom and built-in)
 - [ ] Can create new pattern
 - [ ] Can update own pattern

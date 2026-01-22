@@ -1,17 +1,17 @@
 /**
  * ML Plugin (Optional - Off by Default)
- * 
+ *
  * Provides machine learning capabilities:
  * - Embedding generation (local BERT or remote API)
  * - Semantic search over document corpus
  * - Text classification
  * - Uses Chroma as working memory for embeddings
- * 
+ *
  * Defaults to CPU; supports optional GPU remote runner.
  */
 
-import { getContentStore } from '../store/content-store';
-import type { ContentRef, EmbeddingResult } from '../../../shared/mcp-types';
+import { getContentStore } from "../store/content-store";
+import type { ContentRef, EmbeddingResult } from "../../../shared/mcp-types";
 
 // ============================================================================
 // Configuration
@@ -19,7 +19,7 @@ import type { ContentRef, EmbeddingResult } from '../../../shared/mcp-types';
 
 interface MLConfig {
   enabled: boolean;
-  embeddingProvider: 'local' | 'ollama' | 'openai' | 'gemini';
+  embeddingProvider: "local" | "ollama" | "openai" | "gemini";
   embeddingModel: string;
   chromaPath: string;
   useGPU: boolean;
@@ -28,9 +28,9 @@ interface MLConfig {
 
 const defaultConfig: MLConfig = {
   enabled: false, // Off by default
-  embeddingProvider: 'local',
-  embeddingModel: 'all-MiniLM-L6-v2',
-  chromaPath: './data/chroma',
+  embeddingProvider: "local",
+  embeddingModel: "all-MiniLM-L6-v2",
+  chromaPath: "./data/chroma",
   useGPU: false,
 };
 
@@ -88,14 +88,16 @@ interface ClassifyArgs {
 /**
  * Generate embeddings for text (stored server-side)
  */
-export async function generateEmbeddings(args: GenerateEmbeddingsArgs): Promise<{
+export async function generateEmbeddings(
+  args: GenerateEmbeddingsArgs
+): Promise<{
   embeddingIds: string[];
   dimensions: number;
   model: string;
   stored: boolean;
 }> {
   if (!config.enabled) {
-    throw new Error('ML plugin is disabled. Enable it in configuration.');
+    throw new Error("ML plugin is disabled. Enable it in configuration.");
   }
 
   const store = await getContentStore();
@@ -158,14 +160,17 @@ export async function semanticSearch(args: SemanticSearchArgs): Promise<{
   resultsRef?: ContentRef;
 }> {
   if (!config.enabled) {
-    throw new Error('ML plugin is disabled. Enable it in configuration.');
+    throw new Error("ML plugin is disabled. Enable it in configuration.");
   }
 
   const topK = args.topK ?? 10;
   const threshold = args.threshold ?? 0.5;
 
   // Generate query embedding
-  const queryEmbedding = await generateSingleEmbedding(args.query, config.embeddingModel);
+  const queryEmbedding = await generateSingleEmbedding(
+    args.query,
+    config.embeddingModel
+  );
 
   // Collect all embeddings to search
   const candidates: Array<EmbeddingEntry & { collectionKey: string }> = [];
@@ -174,29 +179,29 @@ export async function semanticSearch(args: SemanticSearchArgs): Promise<{
     for (const ref of args.scopeRefs) {
       const entries = embeddingStore.get(ref);
       if (entries) {
-        candidates.push(...entries.map((e) => ({ ...e, collectionKey: ref })));
+        candidates.push(...entries.map(e => ({ ...e, collectionKey: ref })));
       }
     }
   } else {
     // Search all collections
     embeddingStore.forEach((entries, key) => {
-      candidates.push(...entries.map((e) => ({ ...e, collectionKey: key })));
+      candidates.push(...entries.map(e => ({ ...e, collectionKey: key })));
     });
   }
 
   // Calculate similarities
-  const scored = candidates.map((entry) => ({
+  const scored = candidates.map(entry => ({
     ...entry,
     score: cosineSimilarity(queryEmbedding, entry.embedding),
   }));
 
   // Filter by threshold and sort
   const filtered = scored
-    .filter((s) => s.score >= threshold)
+    .filter(s => s.score >= threshold)
     .sort((a, b) => b.score - a.score)
     .slice(0, topK);
 
-  const results = filtered.map((r) => ({
+  const results = filtered.map(r => ({
     id: r.id,
     score: r.score,
     document: r.document?.slice(0, 200), // Preview only
@@ -207,7 +212,10 @@ export async function semanticSearch(args: SemanticSearchArgs): Promise<{
   let resultsRef: ContentRef | undefined;
   if (results.length > 20) {
     const store = await getContentStore();
-    const stored = await store.put(JSON.stringify(filtered), 'application/json');
+    const stored = await store.put(
+      JSON.stringify(filtered),
+      "application/json"
+    );
     resultsRef = stored.ref;
   }
 
@@ -223,7 +231,7 @@ export async function classify(args: ClassifyArgs): Promise<{
   confidence: number;
 }> {
   if (!config.enabled) {
-    throw new Error('ML plugin is disabled. Enable it in configuration.');
+    throw new Error("ML plugin is disabled. Enable it in configuration.");
   }
 
   const store = await getContentStore();
@@ -234,32 +242,35 @@ export async function classify(args: ClassifyArgs): Promise<{
   }
 
   // Generate embedding for text
-  const textEmbedding = await generateSingleEmbedding(text.slice(0, 1000), config.embeddingModel);
+  const textEmbedding = await generateSingleEmbedding(
+    text.slice(0, 1000),
+    config.embeddingModel
+  );
 
   // Generate embeddings for labels
   const labelEmbeddings = await Promise.all(
-    args.labels.map(async (label) => ({
+    args.labels.map(async label => ({
       label,
       embedding: await generateSingleEmbedding(label, config.embeddingModel),
     }))
   );
 
   // Calculate similarities
-  const scores = labelEmbeddings.map((le) => ({
+  const scores = labelEmbeddings.map(le => ({
     label: le.label,
     score: cosineSimilarity(textEmbedding, le.embedding),
   }));
 
   // Normalize to probabilities using softmax
-  const maxScore = Math.max(...scores.map((s) => s.score));
-  const expScores = scores.map((s) => ({
+  const maxScore = Math.max(...scores.map(s => s.score));
+  const expScores = scores.map(s => ({
     label: s.label,
     exp: Math.exp((s.score - maxScore) * 10), // Scale for better separation
   }));
   const sumExp = expScores.reduce((sum, s) => sum + s.exp, 0);
 
   const predictions = expScores
-    .map((s) => ({
+    .map(s => ({
       label: s.label,
       probability: s.exp / sumExp,
     }))
@@ -267,7 +278,7 @@ export async function classify(args: ClassifyArgs): Promise<{
 
   return {
     predictions,
-    topLabel: predictions[0]?.label ?? '',
+    topLabel: predictions[0]?.label ?? "",
     confidence: predictions[0]?.probability ?? 0,
   };
 }
@@ -275,7 +286,10 @@ export async function classify(args: ClassifyArgs): Promise<{
 /**
  * Generate a single embedding vector for a raw text string
  */
-export async function embedText(args: { text: string; model?: string }): Promise<number[]> {
+export async function embedText(args: {
+  text: string;
+  model?: string;
+}): Promise<number[]> {
   const model = args.model ?? config.embeddingModel;
   return generateSingleEmbedding(args.text, model);
 }
@@ -283,7 +297,9 @@ export async function embedText(args: { text: string; model?: string }): Promise
 /**
  * Clear embeddings for a document
  */
-export async function clearEmbeddings(args: { textRef: string }): Promise<{ success: boolean }> {
+export async function clearEmbeddings(args: {
+  textRef: string;
+}): Promise<{ success: boolean }> {
   embeddingStore.delete(args.textRef);
   return { success: true };
 }
@@ -299,7 +315,7 @@ export async function getEmbeddingStats(): Promise<{
   let totalEmbeddings = 0;
   let dimensions = 0;
 
-  embeddingStore.forEach((entries) => {
+  embeddingStore.forEach(entries => {
     totalEmbeddings += entries.length;
     if (entries.length > 0 && entries[0].embedding) {
       dimensions = entries[0].embedding.length;
@@ -317,18 +333,21 @@ export async function getEmbeddingStats(): Promise<{
 // Embedding Generation
 // ============================================================================
 
-async function generateSingleEmbedding(text: string, model: string): Promise<number[]> {
+async function generateSingleEmbedding(
+  text: string,
+  model: string
+): Promise<number[]> {
   // For now, use a simple hash-based pseudo-embedding
   // In production, integrate with actual embedding models
-  
+
   switch (config.embeddingProvider) {
-    case 'local':
+    case "local":
       return generateLocalEmbedding(text);
-    case 'ollama':
+    case "ollama":
       return generateOllamaEmbedding(text, model);
-    case 'openai':
+    case "openai":
       return generateOpenAIEmbedding(text, model);
-    case 'gemini':
+    case "gemini":
       return generateGeminiEmbedding(text, model);
     default:
       return generateLocalEmbedding(text);
@@ -345,14 +364,14 @@ function generateLocalEmbedding(text: string): number[] {
 
   // Simple hash-based embedding (NOT for production)
   const words = text.toLowerCase().match(/\b\w+\b/g) ?? [];
-  
+
   for (const word of words) {
     let hash = 0;
     for (let i = 0; i < word.length; i++) {
-      hash = ((hash << 5) - hash) + word.charCodeAt(i);
+      hash = (hash << 5) - hash + word.charCodeAt(i);
       hash = hash & hash;
     }
-    
+
     // Distribute hash across embedding dimensions
     for (let i = 0; i < dimensions; i++) {
       embedding[i] += Math.sin(hash * (i + 1)) * 0.01;
@@ -370,78 +389,93 @@ function generateLocalEmbedding(text: string): number[] {
   return embedding;
 }
 
-async function generateOllamaEmbedding(text: string, model: string): Promise<number[]> {
+async function generateOllamaEmbedding(
+  text: string,
+  model: string
+): Promise<number[]> {
   try {
-    const ollamaUrl = process.env.OLLAMA_URL || 'http://localhost:11434';
+    const ollamaUrl = process.env.OLLAMA_URL || "http://localhost:11434";
     const response = await fetch(`${ollamaUrl}/api/embeddings`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: model || 'nomic-embed-text',
+        model: model || "nomic-embed-text",
         prompt: text,
       }),
     });
 
     if (!response.ok) {
-      console.warn(`Ollama embedding failed (${response.status}), using local fallback`);
+      console.warn(
+        `Ollama embedding failed (${response.status}), using local fallback`
+      );
       return generateLocalEmbedding(text);
     }
 
-    const data = await response.json() as { embedding: number[] };
+    const data = (await response.json()) as { embedding: number[] };
     return data.embedding;
   } catch (error) {
-    console.warn('Ollama embedding error, using local fallback:', error);
+    console.warn("Ollama embedding error, using local fallback:", error);
     return generateLocalEmbedding(text);
   }
 }
 
-async function generateOpenAIEmbedding(text: string, model: string): Promise<number[]> {
+async function generateOpenAIEmbedding(
+  text: string,
+  model: string
+): Promise<number[]> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    console.warn('OpenAI API key not set, using local fallback');
+    console.warn("OpenAI API key not set, using local fallback");
     return generateLocalEmbedding(text);
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/embeddings', {
-      method: 'POST',
+    const response = await fetch("https://api.openai.com/v1/embeddings", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: model || 'text-embedding-3-small',
+        model: model || "text-embedding-3-small",
         input: text,
       }),
     });
 
     if (!response.ok) {
-      console.warn(`OpenAI embedding failed (${response.status}), using local fallback`);
+      console.warn(
+        `OpenAI embedding failed (${response.status}), using local fallback`
+      );
       return generateLocalEmbedding(text);
     }
 
-    const data = await response.json() as { data: Array<{ embedding: number[] }> };
+    const data = (await response.json()) as {
+      data: Array<{ embedding: number[] }>;
+    };
     return data.data[0].embedding;
   } catch (error) {
-    console.warn('OpenAI embedding error, using local fallback:', error);
+    console.warn("OpenAI embedding error, using local fallback:", error);
     return generateLocalEmbedding(text);
   }
 }
 
-async function generateGeminiEmbedding(text: string, model: string): Promise<number[]> {
+async function generateGeminiEmbedding(
+  text: string,
+  model: string
+): Promise<number[]> {
   const apiKey = process.env.GOOGLE_API_KEY;
   if (!apiKey) {
-    console.warn('Google API key not set, using local fallback');
+    console.warn("Google API key not set, using local fallback");
     return generateLocalEmbedding(text);
   }
 
   try {
-    const embeddingModel = model || 'text-embedding-004';
+    const embeddingModel = model || "text-embedding-004";
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${embeddingModel}:embedContent?key=${apiKey}`,
       {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           model: `models/${embeddingModel}`,
           content: { parts: [{ text }] },
@@ -450,14 +484,16 @@ async function generateGeminiEmbedding(text: string, model: string): Promise<num
     );
 
     if (!response.ok) {
-      console.warn(`Gemini embedding failed (${response.status}), using local fallback`);
+      console.warn(
+        `Gemini embedding failed (${response.status}), using local fallback`
+      );
       return generateLocalEmbedding(text);
     }
 
-    const data = await response.json() as { embedding: { values: number[] } };
+    const data = (await response.json()) as { embedding: { values: number[] } };
     return data.embedding.values;
   } catch (error) {
-    console.warn('Gemini embedding error, using local fallback:', error);
+    console.warn("Gemini embedding error, using local fallback:", error);
     return generateLocalEmbedding(text);
   }
 }
@@ -474,7 +510,7 @@ function splitIntoChunks(text: string, chunkSize: number): string[] {
 
   for (const word of words) {
     if (currentSize + word.length + 1 > chunkSize && currentChunk.length > 0) {
-      chunks.push(currentChunk.join(' '));
+      chunks.push(currentChunk.join(" "));
       currentChunk = [];
       currentSize = 0;
     }
@@ -483,7 +519,7 @@ function splitIntoChunks(text: string, chunkSize: number): string[] {
   }
 
   if (currentChunk.length > 0) {
-    chunks.push(currentChunk.join(' '));
+    chunks.push(currentChunk.join(" "));
   }
 
   return chunks;
@@ -491,7 +527,7 @@ function splitIntoChunks(text: string, chunkSize: number): string[] {
 
 function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length) {
-    throw new Error('Vectors must have same dimensions');
+    throw new Error("Vectors must have same dimensions");
   }
 
   let dotProduct = 0;

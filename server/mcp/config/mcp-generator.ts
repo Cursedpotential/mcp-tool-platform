@@ -1,17 +1,17 @@
 /**
  * AI-Powered MCP Config Generator
- * 
+ *
  * Generates platform-specific MCP configurations with skills, prompts,
  * and best practices using LLM assistance.
  */
 
-import { LLMProviderHub } from '../llm/provider-hub';
+import { LLMProviderHub } from "../llm/provider-hub";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type Platform = 'claude' | 'gemini' | 'openai' | 'generic';
+export type Platform = "claude" | "gemini" | "openai" | "generic";
 
 export interface MCPSkill {
   name: string;
@@ -39,7 +39,7 @@ export interface GeminiExtensionConfig {
   version: string;
   endpoint: string;
   auth: {
-    type: 'bearer' | 'api_key';
+    type: "bearer" | "api_key";
     token?: string;
     header?: string;
   };
@@ -53,12 +53,12 @@ export interface GeminiExtensionConfig {
 
 export interface OpenAIFunctionConfig {
   tools: {
-    type: 'function';
+    type: "function";
     function: {
       name: string;
       description: string;
       parameters: {
-        type: 'object';
+        type: "object";
         properties: Record<string, unknown>;
         required: string[];
       };
@@ -84,10 +84,11 @@ export interface GenericMCPConfig {
 
 const CLAUDE_SKILLS_TEMPLATE: MCPSkill[] = [
   {
-    name: 'document_preprocessing',
-    description: 'Preprocess documents for analysis - OCR, conversion, chunking',
-    triggers: ['process document', 'extract text', 'convert pdf', 'ocr'],
-    toolChain: ['document.convert', 'document.ocr', 'document.chunk'],
+    name: "document_preprocessing",
+    description:
+      "Preprocess documents for analysis - OCR, conversion, chunking",
+    triggers: ["process document", "extract text", "convert pdf", "ocr"],
+    toolChain: ["document.convert", "document.ocr", "document.chunk"],
     systemPrompt: `When the user wants to process a document:
 1. First use document.convert to convert to markdown
 2. If it's an image/scanned PDF, use document.ocr
@@ -95,16 +96,25 @@ const CLAUDE_SKILLS_TEMPLATE: MCPSkill[] = [
 4. Store results in Chroma for further processing`,
     examples: [
       {
-        input: 'Process this PDF for analysis',
-        output: 'I\'ll preprocess this document using the document tools...',
+        input: "Process this PDF for analysis",
+        output: "I'll preprocess this document using the document tools...",
       },
     ],
   },
   {
-    name: 'entity_extraction',
-    description: 'Extract entities, keywords, and relationships from text',
-    triggers: ['extract entities', 'find names', 'identify keywords', 'analyze text'],
-    toolChain: ['nlp.extract_entities', 'nlp.extract_keywords', 'nlp.detect_language'],
+    name: "entity_extraction",
+    description: "Extract entities, keywords, and relationships from text",
+    triggers: [
+      "extract entities",
+      "find names",
+      "identify keywords",
+      "analyze text",
+    ],
+    toolChain: [
+      "nlp.extract_entities",
+      "nlp.extract_keywords",
+      "nlp.detect_language",
+    ],
     systemPrompt: `For entity extraction tasks:
 1. First detect the language with nlp.detect_language
 2. Use nlp.extract_entities to find people, places, organizations
@@ -112,16 +122,20 @@ const CLAUDE_SKILLS_TEMPLATE: MCPSkill[] = [
 4. Return structured results ready for graph database import`,
     examples: [
       {
-        input: 'Extract all people and companies from this text',
-        output: 'I\'ll analyze the text for entities...',
+        input: "Extract all people and companies from this text",
+        output: "I'll analyze the text for entities...",
       },
     ],
   },
   {
-    name: 'semantic_search',
-    description: 'Search documents using semantic similarity',
-    triggers: ['search for', 'find similar', 'look up', 'semantic search'],
-    toolChain: ['ml.generate_embeddings', 'retrieval.bm25_search', 'retrieval.semantic_search'],
+    name: "semantic_search",
+    description: "Search documents using semantic similarity",
+    triggers: ["search for", "find similar", "look up", "semantic search"],
+    toolChain: [
+      "ml.generate_embeddings",
+      "retrieval.bm25_search",
+      "retrieval.semantic_search",
+    ],
     systemPrompt: `For search tasks:
 1. Generate embeddings for the query with ml.generate_embeddings
 2. Use retrieval.bm25_search for keyword matching
@@ -129,16 +143,16 @@ const CLAUDE_SKILLS_TEMPLATE: MCPSkill[] = [
 4. Combine and rank results for best matches`,
     examples: [
       {
-        input: 'Find documents about contract termination clauses',
-        output: 'I\'ll search semantically for relevant documents...',
+        input: "Find documents about contract termination clauses",
+        output: "I'll search semantically for relevant documents...",
       },
     ],
   },
   {
-    name: 'summarization_pipeline',
-    description: 'Summarize large documents using hierarchical map-reduce',
-    triggers: ['summarize', 'tldr', 'key points', 'overview'],
-    toolChain: ['summarization.map_reduce', 'summarization.extract_outline'],
+    name: "summarization_pipeline",
+    description: "Summarize large documents using hierarchical map-reduce",
+    triggers: ["summarize", "tldr", "key points", "overview"],
+    toolChain: ["summarization.map_reduce", "summarization.extract_outline"],
     systemPrompt: `For summarization:
 1. For large docs, use summarization.map_reduce for hierarchical summary
 2. Use summarization.extract_outline for structure
@@ -146,27 +160,27 @@ const CLAUDE_SKILLS_TEMPLATE: MCPSkill[] = [
 4. Aim for 85%+ token reduction while keeping key info`,
     examples: [
       {
-        input: 'Summarize this 50-page report',
-        output: 'I\'ll create a hierarchical summary preserving key details...',
+        input: "Summarize this 50-page report",
+        output: "I'll create a hierarchical summary preserving key details...",
       },
     ],
   },
 ];
 
 const GEMINI_BEST_PRACTICES = [
-  'Use Gemini\'s 2M token context for processing very large documents in a single pass',
-  'Leverage grounding with Google Search for fact verification',
-  'Use structured output mode for consistent JSON responses',
-  'Enable code execution for data analysis tasks',
-  'Use the thinking mode for complex multi-step reasoning',
+  "Use Gemini's 2M token context for processing very large documents in a single pass",
+  "Leverage grounding with Google Search for fact verification",
+  "Use structured output mode for consistent JSON responses",
+  "Enable code execution for data analysis tasks",
+  "Use the thinking mode for complex multi-step reasoning",
 ];
 
 const OPENAI_BEST_PRACTICES = [
-  'Use function calling with strict mode for reliable tool use',
-  'Leverage parallel function calling for batch operations',
-  'Use JSON mode for structured outputs',
-  'Consider using assistants API for stateful conversations',
-  'Use seed parameter for reproducible outputs',
+  "Use function calling with strict mode for reliable tool use",
+  "Leverage parallel function calling for batch operations",
+  "Use JSON mode for structured outputs",
+  "Consider using assistants API for stateful conversations",
+  "Use seed parameter for reproducible outputs",
 ];
 
 // ============================================================================
@@ -188,19 +202,28 @@ export class MCPConfigGenerator {
   async generateConfig(
     platform: Platform,
     apiKey: string,
-    tools: { name: string; description: string; inputSchema: Record<string, unknown> }[],
+    tools: {
+      name: string;
+      description: string;
+      inputSchema: Record<string, unknown>;
+    }[],
     options?: {
       customSkills?: MCPSkill[];
       includeAllTools?: boolean;
       generateWithAI?: boolean;
     }
-  ): Promise<ClaudeMCPConfig | GeminiExtensionConfig | OpenAIFunctionConfig | GenericMCPConfig> {
+  ): Promise<
+    | ClaudeMCPConfig
+    | GeminiExtensionConfig
+    | OpenAIFunctionConfig
+    | GenericMCPConfig
+  > {
     switch (platform) {
-      case 'claude':
+      case "claude":
         return this.generateClaudeConfig(apiKey, tools, options);
-      case 'gemini':
+      case "gemini":
         return this.generateGeminiConfig(apiKey, tools, options);
-      case 'openai':
+      case "openai":
         return this.generateOpenAIConfig(apiKey, tools, options);
       default:
         return this.generateGenericConfig(apiKey, tools);
@@ -212,7 +235,11 @@ export class MCPConfigGenerator {
    */
   private async generateClaudeConfig(
     apiKey: string,
-    tools: { name: string; description: string; inputSchema: Record<string, unknown> }[],
+    tools: {
+      name: string;
+      description: string;
+      inputSchema: Record<string, unknown>;
+    }[],
     options?: { customSkills?: MCPSkill[]; generateWithAI?: boolean }
   ): Promise<ClaudeMCPConfig> {
     let skills = [...CLAUDE_SKILLS_TEMPLATE];
@@ -222,13 +249,13 @@ export class MCPConfigGenerator {
     }
 
     if (options?.generateWithAI) {
-      const aiSkills = await this.generateSkillsWithAI(tools, 'claude');
+      const aiSkills = await this.generateSkillsWithAI(tools, "claude");
       skills = [...skills, ...aiSkills];
     }
 
     return {
       mcpServers: {
-        'preprocessing-toolshop': {
+        "preprocessing-toolshop": {
           url: `${this.baseUrl}/api/mcp`,
           headers: {
             Authorization: `Bearer ${apiKey}`,
@@ -245,22 +272,27 @@ export class MCPConfigGenerator {
    */
   private async generateGeminiConfig(
     apiKey: string,
-    tools: { name: string; description: string; inputSchema: Record<string, unknown> }[],
+    tools: {
+      name: string;
+      description: string;
+      inputSchema: Record<string, unknown>;
+    }[],
     options?: { generateWithAI?: boolean }
   ): Promise<GeminiExtensionConfig> {
     const functions = tools.map(tool => ({
-      name: tool.name.replace(/\./g, '_'),
+      name: tool.name.replace(/\./g, "_"),
       description: tool.description,
       parameters: tool.inputSchema,
     }));
 
     return {
-      name: 'MCP Preprocessing Toolshop',
-      description: 'Document preprocessing, NLP, and analysis tools for AI workflows',
-      version: '1.0.0',
+      name: "MCP Preprocessing Toolshop",
+      description:
+        "Document preprocessing, NLP, and analysis tools for AI workflows",
+      version: "1.0.0",
       endpoint: `${this.baseUrl}/api/mcp`,
       auth: {
-        type: 'bearer',
+        type: "bearer",
         token: apiKey,
       },
       functions,
@@ -273,16 +305,20 @@ export class MCPConfigGenerator {
    */
   private async generateOpenAIConfig(
     apiKey: string,
-    tools: { name: string; description: string; inputSchema: Record<string, unknown> }[],
+    tools: {
+      name: string;
+      description: string;
+      inputSchema: Record<string, unknown>;
+    }[],
     options?: { generateWithAI?: boolean }
   ): Promise<OpenAIFunctionConfig> {
     const openaiTools = tools.map(tool => ({
-      type: 'function' as const,
+      type: "function" as const,
       function: {
-        name: tool.name.replace(/\./g, '_'),
+        name: tool.name.replace(/\./g, "_"),
         description: tool.description,
         parameters: {
-          type: 'object' as const,
+          type: "object" as const,
           properties: (tool.inputSchema as any).properties || {},
           required: (tool.inputSchema as any).required || [],
         },
@@ -300,7 +336,7 @@ Available tool categories:
 - summarization.* - Hierarchical summarization
 
 Best practices:
-${OPENAI_BEST_PRACTICES.map(p => `- ${p}`).join('\n')}
+${OPENAI_BEST_PRACTICES.map(p => `- ${p}`).join("\n")}
 
 The API endpoint is: ${this.baseUrl}/api/mcp
 Use Bearer token: ${apiKey.substring(0, 12)}...`;
@@ -316,7 +352,11 @@ Use Bearer token: ${apiKey.substring(0, 12)}...`;
    */
   private generateGenericConfig(
     apiKey: string,
-    tools: { name: string; description: string; inputSchema: Record<string, unknown> }[]
+    tools: {
+      name: string;
+      description: string;
+      inputSchema: Record<string, unknown>;
+    }[]
   ): GenericMCPConfig {
     return {
       serverUrl: `${this.baseUrl}/api/mcp`,
@@ -374,7 +414,7 @@ Body: { "ref": "sha256:...", "page": 1, "pageSize": 100 }
     tools: { name: string; description: string }[],
     platform: string
   ): Promise<MCPSkill[]> {
-    const toolList = tools.map(t => `- ${t.name}: ${t.description}`).join('\n');
+    const toolList = tools.map(t => `- ${t.name}: ${t.description}`).join("\n");
 
     const prompt = `Given these available tools:
 ${toolList}
@@ -392,7 +432,7 @@ Return as JSON array of skills.`;
 
     try {
       const response = await this.llmHub.chat({
-        messages: [{ role: 'user', content: prompt }],
+        messages: [{ role: "user", content: prompt }],
       });
 
       const content = response.content;
@@ -404,7 +444,7 @@ Return as JSON array of skills.`;
         }
       }
     } catch (error) {
-      console.error('Failed to generate AI skills:', error);
+      console.error("Failed to generate AI skills:", error);
     }
 
     return [];
@@ -413,14 +453,17 @@ Return as JSON array of skills.`;
   /**
    * Generate a downloadable config file
    */
-  generateConfigFile(config: unknown, platform: Platform): { filename: string; content: string } {
+  generateConfigFile(
+    config: unknown,
+    platform: Platform
+  ): { filename: string; content: string } {
     const content = JSON.stringify(config, null, 2);
-    
+
     const filenames: Record<Platform, string> = {
-      claude: 'claude_desktop_config.json',
-      gemini: 'gemini_extension.json',
-      openai: 'openai_functions.json',
-      generic: 'mcp_config.json',
+      claude: "claude_desktop_config.json",
+      gemini: "gemini_extension.json",
+      openai: "openai_functions.json",
+      generic: "mcp_config.json",
     };
 
     return {

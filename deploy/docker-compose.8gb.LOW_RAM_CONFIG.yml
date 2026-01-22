@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 
 # ============================================================================
 # Optimized Docker Compose for 8GB/4-core VPS
@@ -217,7 +217,7 @@ services:
       - ./scripts:/scripts:ro
       - ./data:/data
     shm_size: 2gb
-    restart: "no"  # Start via webhook
+    restart: "no" # Start via webhook
     networks:
       - salem-network
     deploy:
@@ -244,7 +244,7 @@ services:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
     depends_on:
       - mongo
-    restart: "no"  # Start via webhook
+    restart: "no" # Start via webhook
     networks:
       - salem-network
     deploy:
@@ -261,7 +261,7 @@ services:
     container_name: salem-mongo
     volumes:
       - mongo_data:/data/db
-    restart: "no"  # Start via webhook
+    restart: "no" # Start via webhook
     networks:
       - salem-network
     deploy:
@@ -287,7 +287,7 @@ services:
       - open_webui_data:/app/backend/data
     depends_on:
       - ollama
-    restart: "no"  # Start via webhook
+    restart: "no" # Start via webhook
     networks:
       - salem-network
     deploy:
@@ -306,7 +306,7 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
-    restart: "no"  # Start via webhook
+    restart: "no" # Start via webhook
     networks:
       - salem-network
     deploy:
@@ -330,7 +330,7 @@ services:
       - MAX_QUEUE_LENGTH=5
       - ENABLE_DEBUGGER=true
       - PREBOOT_CHROME=false
-    restart: "no"  # Start via webhook
+    restart: "no" # Start via webhook
     networks:
       - salem-network
     deploy:
@@ -354,7 +354,7 @@ services:
     volumes:
       - playwright_cache:/ms-playwright
       - ./scripts/playwright:/scripts
-    restart: "no"  # Start via webhook
+    restart: "no" # Start via webhook
     networks:
       - salem-network
     deploy:

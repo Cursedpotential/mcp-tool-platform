@@ -3,13 +3,13 @@
  * A → B: Document Ingestion → Classification → Embedding → Database Storage
  */
 
-import { unstructuredLoader } from '../loaders/unstructured-loader';
-import { cachedEmbeddingService } from '../loaders/real-embedding-service';
-import { chromaManager } from '../storage/chroma-client';
-import { supabaseManager } from '../storage/supabase-client';
-import { classifier, aggregateClassifications } from '../analysis/classifier';
-import type { Classification } from '../analysis/classifier';
-import type { UnstructuredResult } from '../loaders/unstructured-loader';
+import { unstructuredLoader } from "../loaders/unstructured-loader";
+import { cachedEmbeddingService } from "../loaders/real-embedding-service";
+import { chromaManager } from "../storage/chroma-client";
+import { supabaseManager } from "../storage/supabase-client";
+import { classifier, aggregateClassifications } from "../analysis/classifier";
+import type { Classification } from "../analysis/classifier";
+import type { UnstructuredResult } from "../loaders/unstructured-loader";
 
 // ============================================================================
 // TYPES
@@ -46,7 +46,13 @@ export interface PipelineResult {
 }
 
 export interface PipelineProgress {
-  stage: 'parsing' | 'classifying' | 'embedding' | 'storing_chroma' | 'storing_supabase' | 'complete';
+  stage:
+    | "parsing"
+    | "classifying"
+    | "embedding"
+    | "storing_chroma"
+    | "storing_supabase"
+    | "complete";
   progress: number; // 0-100
   message: string;
 }
@@ -57,24 +63,28 @@ export interface PipelineProgress {
 
 export class DocumentPipeline {
   private progressCallback?: (progress: PipelineProgress) => void;
-  
+
   /**
    * Set progress callback
    */
   onProgress(callback: (progress: PipelineProgress) => void): void {
     this.progressCallback = callback;
   }
-  
+
   /**
    * Report progress
    */
-  private reportProgress(stage: PipelineProgress['stage'], progress: number, message: string): void {
+  private reportProgress(
+    stage: PipelineProgress["stage"],
+    progress: number,
+    message: string
+  ): void {
     if (this.progressCallback) {
       this.progressCallback({ stage, progress, message });
     }
     console.log(`[Pipeline] [${stage}] ${progress}% - ${message}`);
   }
-  
+
   /**
    * Process document end-to-end
    */
@@ -84,82 +94,92 @@ export class DocumentPipeline {
   ): Promise<PipelineResult> {
     const startTime = Date.now();
     const errors: string[] = [];
-    
+
     console.log(`[Pipeline] Starting processing: ${filePath}`);
-    console.log(`[Pipeline] Case: ${options.caseId}, Platform: ${options.platform}`);
-    
+    console.log(
+      `[Pipeline] Case: ${options.caseId}, Platform: ${options.platform}`
+    );
+
     try {
       // ========================================================================
       // STAGE 1: Parse Document
       // ========================================================================
-      this.reportProgress('parsing', 0, 'Parsing document...');
-      
+      this.reportProgress("parsing", 0, "Parsing document...");
+
       const parseResult = await unstructuredLoader.parseDocument(filePath, {
-        strategy: 'auto',
+        strategy: "auto",
         extractTables: options.extractTables ?? true,
         chunkSize: options.chunkSize ?? 1000,
-        chunkOverlap: options.chunkOverlap ?? 200
+        chunkOverlap: options.chunkOverlap ?? 200,
       });
-      
+
       if (!parseResult.success) {
         throw new Error(`Parsing failed: ${parseResult.error}`);
       }
-      
+
       const documentId = `doc_${options.caseId}_${Date.now()}`;
       const chunks = parseResult.chunks;
-      
-      this.reportProgress('parsing', 20, `Parsed ${chunks.length} chunks`);
-      
+
+      this.reportProgress("parsing", 20, `Parsed ${chunks.length} chunks`);
+
       // ========================================================================
       // STAGE 2: Classify Chunks
       // ========================================================================
       let classifications: Classification[] = [];
-      
+
       if (!options.skipClassification) {
-        this.reportProgress('classifying', 20, 'Classifying chunks...');
-        
+        this.reportProgress("classifying", 20, "Classifying chunks...");
+
         const classificationResults = await classifier.classifyBatch(
           chunks.map(c => ({
             chunk_id: `${documentId}_chunk_${c.index}`,
-            text: c.text
+            text: c.text,
           })),
           `Case: ${options.caseId}, Platform: ${options.platform}`
         );
-        
+
         classifications = classificationResults.map(r => r.classification);
-        
-        this.reportProgress('classifying', 40, `Classified ${classifications.length} chunks`);
+
+        this.reportProgress(
+          "classifying",
+          40,
+          `Classified ${classifications.length} chunks`
+        );
       } else {
-        this.reportProgress('classifying', 40, 'Skipped classification');
+        this.reportProgress("classifying", 40, "Skipped classification");
       }
-      
+
       // ========================================================================
       // STAGE 3: Generate Embeddings
       // ========================================================================
       let embeddings: number[][] = [];
-      
+
       if (!options.skipEmbedding) {
-        this.reportProgress('embedding', 40, 'Generating embeddings...');
-        
+        this.reportProgress("embedding", 40, "Generating embeddings...");
+
         embeddings = await cachedEmbeddingService.generateEmbeddings(
           chunks.map(c => c.text),
           100 // batch size
         );
-        
-        this.reportProgress('embedding', 60, `Generated ${embeddings.length} embeddings`);
+
+        this.reportProgress(
+          "embedding",
+          60,
+          `Generated ${embeddings.length} embeddings`
+        );
       } else {
-        this.reportProgress('embedding', 60, 'Skipped embeddings');
+        this.reportProgress("embedding", 60, "Skipped embeddings");
       }
-      
+
       // ========================================================================
       // STAGE 4: Store in Chroma (72hr TTL)
       // ========================================================================
       if (!options.skipChroma && embeddings.length > 0) {
-        this.reportProgress('storing_chroma', 60, 'Storing in Chroma...');
-        
+        this.reportProgress("storing_chroma", 60, "Storing in Chroma...");
+
         try {
           await chromaManager.initialize();
-          
+
           await chromaManager.addEvidence(
             documentId,
             chunks.map((c, i) => ({
@@ -170,31 +190,33 @@ export class DocumentPipeline {
                 case_id: options.caseId,
                 platform: options.platform,
                 chunk_index: c.index,
-                preliminary_classification: classifications[i] ? JSON.stringify(classifications[i]) : undefined
-              }
+                preliminary_classification: classifications[i]
+                  ? JSON.stringify(classifications[i])
+                  : undefined,
+              },
             })),
             embeddings
           );
-          
-          this.reportProgress('storing_chroma', 75, 'Stored in Chroma');
+
+          this.reportProgress("storing_chroma", 75, "Stored in Chroma");
         } catch (error: any) {
-          console.error('[Pipeline] Chroma storage failed:', error.message);
+          console.error("[Pipeline] Chroma storage failed:", error.message);
           errors.push(`Chroma: ${error.message}`);
         }
       } else {
-        this.reportProgress('storing_chroma', 75, 'Skipped Chroma');
+        this.reportProgress("storing_chroma", 75, "Skipped Chroma");
       }
-      
+
       // ========================================================================
       // STAGE 5: Store in Supabase (Permanent)
       // ========================================================================
       if (!options.skipSupabase) {
-        this.reportProgress('storing_supabase', 75, 'Storing in Supabase...');
-        
+        this.reportProgress("storing_supabase", 75, "Storing in Supabase...");
+
         try {
           // Aggregate classifications
           const aggregated = aggregateClassifications(classifications);
-          
+
           // Prepare document metadata
           const documentRow = {
             id: documentId,
@@ -212,11 +234,11 @@ export class DocumentPipeline {
                 overall_sentiment: aggregated.overall_sentiment,
                 avg_severity: aggregated.avg_severity,
                 pattern_frequency: aggregated.pattern_frequency,
-                high_severity_count: aggregated.high_severity_count
-              }
-            }
+                high_severity_count: aggregated.high_severity_count,
+              },
+            },
           };
-          
+
           // Prepare chunks
           const chunkRows = chunks.map((c, i) => ({
             chunk_id: `${documentId}_chunk_${c.index}`,
@@ -226,48 +248,51 @@ export class DocumentPipeline {
             text: c.text,
             metadata: {
               ...c.metadata,
-              preliminary_classification: classifications[i] || null
-            }
+              preliminary_classification: classifications[i] || null,
+            },
           }));
-          
+
           // Prepare embeddings
-          const embeddingRows = embeddings.length > 0 ? chunks.map((c, i) => ({
-            id: `${documentId}_emb_${c.index}`,
-            document_id: documentId,
-            chunk_id: `${documentId}_chunk_${c.index}`,
-            embedding: embeddings[i],
-            text: c.text,
-            metadata: {
-              case_id: options.caseId,
-              platform: options.platform,
-              chunk_index: c.index
-            }
-          })) : [];
-          
+          const embeddingRows =
+            embeddings.length > 0
+              ? chunks.map((c, i) => ({
+                  id: `${documentId}_emb_${c.index}`,
+                  document_id: documentId,
+                  chunk_id: `${documentId}_chunk_${c.index}`,
+                  embedding: embeddings[i],
+                  text: c.text,
+                  metadata: {
+                    case_id: options.caseId,
+                    platform: options.platform,
+                    chunk_index: c.index,
+                  },
+                }))
+              : [];
+
           // Insert all data
           await supabaseManager.insertDocumentComplete(
             documentRow,
             chunkRows,
             embeddingRows
           );
-          
-          this.reportProgress('storing_supabase', 95, 'Stored in Supabase');
+
+          this.reportProgress("storing_supabase", 95, "Stored in Supabase");
         } catch (error: any) {
-          console.error('[Pipeline] Supabase storage failed:', error.message);
+          console.error("[Pipeline] Supabase storage failed:", error.message);
           errors.push(`Supabase: ${error.message}`);
         }
       } else {
-        this.reportProgress('storing_supabase', 95, 'Skipped Supabase');
+        this.reportProgress("storing_supabase", 95, "Skipped Supabase");
       }
-      
+
       // ========================================================================
       // COMPLETE
       // ========================================================================
       const processingTime = Date.now() - startTime;
       const aggregated = aggregateClassifications(classifications);
-      
-      this.reportProgress('complete', 100, 'Processing complete');
-      
+
+      this.reportProgress("complete", 100, "Processing complete");
+
       return {
         success: errors.length === 0,
         document_id: documentId,
@@ -280,29 +305,28 @@ export class DocumentPipeline {
             overall_sentiment: aggregated.overall_sentiment,
             avg_severity: aggregated.avg_severity,
             pattern_frequency: aggregated.pattern_frequency,
-            high_severity_count: aggregated.high_severity_count
-          }
+            high_severity_count: aggregated.high_severity_count,
+          },
         },
-        errors: errors.length > 0 ? errors : undefined
+        errors: errors.length > 0 ? errors : undefined,
       };
-      
     } catch (error: any) {
-      console.error('[Pipeline] Fatal error:', error.message);
-      
+      console.error("[Pipeline] Fatal error:", error.message);
+
       return {
         success: false,
-        document_id: '',
+        document_id: "",
         filename: filePath,
         statistics: {
           total_chunks: 0,
           total_characters: 0,
-          processing_time_ms: Date.now() - startTime
+          processing_time_ms: Date.now() - startTime,
         },
-        errors: [error.message]
+        errors: [error.message],
       };
     }
   }
-  
+
   /**
    * Process multiple documents
    */
@@ -311,19 +335,21 @@ export class DocumentPipeline {
     options: PipelineOptions
   ): Promise<PipelineResult[]> {
     console.log(`[Pipeline] Processing ${filePaths.length} documents`);
-    
+
     const results: PipelineResult[] = [];
-    
+
     for (let i = 0; i < filePaths.length; i++) {
       console.log(`[Pipeline] Document ${i + 1}/${filePaths.length}`);
-      
+
       const result = await this.processDocument(filePaths[i], options);
       results.push(result);
     }
-    
+
     const successCount = results.filter(r => r.success).length;
-    console.log(`[Pipeline] Batch complete: ${successCount}/${filePaths.length} successful`);
-    
+    console.log(
+      `[Pipeline] Batch complete: ${successCount}/${filePaths.length} successful`
+    );
+
     return results;
   }
 }

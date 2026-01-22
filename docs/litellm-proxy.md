@@ -1,18 +1,18 @@
 # LiteLLM Proxy
 
 **NAME**
-    litellm-proxy - Universal LLM proxy for multi-provider AI integration
+litellm-proxy - Universal LLM proxy for multi-provider AI integration
 
 **SYNOPSIS**
-    LiteLLM provides unified API access to 75+ LLM providers with cost tracking, load balancing, and automatic failover for the forensic analysis platform.
+LiteLLM provides unified API access to 75+ LLM providers with cost tracking, load balancing, and automatic failover for the forensic analysis platform.
 
 **DESCRIPTION**
-    LiteLLM is the central AI infrastructure component that provides unified access to multiple language model providers. It handles authentication, rate limiting, cost tracking, and intelligent routing for optimal performance and cost efficiency.
+LiteLLM is the central AI infrastructure component that provides unified access to multiple language model providers. It handles authentication, rate limiting, cost tracking, and intelligent routing for optimal performance and cost efficiency.
 
 **CORE FEATURES**
 
 **Multi-Provider Support**
-    Unified interface to diverse LLM ecosystems.
+Unified interface to diverse LLM ecosystems.
 
     **Supported Providers:**
     - **OpenAI**: GPT-4o, GPT-4o Mini, GPT-4 Turbo, GPT-3.5 Turbo
@@ -29,7 +29,7 @@
     - **AWS Bedrock**: Amazon Q, Titan models
 
 **Unified API Interface**
-    Single API endpoint for all providers.
+Single API endpoint for all providers.
 
     **API Compatibility:**
     ```typescript
@@ -45,7 +45,7 @@
     ```
 
 **Cost Tracking & Optimization**
-    Real-time cost monitoring and budget management.
+Real-time cost monitoring and budget management.
 
     **Cost Features:**
     - **Per-Request Tracking**: Cost per API call
@@ -55,7 +55,7 @@
     - **Cost Optimization**: Automatic cheapest provider selection
 
 **Intelligent Routing**
-    Smart provider selection based on multiple criteria.
+Smart provider selection based on multiple criteria.
 
     **Routing Logic:**
     - **Cost-Based**: Cheapest suitable model
@@ -65,7 +65,7 @@
     - **Geographic**: Closest data center routing
 
 **Rate Limiting & Fair Use**
-    Prevents API quota exhaustion and ensures fair access.
+Prevents API quota exhaustion and ensures fair access.
 
     **Rate Limit Features:**
     - **Per-User Limits**: Individual user quotas
@@ -77,7 +77,7 @@
 **ARCHITECTURE**
 
 **Proxy Layers**
-    Multi-layered architecture for reliability and performance.
+Multi-layered architecture for reliability and performance.
 
     **Layer Structure:**
     ```
@@ -93,7 +93,7 @@
     ```
 
 **Provider Abstraction**
-    Unified provider interface with automatic adaptation.
+Unified provider interface with automatic adaptation.
 
     **Abstraction Features:**
     - **Parameter Mapping**: Provider-specific parameter conversion
@@ -103,7 +103,7 @@
     - **Version Management**: API version compatibility
 
 **Caching System**
-    Redis-backed caching for performance optimization.
+Redis-backed caching for performance optimization.
 
     **Caching Strategies:**
     - **Response Caching**: Identical request deduplication
@@ -115,7 +115,7 @@
 **DATA STRUCTURES**
 
 **ChatCompletionRequest**
-    Unified chat completion request format.
+Unified chat completion request format.
 
     ```typescript
     interface ChatCompletionRequest {
@@ -134,7 +134,7 @@
     ```
 
 **ProviderConfig**
-    Configuration for each LLM provider.
+Configuration for each LLM provider.
 
     ```typescript
     interface ProviderConfig {
@@ -151,7 +151,7 @@
     ```
 
 **CostTracking**
-    Real-time cost monitoring and analytics.
+Real-time cost monitoring and analytics.
 
     ```typescript
     interface CostTracking {
@@ -169,7 +169,7 @@
     ```
 
 **RateLimitInfo**
-    Current rate limit status for providers.
+Current rate limit status for providers.
 
     ```typescript
     interface RateLimitInfo {
@@ -185,7 +185,7 @@
 **API ENDPOINTS**
 
 **POST /v1/chat/completions**
-    Main chat completion endpoint.
+Main chat completion endpoint.
 
     **Request Body:**
     ```json
@@ -224,7 +224,7 @@
     ```
 
 **POST /v1/embeddings**
-    Text embedding generation endpoint.
+Text embedding generation endpoint.
 
     **Request Body:**
     ```json
@@ -236,7 +236,7 @@
     ```
 
 **GET /health**
-    Health check endpoint.
+Health check endpoint.
 
     **Response:**
     ```json
@@ -252,7 +252,7 @@
     ```
 
 **GET /costs**
-    Cost tracking and analytics endpoint.
+Cost tracking and analytics endpoint.
 
     **Response:**
     ```json
@@ -274,7 +274,7 @@
 **PROVIDER MANAGEMENT**
 
 **Provider Registration**
-    Dynamic provider addition and configuration.
+Dynamic provider addition and configuration.
 
     **Registration Process:**
     1. **Provider Discovery**: Automatic provider detection
@@ -284,7 +284,7 @@
     5. **Cost Integration**: Pricing data loading
 
 **Health Monitoring**
-    Continuous provider availability tracking.
+Continuous provider availability tracking.
 
     **Health Checks:**
     - **Connectivity**: API endpoint reachability
@@ -294,7 +294,7 @@
     - **Error Rates**: Failure analysis
 
 **Failover Management**
-    Automatic switching between providers.
+Automatic switching between providers.
 
     **Failover Strategy:**
     - **Primary Failure**: Switch to backup provider
@@ -306,7 +306,7 @@
 **COST OPTIMIZATION**
 
 **Dynamic Pricing**
-    Real-time cost tracking and optimization.
+Real-time cost tracking and optimization.
 
     **Optimization Features:**
     - **Provider Comparison**: Cost analysis across all providers
@@ -316,7 +316,7 @@
     - **Budget Management**: Spending limit enforcement
 
 **Cost Analytics**
-    Detailed usage and cost reporting.
+Detailed usage and cost reporting.
 
     **Analytics Features:**
     - **Real-time Tracking**: Live cost monitoring
@@ -328,7 +328,7 @@
 **SECURITY FEATURES**
 
 **API Key Management**
-    Secure key storage and rotation.
+Secure key storage and rotation.
 
     **Key Security:**
     - **Encryption**: AES-256 key encryption at rest
@@ -338,7 +338,7 @@
     - **Revocation**: Immediate key invalidation
 
 **Request Validation**
-    Comprehensive input validation and sanitization.
+Comprehensive input validation and sanitization.
 
     **Validation Features:**
     - **Schema Validation**: Request structure verification
@@ -348,7 +348,7 @@
     - **Size Limits**: Request payload size restrictions
 
 **Audit Logging**
-    Complete request and response logging.
+Complete request and response logging.
 
     **Logging Features:**
     - **Request Tracking**: All API calls logged
@@ -360,7 +360,7 @@
 **PERFORMANCE OPTIMIZATION**
 
 **Response Caching**
-    Intelligent caching for repeated requests.
+Intelligent caching for repeated requests.
 
     **Caching Strategy:**
     - **Exact Match**: Identical request caching
@@ -370,7 +370,7 @@
     - **Hit Rate Optimization**: Cache effectiveness monitoring
 
 **Request Batching**
-    Multiple request optimization.
+Multiple request optimization.
 
     **Batching Features:**
     - **Automatic Grouping**: Similar request aggregation
@@ -380,7 +380,7 @@
     - **Timeout Management**: Batch-level timeout handling
 
 **Connection Pooling**
-    Efficient provider connection management.
+Efficient provider connection management.
 
     **Pooling Features:**
     - **Persistent Connections**: Keep-alive connection reuse
@@ -392,10 +392,10 @@
 **CONFIGURATION EXAMPLES**
 
 **Production Configuration**
-    ```yaml
-    general_settings:
-      master_key: "your_master_key_here"
-      database_url: "postgresql://user:pass@postgres:5432/litellm"
+```yaml
+general_settings:
+master_key: "your_master_key_here"
+database_url: "postgresql://user:pass@postgres:5432/litellm"
 
     litellm_settings:
       cache: true
@@ -415,17 +415,15 @@
     ```
 
 **Provider Configuration**
-    ```yaml
-    model_list:
-      # OpenAI Models
-      - model_name: gpt-4o
-        litellm_params:
-          model: openai/gpt-4o
-          api_key: ${OPENAI_API_KEY}
-        model_info:
-          cost_per_token:
-            input_cost_per_token: 0.000005
-            output_cost_per_token: 0.000015
+```yaml
+model_list: # OpenAI Models - model_name: gpt-4o
+litellm_params:
+model: openai/gpt-4o
+api_key: ${OPENAI_API_KEY}
+model_info:
+cost_per_token:
+input_cost_per_token: 0.000005
+output_cost_per_token: 0.000015
 
       # Anthropic Models
       - model_name: claude-opus-4
@@ -439,13 +437,13 @@
     ```
 
 **SEE ALSO**
-    smart-router(7), mcp-gateway(7), workflow-message-processing(7)
+smart-router(7), mcp-gateway(7), workflow-message-processing(7)
 
 **AUTHOR**
-    Claude Code - Opus 4.1
+Claude Code - Opus 4.1
 
 **VERSION**
-    1.0.0
+1.0.0
 
 **DATE**
-    January 11, 2026
+January 11, 2026

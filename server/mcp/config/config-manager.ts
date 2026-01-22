@@ -1,6 +1,6 @@
 /**
  * Configuration Manager
- * 
+ *
  * Manages all configurable aspects of the MCP Tool Platform:
  * - Tool definitions and patterns
  * - Behavioral analysis definitions
@@ -9,8 +9,8 @@
  * - Import/export of all configurations
  */
 
-import { nanoid } from 'nanoid';
-import { getContentStore } from '../store/content-store';
+import { nanoid } from "nanoid";
+import { getContentStore } from "../store/content-store";
 
 // ============================================================================
 // Types
@@ -30,7 +30,7 @@ export interface PatternDefinition {
 
 export interface Pattern {
   id: string;
-  type: 'regex' | 'keyword' | 'phrase' | 'semantic';
+  type: "regex" | "keyword" | "phrase" | "semantic";
   value: string;
   flags?: string; // For regex: 'gi', 'gm', etc.
   weight: number; // Importance weight 0-1
@@ -57,10 +57,10 @@ export interface BehavioralDefinition {
 export interface BehavioralIndicator {
   id: string;
   name: string;
-  type: 'keyword' | 'pattern' | 'sentiment' | 'frequency' | 'context';
+  type: "keyword" | "pattern" | "sentiment" | "frequency" | "context";
   value: string | string[];
   weight: number;
-  polarity: 'positive' | 'negative' | 'neutral';
+  polarity: "positive" | "negative" | "neutral";
 }
 
 export interface CustomDictionary {
@@ -139,7 +139,9 @@ class ConfigurationManager {
   // Pattern Definitions
   // ============================================================================
 
-  createPattern(definition: Omit<PatternDefinition, 'id' | 'createdAt' | 'updatedAt'>): PatternDefinition {
+  createPattern(
+    definition: Omit<PatternDefinition, "id" | "createdAt" | "updatedAt">
+  ): PatternDefinition {
     const now = Date.now();
     const pattern: PatternDefinition = {
       ...definition,
@@ -151,7 +153,10 @@ class ConfigurationManager {
     return pattern;
   }
 
-  updatePattern(id: string, updates: Partial<PatternDefinition>): PatternDefinition | null {
+  updatePattern(
+    id: string,
+    updates: Partial<PatternDefinition>
+  ): PatternDefinition | null {
     const existing = this.patterns.get(id);
     if (!existing) return null;
 
@@ -185,7 +190,9 @@ class ConfigurationManager {
   // Behavioral Definitions
   // ============================================================================
 
-  createBehavior(definition: Omit<BehavioralDefinition, 'id' | 'createdAt' | 'updatedAt'>): BehavioralDefinition {
+  createBehavior(
+    definition: Omit<BehavioralDefinition, "id" | "createdAt" | "updatedAt">
+  ): BehavioralDefinition {
     const now = Date.now();
     const behavior: BehavioralDefinition = {
       ...definition,
@@ -197,7 +204,10 @@ class ConfigurationManager {
     return behavior;
   }
 
-  updateBehavior(id: string, updates: Partial<BehavioralDefinition>): BehavioralDefinition | null {
+  updateBehavior(
+    id: string,
+    updates: Partial<BehavioralDefinition>
+  ): BehavioralDefinition | null {
     const existing = this.behaviors.get(id);
     if (!existing) return null;
 
@@ -231,7 +241,9 @@ class ConfigurationManager {
   // Custom Dictionaries
   // ============================================================================
 
-  createDictionary(dictionary: Omit<CustomDictionary, 'id' | 'createdAt' | 'updatedAt'>): CustomDictionary {
+  createDictionary(
+    dictionary: Omit<CustomDictionary, "id" | "createdAt" | "updatedAt">
+  ): CustomDictionary {
     const now = Date.now();
     const dict: CustomDictionary = {
       ...dictionary,
@@ -243,7 +255,10 @@ class ConfigurationManager {
     return dict;
   }
 
-  updateDictionary(id: string, updates: Partial<CustomDictionary>): CustomDictionary | null {
+  updateDictionary(
+    id: string,
+    updates: Partial<CustomDictionary>
+  ): CustomDictionary | null {
     const existing = this.dictionaries.get(id);
     if (!existing) return null;
 
@@ -285,7 +300,7 @@ class ConfigurationManager {
       enabled: config.enabled ?? existing?.enabled ?? true,
       settings: { ...existing?.settings, ...config.settings },
       overrides: config.overrides ?? existing?.overrides,
-      version: config.version ?? existing?.version ?? '1.0.0',
+      version: config.version ?? existing?.version ?? "1.0.0",
       updatedAt: Date.now(),
     };
     this.toolConfigs.set(toolName, updated);
@@ -304,7 +319,10 @@ class ConfigurationManager {
   // LLM Provider Settings
   // ============================================================================
 
-  setLLMProvider(provider: string, settings: Partial<LLMProviderSettings>): LLMProviderSettings {
+  setLLMProvider(
+    provider: string,
+    settings: Partial<LLMProviderSettings>
+  ): LLMProviderSettings {
     const existing = this.llmProviders.get(provider);
     const updated: LLMProviderSettings = {
       provider,
@@ -335,7 +353,7 @@ class ConfigurationManager {
 
   async exportAll(): Promise<ConfigExport> {
     return {
-      version: '1.0.0',
+      version: "1.0.0",
       exportedAt: Date.now(),
       patterns: this.listPatterns(),
       behaviors: this.listBehaviors(),
@@ -355,12 +373,27 @@ class ConfigurationManager {
     };
   }
 
-  async importAll(config: ConfigExport, options: { merge?: boolean; overwrite?: boolean } = {}): Promise<{
-    imported: { patterns: number; behaviors: number; dictionaries: number; tools: number; providers: number };
+  async importAll(
+    config: ConfigExport,
+    options: { merge?: boolean; overwrite?: boolean } = {}
+  ): Promise<{
+    imported: {
+      patterns: number;
+      behaviors: number;
+      dictionaries: number;
+      tools: number;
+      providers: number;
+    };
     errors: string[];
   }> {
     const errors: string[] = [];
-    const imported = { patterns: 0, behaviors: 0, dictionaries: 0, tools: 0, providers: 0 };
+    const imported = {
+      patterns: 0,
+      behaviors: 0,
+      dictionaries: 0,
+      tools: 0,
+      providers: 0,
+    };
 
     // Clear existing if not merging
     if (!options.merge) {
@@ -379,7 +412,9 @@ class ConfigurationManager {
           imported.patterns++;
         }
       } catch (e) {
-        errors.push(`Pattern ${pattern.name}: ${e instanceof Error ? e.message : 'Unknown error'}`);
+        errors.push(
+          `Pattern ${pattern.name}: ${e instanceof Error ? e.message : "Unknown error"}`
+        );
       }
     }
 
@@ -391,7 +426,9 @@ class ConfigurationManager {
           imported.behaviors++;
         }
       } catch (e) {
-        errors.push(`Behavior ${behavior.name}: ${e instanceof Error ? e.message : 'Unknown error'}`);
+        errors.push(
+          `Behavior ${behavior.name}: ${e instanceof Error ? e.message : "Unknown error"}`
+        );
       }
     }
 
@@ -403,7 +440,9 @@ class ConfigurationManager {
           imported.dictionaries++;
         }
       } catch (e) {
-        errors.push(`Dictionary ${dict.name}: ${e instanceof Error ? e.message : 'Unknown error'}`);
+        errors.push(
+          `Dictionary ${dict.name}: ${e instanceof Error ? e.message : "Unknown error"}`
+        );
       }
     }
 
@@ -415,7 +454,9 @@ class ConfigurationManager {
           imported.tools++;
         }
       } catch (e) {
-        errors.push(`Tool ${tool.toolName}: ${e instanceof Error ? e.message : 'Unknown error'}`);
+        errors.push(
+          `Tool ${tool.toolName}: ${e instanceof Error ? e.message : "Unknown error"}`
+        );
       }
     }
 
@@ -429,7 +470,9 @@ class ConfigurationManager {
         });
         imported.providers++;
       } catch (e) {
-        errors.push(`Provider ${provider.provider}: ${e instanceof Error ? e.message : 'Unknown error'}`);
+        errors.push(
+          `Provider ${provider.provider}: ${e instanceof Error ? e.message : "Unknown error"}`
+        );
       }
     }
 
@@ -443,89 +486,115 @@ class ConfigurationManager {
   getSchemas(): ConfigSchema[] {
     return [
       {
-        type: 'pattern',
-        version: '1.0.0',
+        type: "pattern",
+        version: "1.0.0",
         schema: {
-          type: 'object',
-          required: ['name', 'category', 'patterns'],
+          type: "object",
+          required: ["name", "category", "patterns"],
           properties: {
-            name: { type: 'string', description: 'Pattern set name' },
-            description: { type: 'string' },
-            category: { type: 'string', description: 'Category for organization' },
+            name: { type: "string", description: "Pattern set name" },
+            description: { type: "string" },
+            category: {
+              type: "string",
+              description: "Category for organization",
+            },
             patterns: {
-              type: 'array',
+              type: "array",
               items: {
-                type: 'object',
-                required: ['type', 'value'],
+                type: "object",
+                required: ["type", "value"],
                 properties: {
-                  type: { type: 'string', enum: ['regex', 'keyword', 'phrase', 'semantic'] },
-                  value: { type: 'string' },
-                  flags: { type: 'string' },
-                  weight: { type: 'number', minimum: 0, maximum: 1 },
+                  type: {
+                    type: "string",
+                    enum: ["regex", "keyword", "phrase", "semantic"],
+                  },
+                  value: { type: "string" },
+                  flags: { type: "string" },
+                  weight: { type: "number", minimum: 0, maximum: 1 },
                 },
               },
             },
-            enabled: { type: 'boolean', default: true },
+            enabled: { type: "boolean", default: true },
           },
         },
       },
       {
-        type: 'behavior',
-        version: '1.0.0',
+        type: "behavior",
+        version: "1.0.0",
         schema: {
-          type: 'object',
-          required: ['name', 'category', 'indicators', 'thresholds'],
+          type: "object",
+          required: ["name", "category", "indicators", "thresholds"],
           properties: {
-            name: { type: 'string' },
-            description: { type: 'string' },
-            category: { type: 'string' },
+            name: { type: "string" },
+            description: { type: "string" },
+            category: { type: "string" },
             indicators: {
-              type: 'array',
+              type: "array",
               items: {
-                type: 'object',
-                required: ['name', 'type', 'value'],
+                type: "object",
+                required: ["name", "type", "value"],
                 properties: {
-                  name: { type: 'string' },
-                  type: { type: 'string', enum: ['keyword', 'pattern', 'sentiment', 'frequency', 'context'] },
-                  value: { oneOf: [{ type: 'string' }, { type: 'array', items: { type: 'string' } }] },
-                  weight: { type: 'number', minimum: 0, maximum: 1 },
-                  polarity: { type: 'string', enum: ['positive', 'negative', 'neutral'] },
+                  name: { type: "string" },
+                  type: {
+                    type: "string",
+                    enum: [
+                      "keyword",
+                      "pattern",
+                      "sentiment",
+                      "frequency",
+                      "context",
+                    ],
+                  },
+                  value: {
+                    oneOf: [
+                      { type: "string" },
+                      { type: "array", items: { type: "string" } },
+                    ],
+                  },
+                  weight: { type: "number", minimum: 0, maximum: 1 },
+                  polarity: {
+                    type: "string",
+                    enum: ["positive", "negative", "neutral"],
+                  },
                 },
               },
             },
             thresholds: {
-              type: 'object',
-              required: ['low', 'medium', 'high'],
+              type: "object",
+              required: ["low", "medium", "high"],
               properties: {
-                low: { type: 'number' },
-                medium: { type: 'number' },
-                high: { type: 'number' },
+                low: { type: "number" },
+                medium: { type: "number" },
+                high: { type: "number" },
               },
             },
-            enabled: { type: 'boolean', default: true },
+            enabled: { type: "boolean", default: true },
           },
         },
       },
       {
-        type: 'dictionary',
-        version: '1.0.0',
+        type: "dictionary",
+        version: "1.0.0",
         schema: {
-          type: 'object',
-          required: ['name', 'language', 'entries'],
+          type: "object",
+          required: ["name", "language", "entries"],
           properties: {
-            name: { type: 'string' },
-            description: { type: 'string' },
-            language: { type: 'string', description: 'ISO 639-1 language code' },
+            name: { type: "string" },
+            description: { type: "string" },
+            language: {
+              type: "string",
+              description: "ISO 639-1 language code",
+            },
             entries: {
-              type: 'array',
+              type: "array",
               items: {
-                type: 'object',
-                required: ['term'],
+                type: "object",
+                required: ["term"],
                 properties: {
-                  term: { type: 'string' },
-                  definition: { type: 'string' },
-                  synonyms: { type: 'array', items: { type: 'string' } },
-                  category: { type: 'string' },
+                  term: { type: "string" },
+                  definition: { type: "string" },
+                  synonyms: { type: "array", items: { type: "string" } },
+                  category: { type: "string" },
                 },
               },
             },
@@ -533,26 +602,30 @@ class ConfigurationManager {
         },
       },
       {
-        type: 'llm_provider',
-        version: '1.0.0',
+        type: "llm_provider",
+        version: "1.0.0",
         schema: {
-          type: 'object',
-          required: ['provider'],
+          type: "object",
+          required: ["provider"],
           properties: {
-            provider: { type: 'string', description: 'Provider identifier' },
-            enabled: { type: 'boolean', default: false },
-            baseUrl: { type: 'string', format: 'uri' },
-            defaultModel: { type: 'string' },
-            embeddingModel: { type: 'string' },
-            priority: { type: 'number', minimum: 1, description: 'Lower = higher priority' },
+            provider: { type: "string", description: "Provider identifier" },
+            enabled: { type: "boolean", default: false },
+            baseUrl: { type: "string", format: "uri" },
+            defaultModel: { type: "string" },
+            embeddingModel: { type: "string" },
+            priority: {
+              type: "number",
+              minimum: 1,
+              description: "Lower = higher priority",
+            },
             rateLimit: {
-              type: 'object',
+              type: "object",
               properties: {
-                requestsPerMinute: { type: 'number' },
-                tokensPerMinute: { type: 'number' },
+                requestsPerMinute: { type: "number" },
+                tokensPerMinute: { type: "number" },
               },
             },
-            costTracking: { type: 'boolean', default: true },
+            costTracking: { type: "boolean", default: true },
           },
         },
       },
@@ -563,18 +636,21 @@ class ConfigurationManager {
   // Validation
   // ============================================================================
 
-  validatePattern(pattern: Partial<PatternDefinition>): { valid: boolean; errors: string[] } {
+  validatePattern(pattern: Partial<PatternDefinition>): {
+    valid: boolean;
+    errors: string[];
+  } {
     const errors: string[] = [];
 
-    if (!pattern.name) errors.push('Name is required');
-    if (!pattern.category) errors.push('Category is required');
+    if (!pattern.name) errors.push("Name is required");
+    if (!pattern.category) errors.push("Category is required");
     if (!pattern.patterns || pattern.patterns.length === 0) {
-      errors.push('At least one pattern is required');
+      errors.push("At least one pattern is required");
     }
 
     // Validate regex patterns
     for (const p of pattern.patterns || []) {
-      if (p.type === 'regex') {
+      if (p.type === "regex") {
         try {
           new RegExp(p.value, p.flags);
         } catch (e) {
@@ -586,22 +662,25 @@ class ConfigurationManager {
     return { valid: errors.length === 0, errors };
   }
 
-  validateBehavior(behavior: Partial<BehavioralDefinition>): { valid: boolean; errors: string[] } {
+  validateBehavior(behavior: Partial<BehavioralDefinition>): {
+    valid: boolean;
+    errors: string[];
+  } {
     const errors: string[] = [];
 
-    if (!behavior.name) errors.push('Name is required');
-    if (!behavior.category) errors.push('Category is required');
+    if (!behavior.name) errors.push("Name is required");
+    if (!behavior.category) errors.push("Category is required");
     if (!behavior.indicators || behavior.indicators.length === 0) {
-      errors.push('At least one indicator is required');
+      errors.push("At least one indicator is required");
     }
     if (!behavior.thresholds) {
-      errors.push('Thresholds are required');
+      errors.push("Thresholds are required");
     } else {
       if (behavior.thresholds.low >= behavior.thresholds.medium) {
-        errors.push('Low threshold must be less than medium');
+        errors.push("Low threshold must be less than medium");
       }
       if (behavior.thresholds.medium >= behavior.thresholds.high) {
-        errors.push('Medium threshold must be less than high');
+        errors.push("Medium threshold must be less than high");
       }
     }
 

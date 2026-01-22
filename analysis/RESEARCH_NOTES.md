@@ -457,7 +457,7 @@ response = ollama.chat(
 ```python
 import google.generativeai as genai
 
-genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
+genai.configure(api_key="...")
 model = genai.GenerativeModel("gemini-2.5-flash")
 
 response = model.generate_content("Extract entities from: ...")
@@ -488,7 +488,7 @@ import openai
 
 client = openai.OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key=os.environ.get("OPENROUTER_API_KEY")
+    api_key="..."
 )
 
 response = client.chat.completions.create(

@@ -26,8 +26,8 @@ export const patternsRouter = router({
       const db = await getDb();
       if (!db) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Database not available'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
         });
       }
 
@@ -35,7 +35,7 @@ export const patternsRouter = router({
         or(
           eq(behavioralPatterns.userId, ctx.user.id),
           isNull(behavioralPatterns.userId)
-        )
+        ),
       ];
 
       if (input.search) {
@@ -61,13 +61,15 @@ export const patternsRouter = router({
 
       const whereClauses = and(...conditions);
 
-      const patterns = await db.select()
+      const patterns = await db
+        .select()
         .from(behavioralPatterns)
         .where(whereClauses)
         .limit(input.pageSize)
         .offset((input.page - 1) * input.pageSize);
 
-      const total = await db.select({ count: count() })
+      const total = await db
+        .select({ count: count() })
         .from(behavioralPatterns)
         .where(whereClauses);
 
@@ -85,20 +87,21 @@ export const patternsRouter = router({
       const db = await getDb();
       if (!db) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Database not available'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
         });
       }
 
-      const pattern = await db.select()
+      const pattern = await db
+        .select()
         .from(behavioralPatterns)
         .where(eq(behavioralPatterns.id, input.id))
         .limit(1);
 
       if (!pattern || pattern.length === 0) {
         throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Pattern not found',
+          code: "NOT_FOUND",
+          message: "Pattern not found",
         });
       }
 
@@ -106,8 +109,8 @@ export const patternsRouter = router({
 
       if (firstPattern.userId !== ctx.user.id && firstPattern.userId !== null) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You do not have permission to access this pattern',
+          code: "FORBIDDEN",
+          message: "You do not have permission to access this pattern",
         });
       }
 
@@ -130,27 +133,27 @@ export const patternsRouter = router({
       const db = await getDb();
       if (!db) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Database not available'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
         });
       }
 
-      const result = await db.insert(behavioralPatterns)
-        .values({
-          userId: ctx.user.id,
-          name: input.name,
-          category: input.category,
-          pattern: input.pattern,
-          description: input.description,
-          severity: input.severity,
-          mclFactors: JSON.stringify(input.mclFactors || []),
-          examples: JSON.stringify(input.examples || []),
-          isCustom: 'true',
-          isActive: 'true',
-        });
+      const result = await db.insert(behavioralPatterns).values({
+        userId: ctx.user.id,
+        name: input.name,
+        category: input.category,
+        pattern: input.pattern,
+        description: input.description,
+        severity: input.severity,
+        mclFactors: JSON.stringify(input.mclFactors || []),
+        examples: JSON.stringify(input.examples || []),
+        isCustom: "true",
+        isActive: "true",
+      });
 
       const insertId = Number((result as any).insertId);
-      const [newPattern] = await db.select()
+      const [newPattern] = await db
+        .select()
         .from(behavioralPatterns)
         .where(eq(behavioralPatterns.id, insertId))
         .limit(1);
@@ -176,20 +179,21 @@ export const patternsRouter = router({
       const db = await getDb();
       if (!db) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Database not available'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
         });
       }
 
-      const existingPattern = await db.select()
+      const existingPattern = await db
+        .select()
         .from(behavioralPatterns)
         .where(eq(behavioralPatterns.id, input.id))
         .limit(1);
 
       if (!existingPattern || existingPattern.length === 0) {
         throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Pattern not found',
+          code: "NOT_FOUND",
+          message: "Pattern not found",
         });
       }
 
@@ -197,15 +201,15 @@ export const patternsRouter = router({
 
       if (firstPattern.userId !== ctx.user.id) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You do not own this pattern',
+          code: "FORBIDDEN",
+          message: "You do not own this pattern",
         });
       }
 
       if (firstPattern.userId === null) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Cannot update built-in patterns',
+          code: "FORBIDDEN",
+          message: "Cannot update built-in patterns",
         });
       }
 
@@ -217,7 +221,7 @@ export const patternsRouter = router({
         severity?: number;
         mclFactors?: string;
         examples?: string;
-        isActive?: 'true' | 'false';
+        isActive?: "true" | "false";
       } = {};
 
       if (input.name !== undefined) {
@@ -242,14 +246,16 @@ export const patternsRouter = router({
         updateValues.examples = JSON.stringify(input.examples);
       }
       if (input.isActive !== undefined) {
-        updateValues.isActive = input.isActive ? 'true' : 'false';
+        updateValues.isActive = input.isActive ? "true" : "false";
       }
 
-      await db.update(behavioralPatterns)
+      await db
+        .update(behavioralPatterns)
         .set(updateValues)
         .where(eq(behavioralPatterns.id, input.id));
 
-      const [updated] = await db.select()
+      const [updated] = await db
+        .select()
         .from(behavioralPatterns)
         .where(eq(behavioralPatterns.id, input.id))
         .limit(1);
@@ -263,20 +269,21 @@ export const patternsRouter = router({
       const db = await getDb();
       if (!db) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Database not available'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
         });
       }
 
-      const existingPattern = await db.select()
+      const existingPattern = await db
+        .select()
         .from(behavioralPatterns)
         .where(eq(behavioralPatterns.id, input.id))
         .limit(1);
 
       if (!existingPattern || existingPattern.length === 0) {
         throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Pattern not found',
+          code: "NOT_FOUND",
+          message: "Pattern not found",
         });
       }
 
@@ -284,19 +291,20 @@ export const patternsRouter = router({
 
       if (firstPattern.userId !== ctx.user.id) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'You do not own this pattern',
+          code: "FORBIDDEN",
+          message: "You do not own this pattern",
         });
       }
 
       if (firstPattern.userId === null) {
         throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: 'Cannot delete built-in patterns',
+          code: "FORBIDDEN",
+          message: "Cannot delete built-in patterns",
         });
       }
 
-      await db.delete(behavioralPatterns)
+      await db
+        .delete(behavioralPatterns)
         .where(eq(behavioralPatterns.id, input.id));
 
       return { success: true };
@@ -315,7 +323,7 @@ export const patternsRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
-        const regex = new RegExp(input.pattern, 'gi');
+        const regex = new RegExp(input.pattern, "gi");
         const matches = [];
         let match;
 
@@ -326,7 +334,7 @@ export const patternsRouter = router({
         return { matches, matchCount: matches.length };
       } catch (error: any) {
         throw new TRPCError({
-          code: 'BAD_REQUEST',
+          code: "BAD_REQUEST",
           message: `Invalid regex: ${error.message}`,
         });
       }
@@ -350,15 +358,15 @@ export const patternsRouter = router({
             examples: z.array(z.string()).optional(),
           })
         ),
-        conflictResolution: z.enum(['overwrite', 'skip', 'rename']),
+        conflictResolution: z.enum(["overwrite", "skip", "rename"]),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Database not available'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
         });
       }
 
@@ -368,18 +376,20 @@ export const patternsRouter = router({
 
       for (const patternData of input.patterns) {
         try {
-          const existingPattern = await db.select()
+          const existingPattern = await db
+            .select()
             .from(behavioralPatterns)
             .where(eq(behavioralPatterns.name, patternData.name))
             .limit(1);
 
           if (existingPattern.length > 0) {
             const existing = existingPattern[0];
-            if (input.conflictResolution === 'skip') {
+            if (input.conflictResolution === "skip") {
               skipped++;
               continue;
-            } else if (input.conflictResolution === 'overwrite') {
-              await db.update(behavioralPatterns)
+            } else if (input.conflictResolution === "overwrite") {
+              await db
+                .update(behavioralPatterns)
                 .set({
                   category: patternData.category,
                   pattern: patternData.pattern,
@@ -390,44 +400,46 @@ export const patternsRouter = router({
                 })
                 .where(eq(behavioralPatterns.id, existing.id));
               imported++;
-            } else if (input.conflictResolution === 'rename') {
+            } else if (input.conflictResolution === "rename") {
               let newName = patternData.name + " (imported)";
               let counter = 1;
               while (true) {
-                const checkName = await db.select().from(behavioralPatterns).where(eq(behavioralPatterns.name, newName)).limit(1);
+                const checkName = await db
+                  .select()
+                  .from(behavioralPatterns)
+                  .where(eq(behavioralPatterns.name, newName))
+                  .limit(1);
                 if (checkName.length === 0) break;
                 newName = patternData.name + ` (imported ${counter++})`;
               }
 
-              await db.insert(behavioralPatterns)
-                .values({
-                  userId: ctx.user.id,
-                  name: newName,
-                  category: patternData.category,
-                  pattern: patternData.pattern,
-                  description: patternData.description,
-                  severity: patternData.severity,
-                  mclFactors: JSON.stringify(patternData.mclFactors || []),
-                  examples: JSON.stringify(patternData.examples || []),
-                  isCustom: 'true',
-                  isActive: 'true',
-                });
-              imported++;
-            }
-          } else {
-            await db.insert(behavioralPatterns)
-              .values({
+              await db.insert(behavioralPatterns).values({
                 userId: ctx.user.id,
-                name: patternData.name,
+                name: newName,
                 category: patternData.category,
                 pattern: patternData.pattern,
                 description: patternData.description,
                 severity: patternData.severity,
                 mclFactors: JSON.stringify(patternData.mclFactors || []),
                 examples: JSON.stringify(patternData.examples || []),
-                isCustom: 'true',
-                isActive: 'true',
+                isCustom: "true",
+                isActive: "true",
               });
+              imported++;
+            }
+          } else {
+            await db.insert(behavioralPatterns).values({
+              userId: ctx.user.id,
+              name: patternData.name,
+              category: patternData.category,
+              pattern: patternData.pattern,
+              description: patternData.description,
+              severity: patternData.severity,
+              mclFactors: JSON.stringify(patternData.mclFactors || []),
+              examples: JSON.stringify(patternData.examples || []),
+              isCustom: "true",
+              isActive: "true",
+            });
             imported++;
           }
         } catch (error: any) {
@@ -441,7 +453,7 @@ export const patternsRouter = router({
   export: protectedProcedure
     .input(
       z.object({
-        format: z.enum(['json', 'csv']),
+        format: z.enum(["json", "csv"]),
         includeBuiltIn: z.boolean().default(false),
       })
     )
@@ -449,31 +461,45 @@ export const patternsRouter = router({
       const db = await getDb();
       if (!db) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Database not available'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
         });
       }
 
       const whereClauses = input.includeBuiltIn
-        ? or(eq(behavioralPatterns.userId, ctx.user.id), isNull(behavioralPatterns.userId))
+        ? or(
+            eq(behavioralPatterns.userId, ctx.user.id),
+            isNull(behavioralPatterns.userId)
+          )
         : eq(behavioralPatterns.userId, ctx.user.id);
 
-      const patterns = await db.select()
+      const patterns = await db
+        .select()
         .from(behavioralPatterns)
         .where(whereClauses);
 
-      if (input.format === 'json') {
+      if (input.format === "json") {
         return JSON.stringify(patterns, null, 2);
-      } else if (input.format === 'csv') {
+      } else if (input.format === "csv") {
         if (patterns.length === 0) return "";
-        const header = Object.keys(patterns[0]).join(',');
-        const rows = patterns.map(pattern => Object.values(pattern).map(value => typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value).join(',')).join('\n');
+        const header = Object.keys(patterns[0]).join(",");
+        const rows = patterns
+          .map(pattern =>
+            Object.values(pattern)
+              .map(value =>
+                typeof value === "string"
+                  ? `"${value.replace(/"/g, '""')}"`
+                  : value
+              )
+              .join(",")
+          )
+          .join("\n");
         return `${header}\n${rows}`;
       }
 
       throw new TRPCError({
-        code: 'BAD_REQUEST',
-        message: 'Invalid format',
+        code: "BAD_REQUEST",
+        message: "Invalid format",
       });
     }),
 
@@ -485,22 +511,36 @@ export const patternsRouter = router({
     const db = await getDb();
     if (!db) {
       throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Database not available'
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Database not available",
       });
     }
 
-    const totalPatterns = await db.select({ count: count() }).from(behavioralPatterns);
-    const customPatterns = await db.select({ count: count() }).from(behavioralPatterns).where(eq(behavioralPatterns.userId, ctx.user.id));
-    const builtInPatterns = await db.select({ count: count() }).from(behavioralPatterns).where(isNull(behavioralPatterns.userId));
+    const totalPatterns = await db
+      .select({ count: count() })
+      .from(behavioralPatterns);
+    const customPatterns = await db
+      .select({ count: count() })
+      .from(behavioralPatterns)
+      .where(eq(behavioralPatterns.userId, ctx.user.id));
+    const builtInPatterns = await db
+      .select({ count: count() })
+      .from(behavioralPatterns)
+      .where(isNull(behavioralPatterns.userId));
 
-    const categories = await db.select({ category: behavioralPatterns.category }).from(behavioralPatterns);
+    const categories = await db
+      .select({ category: behavioralPatterns.category })
+      .from(behavioralPatterns);
     const byCategory: { [key: string]: number } = {};
     categories.forEach(c => {
       byCategory[c.category] = (byCategory[c.category] || 0) + 1;
     });
 
-    const topMatched = await db.select().from(behavioralPatterns).orderBy(behavioralPatterns.matchCount).limit(10);
+    const topMatched = await db
+      .select()
+      .from(behavioralPatterns)
+      .orderBy(behavioralPatterns.matchCount)
+      .limit(10);
 
     return {
       totalPatterns: totalPatterns[0]?.count || 0,
@@ -519,22 +559,26 @@ export const patternsRouter = router({
     const db = await getDb();
     if (!db) {
       throw new TRPCError({
-        code: 'INTERNAL_SERVER_ERROR',
-        message: 'Database not available'
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Database not available",
       });
     }
 
-    const categories = await db.select({
-      id: patternCategories.id,
-      name: patternCategories.name,
-      description: patternCategories.description,
-      color: patternCategories.color,
-      icon: patternCategories.icon,
-      defaultSeverity: patternCategories.defaultSeverity,
-      patternCount: count(behavioralPatterns.id),
-    })
+    const categories = await db
+      .select({
+        id: patternCategories.id,
+        name: patternCategories.name,
+        description: patternCategories.description,
+        color: patternCategories.color,
+        icon: patternCategories.icon,
+        defaultSeverity: patternCategories.defaultSeverity,
+        patternCount: count(behavioralPatterns.id),
+      })
       .from(patternCategories)
-      .leftJoin(behavioralPatterns, eq(patternCategories.name, behavioralPatterns.category))
+      .leftJoin(
+        behavioralPatterns,
+        eq(patternCategories.name, behavioralPatterns.category)
+      )
       .groupBy(patternCategories.id);
 
     return categories;
@@ -554,22 +598,22 @@ export const patternsRouter = router({
       const db = await getDb();
       if (!db) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Database not available'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
         });
       }
 
-      const result = await db.insert(patternCategories)
-        .values({
-          name: input.name,
-          description: input.description,
-          color: input.color,
-          icon: input.icon,
-          defaultSeverity: input.defaultSeverity,
-        });
+      const result = await db.insert(patternCategories).values({
+        name: input.name,
+        description: input.description,
+        color: input.color,
+        icon: input.icon,
+        defaultSeverity: input.defaultSeverity,
+      });
 
       const insertId = Number((result as any).insertId);
-      const [newCategory] = await db.select()
+      const [newCategory] = await db
+        .select()
         .from(patternCategories)
         .where(eq(patternCategories.id, insertId))
         .limit(1);
@@ -593,8 +637,8 @@ export const patternsRouter = router({
       const db = await getDb();
       if (!db) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Database not available'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
         });
       }
 
@@ -622,11 +666,13 @@ export const patternsRouter = router({
         updateValues.defaultSeverity = input.defaultSeverity;
       }
 
-      await db.update(patternCategories)
+      await db
+        .update(patternCategories)
         .set(updateValues)
         .where(eq(patternCategories.id, input.id));
 
-      const [updatedCategory] = await db.select()
+      const [updatedCategory] = await db
+        .select()
         .from(patternCategories)
         .where(eq(patternCategories.id, input.id))
         .limit(1);
@@ -640,23 +686,36 @@ export const patternsRouter = router({
       const db = await getDb();
       if (!db) {
         throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Database not available'
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Database not available",
         });
       }
 
-      const patternCount = await db.select({ count: count() })
+      const patternCount = await db
+        .select({ count: count() })
         .from(behavioralPatterns)
-        .where(eq(behavioralPatterns.category, (await db.select().from(patternCategories).where(eq(patternCategories.id, input.id)).limit(1))[0]?.name || ""));
+        .where(
+          eq(
+            behavioralPatterns.category,
+            (
+              await db
+                .select()
+                .from(patternCategories)
+                .where(eq(patternCategories.id, input.id))
+                .limit(1)
+            )[0]?.name || ""
+          )
+        );
 
       if (patternCount[0]?.count && patternCount[0].count > 0) {
         throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'Cannot delete category with existing patterns',
+          code: "BAD_REQUEST",
+          message: "Cannot delete category with existing patterns",
         });
       }
 
-      await db.delete(patternCategories)
+      await db
+        .delete(patternCategories)
         .where(eq(patternCategories.id, input.id));
 
       return { success: true };

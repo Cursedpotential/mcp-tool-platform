@@ -2,16 +2,22 @@
 import { useAuth } from "@/core/hooks/useAuth";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import { 
-  Search, 
-  FileText, 
-  Brain, 
-  GitCompare, 
-  FolderTree, 
+import {
+  Search,
+  FileText,
+  Brain,
+  GitCompare,
+  FolderTree,
   Shield,
   Zap,
   Database,
@@ -19,7 +25,7 @@ import {
   ArrowRight,
   Terminal,
   Layers,
-  Activity
+  Activity,
 } from "lucide-react";
 import { getLoginUrl } from "@/const";
 import { useState } from "react";
@@ -27,7 +33,7 @@ import { trpc } from "@/lib/trpc";
 
 /**
  * MCP Preprocessing Tool Shop - Home Dashboard
- * 
+ *
  * A "Home Depot of preprocessing tools" designed for 85%+ token reduction
  * before data flows into final databases (Neo4j, Supabase, Vector DBs).
  */
@@ -55,7 +61,12 @@ export default function Home() {
       name: "NLP",
       icon: Brain,
       description: "Entity extraction, keywords, sentiment, language detection",
-      tools: ["nlp.detect_language", "nlp.extract_entities", "nlp.extract_keywords", "nlp.analyze_sentiment"],
+      tools: [
+        "nlp.detect_language",
+        "nlp.extract_entities",
+        "nlp.extract_keywords",
+        "nlp.analyze_sentiment",
+      ],
       color: "bg-purple-500/10 text-purple-600",
     },
     {
@@ -85,32 +96,38 @@ export default function Home() {
     {
       icon: Zap,
       title: "85%+ Token Reduction",
-      description: "Heavy preprocessing happens here so LLMs receive pre-analyzed, structured data.",
+      description:
+        "Heavy preprocessing happens here so LLMs receive pre-analyzed, structured data.",
     },
     {
       icon: Database,
       title: "Content-Addressed Storage",
-      description: "SHA-256 refs with paging for token-efficient retrieval of large artifacts.",
+      description:
+        "SHA-256 refs with paging for token-efficient retrieval of large artifacts.",
     },
     {
       icon: Layers,
       title: "Working Memory (Chroma)",
-      description: "Staging area for intermediate results - not the final destination.",
+      description:
+        "Staging area for intermediate results - not the final destination.",
     },
     {
       icon: Shield,
       title: "HITL Approval Gating",
-      description: "Preview, diff, and rollback for all destructive operations.",
+      description:
+        "Preview, diff, and rollback for all destructive operations.",
     },
     {
       icon: Activity,
       title: "Observability",
-      description: "Distributed tracing and metrics for task execution monitoring.",
+      description:
+        "Distributed tracing and metrics for task execution monitoring.",
     },
     {
       icon: Terminal,
       title: "Provider Agnostic",
-      description: "Ollama, Gemini, OpenRouter, BERT - swap LLM providers freely.",
+      description:
+        "Ollama, Gemini, OpenRouter, BERT - swap LLM providers freely.",
     },
   ];
 
@@ -131,7 +148,11 @@ export default function Home() {
                 <span className="text-sm text-muted-foreground">
                   Welcome, {user?.name || "User"}
                 </span>
-                <Button variant="outline" size="sm" onClick={() => window.location.href = '/tools'}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => (window.location.href = "/tools")}
+                >
                   Dashboard
                 </Button>
               </div>
@@ -157,16 +178,25 @@ export default function Home() {
             </span>
           </h1>
           <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Token-efficient MCP Gateway for OCR, entity extraction, sentiment analysis, 
-            chunking, embeddings, and more. Achieve 85%+ token reduction before 
-            data flows to your final databases.
+            Token-efficient MCP Gateway for OCR, entity extraction, sentiment
+            analysis, chunking, embeddings, and more. Achieve 85%+ token
+            reduction before data flows to your final databases.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" className="gap-2" onClick={() => window.location.href = '/tools'}>
+            <Button
+              size="lg"
+              className="gap-2"
+              onClick={() => (window.location.href = "/tools")}
+            >
               <Terminal className="h-4 w-4" />
               Explore Tools
             </Button>
-            <Button size="lg" variant="outline" className="gap-2" onClick={() => window.location.href = '/wiki'}>
+            <Button
+              size="lg"
+              variant="outline"
+              className="gap-2"
+              onClick={() => (window.location.href = "/wiki")}
+            >
               View Documentation
               <ArrowRight className="h-4 w-4" />
             </Button>
@@ -183,7 +213,7 @@ export default function Home() {
               placeholder="Search tools... (e.g., 'ocr', 'entity extraction', 'summarize')"
               className="pl-12 h-14 text-lg"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={e => setSearchQuery(e.target.value)}
             />
           </div>
         </div>
@@ -192,10 +222,15 @@ export default function Home() {
       {/* Tool Categories */}
       <section className="py-16 px-4">
         <div className="container">
-          <h2 className="text-2xl font-bold mb-8 text-center">Tool Categories</h2>
+          <h2 className="text-2xl font-bold mb-8 text-center">
+            Tool Categories
+          </h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {toolCategories.map((category) => (
-              <Card key={category.name} className="hover:shadow-lg transition-shadow cursor-pointer">
+            {toolCategories.map(category => (
+              <Card
+                key={category.name}
+                className="hover:shadow-lg transition-shadow cursor-pointer"
+              >
                 <CardHeader>
                   <div className="flex items-center gap-3">
                     <div className={`p-2 rounded-lg ${category.color}`}>
@@ -207,7 +242,7 @@ export default function Home() {
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-wrap gap-2">
-                    {category.tools.map((tool) => (
+                    {category.tools.map(tool => (
                       <Badge key={tool} variant="secondary" className="text-xs">
                         {tool}
                       </Badge>
@@ -223,19 +258,24 @@ export default function Home() {
       {/* Features Grid */}
       <section className="py-16 px-4 bg-slate-900 text-white">
         <div className="container">
-          <h2 className="text-2xl font-bold mb-2 text-center">Why MCP Tool Shop?</h2>
+          <h2 className="text-2xl font-bold mb-2 text-center">
+            Why MCP Tool Shop?
+          </h2>
           <p className="text-slate-400 text-center mb-12 max-w-2xl mx-auto">
-            An intermediary preprocessing system designed for maximum token efficiency
+            An intermediary preprocessing system designed for maximum token
+            efficiency
           </p>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {features.map((feature) => (
+            {features.map(feature => (
               <div key={feature.title} className="flex gap-4">
                 <div className="p-2 h-fit rounded-lg bg-white/10">
                   <feature.icon className="h-5 w-5" />
                 </div>
                 <div>
                   <h3 className="font-semibold mb-1">{feature.title}</h3>
-                  <p className="text-sm text-slate-400">{feature.description}</p>
+                  <p className="text-sm text-slate-400">
+                    {feature.description}
+                  </p>
                 </div>
               </div>
             ))}
@@ -246,7 +286,9 @@ export default function Home() {
       {/* Architecture Overview */}
       <section className="py-16 px-4">
         <div className="container max-w-4xl">
-          <h2 className="text-2xl font-bold mb-8 text-center">Data Flow Architecture</h2>
+          <h2 className="text-2xl font-bold mb-8 text-center">
+            Data Flow Architecture
+          </h2>
           <Card className="p-8">
             <div className="flex flex-col md:flex-row items-center justify-between gap-8">
               <div className="text-center">
@@ -254,7 +296,9 @@ export default function Home() {
                   <FileText className="h-8 w-8 text-blue-600" />
                 </div>
                 <h3 className="font-semibold">Raw Documents</h3>
-                <p className="text-sm text-muted-foreground">PDFs, Images, Text</p>
+                <p className="text-sm text-muted-foreground">
+                  PDFs, Images, Text
+                </p>
               </div>
               <ArrowRight className="h-8 w-8 text-muted-foreground hidden md:block" />
               <div className="text-center">
@@ -262,7 +306,9 @@ export default function Home() {
                   <Layers className="h-8 w-8 text-purple-600" />
                 </div>
                 <h3 className="font-semibold">MCP Tool Shop</h3>
-                <p className="text-sm text-muted-foreground">OCR, NLP, Chunking</p>
+                <p className="text-sm text-muted-foreground">
+                  OCR, NLP, Chunking
+                </p>
               </div>
               <ArrowRight className="h-8 w-8 text-muted-foreground hidden md:block" />
               <div className="text-center">
@@ -270,7 +316,9 @@ export default function Home() {
                   <Database className="h-8 w-8 text-green-600" />
                 </div>
                 <h3 className="font-semibold">Final Databases</h3>
-                <p className="text-sm text-muted-foreground">Neo4j, Supabase, VectorDB</p>
+                <p className="text-sm text-muted-foreground">
+                  Neo4j, Supabase, VectorDB
+                </p>
               </div>
             </div>
           </Card>
@@ -280,7 +328,9 @@ export default function Home() {
       {/* API Endpoints */}
       <section className="py-16 px-4 bg-slate-50">
         <div className="container max-w-4xl">
-          <h2 className="text-2xl font-bold mb-8 text-center">MCP Gateway API</h2>
+          <h2 className="text-2xl font-bold mb-8 text-center">
+            MCP Gateway API
+          </h2>
           <Tabs defaultValue="search" className="w-full">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="search">search_tools</TabsTrigger>
@@ -293,13 +343,14 @@ export default function Home() {
                 <CardHeader>
                   <CardTitle className="text-lg">search_tools</CardTitle>
                   <CardDescription>
-                    Discover available tools with minimal token overhead. Returns compact 
-                    tool cards (name, category, description, tags).
+                    Discover available tools with minimal token overhead.
+                    Returns compact tool cards (name, category, description,
+                    tags).
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg text-sm overflow-x-auto">
-{`// Example request
+                    {`// Example request
 trpc.mcp.searchTools.query({
   query: "extract entities",
   topK: 10,
@@ -314,13 +365,13 @@ trpc.mcp.searchTools.query({
                 <CardHeader>
                   <CardTitle className="text-lg">describe_tool</CardTitle>
                   <CardDescription>
-                    Get full tool specification on demand. Includes input/output schemas, 
-                    examples, and permission requirements.
+                    Get full tool specification on demand. Includes input/output
+                    schemas, examples, and permission requirements.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg text-sm overflow-x-auto">
-{`// Example request
+                    {`// Example request
 trpc.mcp.describeTool.query({
   toolName: "nlp.extract_entities"
 })`}
@@ -333,13 +384,14 @@ trpc.mcp.describeTool.query({
                 <CardHeader>
                   <CardTitle className="text-lg">invoke_tool</CardTitle>
                   <CardDescription>
-                    Execute tools with reference-based returns. Small outputs inline, 
-                    large outputs return content references for paged retrieval.
+                    Execute tools with reference-based returns. Small outputs
+                    inline, large outputs return content references for paged
+                    retrieval.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg text-sm overflow-x-auto">
-{`// Example request
+                    {`// Example request
 trpc.mcp.invokeTool.mutate({
   toolName: "doc.ocr_image_or_pdf",
   args: { path: "/data/document.pdf" },
@@ -354,13 +406,13 @@ trpc.mcp.invokeTool.mutate({
                 <CardHeader>
                   <CardTitle className="text-lg">get_ref</CardTitle>
                   <CardDescription>
-                    Retrieve content-addressed artifacts with paging. Enables token-efficient 
-                    retrieval of large outputs.
+                    Retrieve content-addressed artifacts with paging. Enables
+                    token-efficient retrieval of large outputs.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <pre className="bg-slate-900 text-slate-100 p-4 rounded-lg text-sm overflow-x-auto">
-{`// Example request
+                    {`// Example request
 trpc.mcp.getRef.query({
   ref: "sha256:abc123...",
   page: 1,
@@ -377,9 +429,13 @@ trpc.mcp.getRef.query({
       {/* Footer */}
       <footer className="py-8 px-4 border-t bg-white">
         <div className="container text-center text-sm text-muted-foreground">
-          <p>MCP Preprocessing Tool Shop - Token-efficient document preprocessing platform</p>
+          <p>
+            MCP Preprocessing Tool Shop - Token-efficient document preprocessing
+            platform
+          </p>
           <p className="mt-2">
-            Designed for 85%+ token reduction before data flows to Neo4j, Supabase, and Vector DBs
+            Designed for 85%+ token reduction before data flows to Neo4j,
+            Supabase, and Vector DBs
           </p>
         </div>
       </footer>

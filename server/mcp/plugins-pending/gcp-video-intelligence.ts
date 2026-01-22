@@ -1,11 +1,11 @@
 import {
   VideoIntelligenceServiceClient,
   protos,
-} from '@google-cloud/video-intelligence';
-import { Request, Response, NextFunction } from 'express';
-import { Router } from 'express';
+} from "@google-cloud/video-intelligence";
+import { Request, Response, NextFunction } from "express";
+import { Router } from "express";
 
-const API_KEY = 'AIzaSyCmEDGGPNYFRKj4gnmJudWsJfQBQmeE-N8'; // This API key is for demonstration purposes only. In a real application, use environment variables or a secure key management system.
+const API_KEY = "AIzaSyCmEDGGPNYFRKj4gnmJudWsJfQBQmeE-N8"; // This API key is for demonstration purposes only. In a real application, use environment variables or a secure key management system.
 
 interface AnnotateVideoRequest {
   inputUri: string;
@@ -28,32 +28,35 @@ const videoIntelligenceClient = new VideoIntelligenceServiceClient({
 
 export function registerVideoHandlers(router: Router): void {
   router.post(
-    '/video-intelligence/annotateVideo',
+    "/video-intelligence/annotateVideo",
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { inputUri, features } = req.body as AnnotateVideoRequest;
 
         if (!inputUri || !features || !Array.isArray(features)) {
           return res.status(400).json({
-            error: 'Invalid request body. `inputUri` and `features` are required.',
+            error:
+              "Invalid request body. `inputUri` and `features` are required.",
           });
         }
 
-        const request: protos.google.cloud.videointelligence.v1.IAnnotateVideoRequest = {
-          inputUri: inputUri,
-          features: features,
-        };
+        const request: protos.google.cloud.videointelligence.v1.IAnnotateVideoRequest =
+          {
+            inputUri: inputUri,
+            features: features,
+          };
 
         // The SDK doesn't directly expose an API key option in the `annotateVideo` method.
         // If an API key is strictly required for authentication, it's usually handled
         // by setting the `GOOGLE_API_KEY` environment variable or by using a custom
         // `AuthClient` if the SDK allows it.
         // For this example, we'll proceed assuming ADC or environment variable setup.
-        const [operation] = await videoIntelligenceClient.annotateVideo(request);
+        const [operation] =
+          await videoIntelligenceClient.annotateVideo(request);
 
         res.status(202).json({ operationId: operation.name });
       } catch (error) {
-        console.error('Error annotating video:', error);
+        console.error("Error annotating video:", error);
         next(error);
       }
     }
@@ -61,38 +64,40 @@ export function registerVideoHandlers(router: Router): void {
 
   // You might want to add an endpoint to check the status of an operation
   router.get(
-    '/video-intelligence/operations/:operationId',
+    "/video-intelligence/operations/:operationId",
     async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { operationId } = req.params;
 
         if (!operationId) {
-          return res.status(400).json({ error: 'Operation ID is required.' });
+          return res.status(400).json({ error: "Operation ID is required." });
         }
 
-        const [operation] = await videoIntelligenceClient.getOperation(operationId);
+        const [operation] =
+          await videoIntelligenceClient.getOperation(operationId);
 
         if (operation.done) {
           if (operation.error) {
             return res.status(500).json({
-              status: 'error',
+              status: "error",
               error: operation.error,
             });
           } else {
-            const result = operation.response as protos.google.cloud.videointelligence.v1.IAnnotateVideoResponse;
+            const result =
+              operation.response as protos.google.cloud.videointelligence.v1.IAnnotateVideoResponse;
             return res.status(200).json({
-              status: 'completed',
+              status: "completed",
               result: result,
             });
           }
         } else {
           return res.status(200).json({
-            status: 'pending',
-            message: 'Operation is still in progress.',
+            status: "pending",
+            message: "Operation is still in progress.",
           });
         }
       } catch (error) {
-        console.error('Error getting operation status:', error);
+        console.error("Error getting operation status:", error);
         next(error);
       }
     }

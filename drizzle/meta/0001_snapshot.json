@@ -92,12 +92,8 @@
           "name": "apiKeyUsageLogs_apiKeyId_apiKeys_id_fk",
           "tableFrom": "apiKeyUsageLogs",
           "tableTo": "apiKeys",
-          "columnsFrom": [
-            "apiKeyId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["apiKeyId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -105,9 +101,7 @@
       "compositePrimaryKeys": {
         "apiKeyUsageLogs_id": {
           "name": "apiKeyUsageLogs_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -213,12 +207,8 @@
           "name": "apiKeys_userId_users_id_fk",
           "tableFrom": "apiKeys",
           "tableTo": "users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -226,17 +216,13 @@
       "compositePrimaryKeys": {
         "apiKeys_id": {
           "name": "apiKeys_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "apiKeys_keyHash_unique": {
           "name": "apiKeys_keyHash_unique",
-          "columns": [
-            "keyHash"
-          ]
+          "columns": ["keyHash"]
         }
       },
       "checkConstraint": {}
@@ -365,12 +351,8 @@
           "name": "systemPrompts_userId_users_id_fk",
           "tableFrom": "systemPrompts",
           "tableTo": "users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -378,9 +360,7 @@
       "compositePrimaryKeys": {
         "systemPrompts_id": {
           "name": "systemPrompts_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},
@@ -463,17 +443,13 @@
       "compositePrimaryKeys": {
         "users_id": {
           "name": "users_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {
         "users_openId_unique": {
           "name": "users_openId_unique",
-          "columns": [
-            "openId"
-          ]
+          "columns": ["openId"]
         }
       },
       "checkConstraint": {}
@@ -570,12 +546,8 @@
           "name": "workflowTemplates_userId_users_id_fk",
           "tableFrom": "workflowTemplates",
           "tableTo": "users",
-          "columnsFrom": [
-            "userId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["userId"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -583,12 +555,8 @@
           "name": "workflowTemplates_systemPromptId_systemPrompts_id_fk",
           "tableFrom": "workflowTemplates",
           "tableTo": "systemPrompts",
-          "columnsFrom": [
-            "systemPromptId"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["systemPromptId"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -596,9 +564,7 @@
       "compositePrimaryKeys": {
         "workflowTemplates_id": {
           "name": "workflowTemplates_id",
-          "columns": [
-            "id"
-          ]
+          "columns": ["id"]
         }
       },
       "uniqueConstraints": {},

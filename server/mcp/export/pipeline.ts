@@ -1,17 +1,21 @@
 /**
  * Export Pipeline
- * 
+ *
  * Handles export of preprocessed data to final destinations:
  * - Neo4j graph database
  * - Supabase (PostgreSQL)
  * - Vector databases (Chroma, FAISS, etc.)
  * - JSON/CSV file export
- * 
+ *
  * This is the final stage before data flows to the orchestrating agent.
  */
 
-import { getContentStore } from '../store/content-store';
-import type { ContentRef, Entity, DocumentChunk } from '../../../shared/mcp-types';
+import { getContentStore } from "../store/content-store";
+import type {
+  ContentRef,
+  Entity,
+  DocumentChunk,
+} from "../../../shared/mcp-types";
 
 interface Citation {
   id: string;
@@ -38,7 +42,7 @@ export interface ExportConfig {
     key: string;
   };
   vectorDb?: {
-    type: 'chroma' | 'faiss' | 'pinecone';
+    type: "chroma" | "faiss" | "pinecone";
     config: Record<string, unknown>;
   };
 }
@@ -87,14 +91,14 @@ export interface GraphRelationship {
  */
 export async function exportToNeo4j(
   doc: ProcessedDocument,
-  config: ExportConfig['neo4j']
+  config: ExportConfig["neo4j"]
 ): Promise<ExportResult> {
   if (!config) {
     return {
       success: false,
-      destination: 'neo4j',
+      destination: "neo4j",
       recordsExported: 0,
-      errors: ['Neo4j configuration not provided'],
+      errors: ["Neo4j configuration not provided"],
     };
   }
 
@@ -106,7 +110,7 @@ export async function exportToNeo4j(
     // For now, return the statements as metadata
     return {
       success: true,
-      destination: 'neo4j',
+      destination: "neo4j",
       recordsExported: statements.length,
       metadata: {
         statements: statements.slice(0, 5), // Preview
@@ -116,9 +120,9 @@ export async function exportToNeo4j(
   } catch (error) {
     return {
       success: false,
-      destination: 'neo4j',
+      destination: "neo4j",
       recordsExported: 0,
-      errors: [error instanceof Error ? error.message : 'Unknown error'],
+      errors: [error instanceof Error ? error.message : "Unknown error"],
     };
   }
 }
@@ -128,14 +132,14 @@ export async function exportToNeo4j(
  */
 export async function exportToSupabase(
   doc: ProcessedDocument,
-  config: ExportConfig['supabase']
+  config: ExportConfig["supabase"]
 ): Promise<ExportResult> {
   if (!config) {
     return {
       success: false,
-      destination: 'supabase',
+      destination: "supabase",
       recordsExported: 0,
-      errors: ['Supabase configuration not provided'],
+      errors: ["Supabase configuration not provided"],
     };
   }
 
@@ -147,8 +151,11 @@ export async function exportToSupabase(
     // For now, return the records as metadata
     return {
       success: true,
-      destination: 'supabase',
-      recordsExported: records.documents.length + records.chunks.length + records.entities.length,
+      destination: "supabase",
+      recordsExported:
+        records.documents.length +
+        records.chunks.length +
+        records.entities.length,
       metadata: {
         documentCount: records.documents.length,
         chunkCount: records.chunks.length,
@@ -158,9 +165,9 @@ export async function exportToSupabase(
   } catch (error) {
     return {
       success: false,
-      destination: 'supabase',
+      destination: "supabase",
       recordsExported: 0,
-      errors: [error instanceof Error ? error.message : 'Unknown error'],
+      errors: [error instanceof Error ? error.message : "Unknown error"],
     };
   }
 }
@@ -171,20 +178,20 @@ export async function exportToSupabase(
 export async function exportToVectorDb(
   doc: ProcessedDocument,
   embeddings: Array<{ chunkId: string; vector: number[] }>,
-  config: ExportConfig['vectorDb']
+  config: ExportConfig["vectorDb"]
 ): Promise<ExportResult> {
   if (!config) {
     return {
       success: false,
-      destination: 'vectordb',
+      destination: "vectordb",
       recordsExported: 0,
-      errors: ['Vector DB configuration not provided'],
+      errors: ["Vector DB configuration not provided"],
     };
   }
 
   try {
     // Format for vector DB
-    const vectors = embeddings.map((e) => ({
+    const vectors = embeddings.map(e => ({
       id: e.chunkId,
       values: e.vector,
       metadata: {
@@ -206,9 +213,9 @@ export async function exportToVectorDb(
   } catch (error) {
     return {
       success: false,
-      destination: 'vectordb',
+      destination: "vectordb",
       recordsExported: 0,
-      errors: [error instanceof Error ? error.message : 'Unknown error'],
+      errors: [error instanceof Error ? error.message : "Unknown error"],
     };
   }
 }
@@ -216,15 +223,13 @@ export async function exportToVectorDb(
 /**
  * Export to JSON file
  */
-export async function exportToJson(
-  doc: ProcessedDocument
-): Promise<{
+export async function exportToJson(doc: ProcessedDocument): Promise<{
   ref: ContentRef;
   size: number;
 }> {
   const store = await getContentStore();
   const json = JSON.stringify(doc, null, 2);
-  const stored = await store.put(json, 'application/json');
+  const stored = await store.put(json, "application/json");
 
   return {
     ref: stored.ref,
@@ -246,35 +251,39 @@ export async function exportToCsv(
 
   // Document metadata CSV
   const docCsv = [
-    'id,title,source_ref,chunk_count,entity_count,sentiment_label,sentiment_score',
-    `"${doc.id}","${doc.title ?? ''}","${doc.sourceRef}",${doc.chunks.length},${doc.entities.length},"${doc.sentiment?.label ?? ''}",${doc.sentiment?.score ?? ''}`,
-  ].join('\n');
+    "id,title,source_ref,chunk_count,entity_count,sentiment_label,sentiment_score",
+    `"${doc.id}","${doc.title ?? ""}","${doc.sourceRef}",${doc.chunks.length},${doc.entities.length},"${doc.sentiment?.label ?? ""}",${doc.sentiment?.score ?? ""}`,
+  ].join("\n");
 
-  const docStored = await store.put(docCsv, 'text/csv');
-  refs.push({ type: 'document', ref: docStored.ref });
+  const docStored = await store.put(docCsv, "text/csv");
+  refs.push({ type: "document", ref: docStored.ref });
 
   // Chunks CSV
   if (options.includeChunks && doc.chunks.length > 0) {
-    const chunkLines = ['chunk_id,document_id,index,type,start_offset,end_offset,content'];
+    const chunkLines = [
+      "chunk_id,document_id,index,type,start_offset,end_offset,content",
+    ];
     for (const chunk of doc.chunks) {
       chunkLines.push(
         `"${chunk.id}","${chunk.documentId}",${chunk.index},"${chunk.type}",${chunk.startOffset},${chunk.endOffset},"${escapeCSV(chunk.content)}"`
       );
     }
-    const chunkStored = await store.put(chunkLines.join('\n'), 'text/csv');
-    refs.push({ type: 'chunks', ref: chunkStored.ref });
+    const chunkStored = await store.put(chunkLines.join("\n"), "text/csv");
+    refs.push({ type: "chunks", ref: chunkStored.ref });
   }
 
   // Entities CSV
   if (options.includeEntities && doc.entities.length > 0) {
-    const entityLines = ['entity_text,entity_type,start_offset,end_offset,confidence'];
+    const entityLines = [
+      "entity_text,entity_type,start_offset,end_offset,confidence",
+    ];
     for (const entity of doc.entities) {
       entityLines.push(
         `"${escapeCSV(entity.text)}","${entity.type}",${entity.startOffset},${entity.endOffset},${entity.confidence}`
       );
     }
-    const entityStored = await store.put(entityLines.join('\n'), 'text/csv');
-    refs.push({ type: 'entities', ref: entityStored.ref });
+    const entityStored = await store.put(entityLines.join("\n"), "text/csv");
+    refs.push({ type: "entities", ref: entityStored.ref });
   }
 
   return { refs };
@@ -333,17 +342,20 @@ function generateNeo4jStatements(doc: ProcessedDocument): string[] {
   const statements: string[] = [];
 
   // Create document node
-  statements.push(`
+  statements.push(
+    `
     MERGE (d:Document {id: "${doc.id}"})
-    SET d.title = "${doc.title ?? ''}"
+    SET d.title = "${doc.title ?? ""}"
     SET d.sourceRef = "${doc.sourceRef}"
     SET d.chunkCount = ${doc.chunks.length}
     SET d.entityCount = ${doc.entities.length}
-  `.trim());
+  `.trim()
+  );
 
   // Create chunk nodes and relationships
   for (const chunk of doc.chunks) {
-    statements.push(`
+    statements.push(
+      `
       MERGE (c:Chunk {id: "${chunk.id}"})
       SET c.index = ${chunk.index}
       SET c.type = "${chunk.type}"
@@ -352,37 +364,47 @@ function generateNeo4jStatements(doc: ProcessedDocument): string[] {
       WITH c
       MATCH (d:Document {id: "${doc.id}"})
       MERGE (d)-[:HAS_CHUNK]->(c)
-    `.trim());
+    `.trim()
+    );
   }
 
   // Create entity nodes and relationships
   const entityMap = new Map<string, string>();
   for (const entity of doc.entities) {
-    const entityId = `${entity.type}-${entity.text}`.replace(/[^a-zA-Z0-9-]/g, '_');
+    const entityId = `${entity.type}-${entity.text}`.replace(
+      /[^a-zA-Z0-9-]/g,
+      "_"
+    );
     if (!entityMap.has(entityId)) {
       entityMap.set(entityId, entity.text);
-      statements.push(`
+      statements.push(
+        `
         MERGE (e:Entity:${entity.type} {id: "${entityId}"})
         SET e.text = "${escapeNeo4j(entity.text)}"
         SET e.type = "${entity.type}"
-      `.trim());
+      `.trim()
+      );
     }
 
-    statements.push(`
+    statements.push(
+      `
       MATCH (d:Document {id: "${doc.id}"})
       MATCH (e:Entity {id: "${entityId}"})
       MERGE (d)-[:MENTIONS {offset: ${entity.startOffset}, confidence: ${entity.confidence}}]->(e)
-    `.trim());
+    `.trim()
+    );
   }
 
   // Create keyword relationships
   for (const kw of doc.keywords) {
-    statements.push(`
+    statements.push(
+      `
       MERGE (k:Keyword {text: "${escapeNeo4j(kw.keyword)}"})
       WITH k
       MATCH (d:Document {id: "${doc.id}"})
       MERGE (d)-[:HAS_KEYWORD {score: ${kw.score}}]->(k)
-    `.trim());
+    `.trim()
+    );
   }
 
   return statements;
@@ -412,7 +434,7 @@ function generateSupabaseRecords(doc: ProcessedDocument): {
     },
   ];
 
-  const chunks = doc.chunks.map((chunk) => ({
+  const chunks = doc.chunks.map(chunk => ({
     id: chunk.id,
     document_id: doc.id,
     index: chunk.index,
@@ -441,11 +463,11 @@ function generateSupabaseRecords(doc: ProcessedDocument): {
 // ============================================================================
 
 function escapeCSV(str: string): string {
-  return str.replace(/"/g, '""').replace(/\n/g, '\\n');
+  return str.replace(/"/g, '""').replace(/\n/g, "\\n");
 }
 
 function escapeNeo4j(str: string): string {
-  return str.replace(/"/g, '\\"').replace(/\\/g, '\\\\');
+  return str.replace(/"/g, '\\"').replace(/\\/g, "\\\\");
 }
 
 /**
@@ -467,7 +489,9 @@ export function createProcessingSummary(doc: ProcessedDocument): {
   const processedSize =
     JSON.stringify(doc.entities).length +
     JSON.stringify(doc.keywords).length +
-    JSON.stringify(doc.chunks.map((c) => ({ ...c, content: c.content.slice(0, 100) }))).length;
+    JSON.stringify(
+      doc.chunks.map(c => ({ ...c, content: c.content.slice(0, 100) }))
+    ).length;
 
   const tokenReduction = Math.round((1 - processedSize / originalSize) * 100);
 
@@ -481,6 +505,6 @@ export function createProcessingSummary(doc: ProcessedDocument): {
       citations: doc.citations?.length ?? 0,
     },
     readyForIngestion: true,
-    exportFormats: ['neo4j', 'supabase', 'vectordb', 'json', 'csv'],
+    exportFormats: ["neo4j", "supabase", "vectordb", "json", "csv"],
   };
 }

@@ -1,12 +1,12 @@
 /**
  * LangGraph Adapter for MCP Tool Platform
- * 
+ *
  * Provides TypeScript-based state machine orchestration for multi-agent workflows.
  * Integrates with Python LangGraph via subprocess bridge for complex graph execution.
  */
 
-import { spawn } from 'child_process';
-import path from 'path';
+import { spawn } from "child_process";
+import path from "path";
 
 // ============================================================================
 // STATE SCHEMAS
@@ -28,10 +28,15 @@ export interface BaseWorkflowState {
  * Tracks progression: preliminary → full_context → meta_analysis → reconciliation
  */
 export interface ForensicInvestigationState extends BaseWorkflowState {
-  stage: 'preliminary' | 'full_context' | 'meta_analysis' | 'reconciliation' | 'complete';
+  stage:
+    | "preliminary"
+    | "full_context"
+    | "meta_analysis"
+    | "reconciliation"
+    | "complete";
   evidence_id: string;
   case_id: string;
-  
+
   // Preliminary findings (Chroma stage, 0-72h)
   preliminary?: {
     timestamp: Date;
@@ -40,7 +45,7 @@ export interface ForensicInvestigationState extends BaseWorkflowState {
     uncertainty_flags: string[];
     chroma_collection_id: string;
   };
-  
+
   // Full context findings (Meta-analysis stage, post-72h)
   full_context?: {
     timestamp: Date;
@@ -49,7 +54,7 @@ export interface ForensicInvestigationState extends BaseWorkflowState {
     pattern_sequences: PatternSequence[];
     neo4j_entity_ids: string[];
   };
-  
+
   // Reconciliation (Human-in-the-loop)
   reconciliation?: {
     approved: boolean;
@@ -57,7 +62,7 @@ export interface ForensicInvestigationState extends BaseWorkflowState {
     methodology_justification: string;
     checkpoint_id: string;
   };
-  
+
   // Audit trail (all analysis snapshots)
   audit_trail: AnalysisSnapshot[];
 }
@@ -67,17 +72,23 @@ export interface ForensicInvestigationState extends BaseWorkflowState {
  * Tracks: ingestion → type_detection → extraction → validation → storage
  */
 export interface DocumentProcessingState extends BaseWorkflowState {
-  stage: 'ingestion' | 'type_detection' | 'extraction' | 'validation' | 'storage' | 'complete';
+  stage:
+    | "ingestion"
+    | "type_detection"
+    | "extraction"
+    | "validation"
+    | "storage"
+    | "complete";
   document_id: string;
   source_path: string;
-  
+
   // Type detection results
   detected_type?: {
-    format: 'pdf' | 'html' | 'docx' | 'txt' | 'image' | 'unknown';
+    format: "pdf" | "html" | "docx" | "txt" | "image" | "unknown";
     confidence: number;
     mime_type: string;
   };
-  
+
   // Extraction results
   extracted_content?: {
     text: string;
@@ -85,14 +96,14 @@ export interface DocumentProcessingState extends BaseWorkflowState {
     chunks: DocumentChunk[];
     entities: ExtractedEntity[];
   };
-  
+
   // Validation results
   validation?: {
     passed: boolean;
     errors: string[];
     warnings: string[];
   };
-  
+
   // Storage references
   storage?: {
     r2_key: string;
@@ -108,7 +119,7 @@ export interface DocumentProcessingState extends BaseWorkflowState {
 export interface ClassificationSnapshot {
   severity: number;
   patterns: string[];
-  sentiment: 'positive' | 'negative' | 'neutral' | 'manipulative';
+  sentiment: "positive" | "negative" | "neutral" | "manipulative";
   confidence: number;
   reasoning: string;
 }
@@ -123,7 +134,7 @@ export interface PatternSequence {
 
 export interface AnalysisSnapshot {
   timestamp: Date;
-  source: 'chroma_preliminary' | 'full_context_meta' | 'human_review';
+  source: "chroma_preliminary" | "full_context_meta" | "human_review";
   classifications: ClassificationSnapshot;
   reasoning: string;
 }
@@ -152,7 +163,9 @@ export interface ExtractedEntity {
  * Graph node function signature
  * Takes current state and returns updated state
  */
-export type GraphNode<T extends BaseWorkflowState> = (state: T) => Promise<Partial<T>>;
+export type GraphNode<T extends BaseWorkflowState> = (
+  state: T
+) => Promise<Partial<T>>;
 
 /**
  * Conditional edge function signature
@@ -179,11 +192,14 @@ export interface GraphDefinition<T extends BaseWorkflowState> {
 
 export class LangGraphAdapter {
   private pythonBridgePath: string;
-  
+
   constructor() {
-    this.pythonBridgePath = path.join(__dirname, '../../python-tools/langgraph_runner.py');
+    this.pythonBridgePath = path.join(
+      __dirname,
+      "../../python-tools/langgraph_runner.py"
+    );
   }
-  
+
   /**
    * Create a new graph definition
    */
@@ -194,7 +210,7 @@ export class LangGraphAdapter {
   ): GraphBuilder<T> {
     return new GraphBuilder<T>(name, description, initialState);
   }
-  
+
   /**
    * Execute a graph with given initial state
    * Returns final state after all nodes complete
@@ -205,43 +221,43 @@ export class LangGraphAdapter {
   ): Promise<T> {
     let currentState: T = { ...graph.initial_state, ...initialState } as T;
     let currentNode = graph.entry_point;
-    
-    while (currentNode !== 'END') {
+
+    while (currentNode !== "END") {
       // Check if this is a checkpoint node
       if (graph.checkpoints?.includes(currentNode)) {
         console.log(`[LangGraph] Checkpoint reached: ${currentNode}`);
         // In production, this would pause and wait for human approval
         // For now, we continue automatically
       }
-      
+
       // Execute current node
       const nodeFunc = graph.nodes.get(currentNode);
       if (!nodeFunc) {
         throw new Error(`Node not found: ${currentNode}`);
       }
-      
+
       console.log(`[LangGraph] Executing node: ${currentNode}`);
       const updates = await nodeFunc(currentState);
       currentState = { ...currentState, ...updates };
-      
+
       // Determine next node
       const edge = graph.edges.get(currentNode);
       if (!edge) {
         throw new Error(`No edge defined for node: ${currentNode}`);
       }
-      
-      if (typeof edge === 'string') {
+
+      if (typeof edge === "string") {
         currentNode = edge;
       } else {
         currentNode = edge(currentState);
       }
-      
+
       console.log(`[LangGraph] Next node: ${currentNode}`);
     }
-    
+
     return currentState;
   }
-  
+
   /**
    * Execute graph with streaming updates
    * Yields state after each node execution
@@ -252,29 +268,29 @@ export class LangGraphAdapter {
   ): AsyncGenerator<T> {
     let currentState: T = { ...graph.initial_state, ...initialState } as T;
     let currentNode = graph.entry_point;
-    
-    while (currentNode !== 'END') {
+
+    while (currentNode !== "END") {
       const nodeFunc = graph.nodes.get(currentNode);
       if (!nodeFunc) {
         throw new Error(`Node not found: ${currentNode}`);
       }
-      
+
       const updates = await nodeFunc(currentState);
       currentState = { ...currentState, ...updates };
-      
+
       // Yield updated state
       yield currentState;
-      
+
       // Determine next node
       const edge = graph.edges.get(currentNode);
       if (!edge) {
         throw new Error(`No edge defined for node: ${currentNode}`);
       }
-      
-      currentNode = typeof edge === 'string' ? edge : edge(currentState);
+
+      currentNode = typeof edge === "string" ? edge : edge(currentState);
     }
   }
-  
+
   /**
    * Get current state of a running graph (for resumability)
    */
@@ -283,7 +299,7 @@ export class LangGraphAdapter {
     // For now, return null (not implemented)
     return null;
   }
-  
+
   /**
    * Save graph state for resumability
    */
@@ -291,35 +307,32 @@ export class LangGraphAdapter {
     // In production, this would persist to Supabase
     console.log(`[LangGraph] Saving state for workflow: ${state.workflow_id}`);
   }
-  
+
   /**
    * Execute complex graph via Python LangGraph bridge
    * For workflows that require Python-specific libraries
    */
-  async executePythonGraph(
-    graphSpec: any,
-    initialState: any
-  ): Promise<any> {
+  async executePythonGraph(graphSpec: any, initialState: any): Promise<any> {
     return new Promise((resolve, reject) => {
-      const process = spawn('python3.11', [
+      const process = spawn("python3.11", [
         this.pythonBridgePath,
-        'execute_graph',
+        "execute_graph",
         JSON.stringify(graphSpec),
-        JSON.stringify(initialState)
+        JSON.stringify(initialState),
       ]);
-      
-      let stdout = '';
-      let stderr = '';
-      
-      process.stdout.on('data', (data) => {
+
+      let stdout = "";
+      let stderr = "";
+
+      process.stdout.on("data", data => {
         stdout += data.toString();
       });
-      
-      process.stderr.on('data', (data) => {
+
+      process.stderr.on("data", data => {
         stderr += data.toString();
       });
-      
-      process.on('close', (code) => {
+
+      process.on("close", code => {
         if (code !== 0) {
           reject(new Error(`Python LangGraph failed: ${stderr}`));
         } else {
@@ -341,7 +354,7 @@ export class LangGraphAdapter {
 
 export class GraphBuilder<T extends BaseWorkflowState> {
   private graph: GraphDefinition<T>;
-  
+
   constructor(name: string, description: string, initialState: Partial<T>) {
     this.graph = {
       name,
@@ -349,11 +362,11 @@ export class GraphBuilder<T extends BaseWorkflowState> {
       initial_state: initialState,
       nodes: new Map(),
       edges: new Map(),
-      entry_point: '',
-      checkpoints: []
+      entry_point: "",
+      checkpoints: [],
     };
   }
-  
+
   /**
    * Add a node to the graph
    */
@@ -361,7 +374,7 @@ export class GraphBuilder<T extends BaseWorkflowState> {
     this.graph.nodes.set(name, func);
     return this;
   }
-  
+
   /**
    * Add a direct edge between two nodes
    */
@@ -369,7 +382,7 @@ export class GraphBuilder<T extends BaseWorkflowState> {
     this.graph.edges.set(from, to);
     return this;
   }
-  
+
   /**
    * Add a conditional edge (routing based on state)
    */
@@ -377,7 +390,7 @@ export class GraphBuilder<T extends BaseWorkflowState> {
     this.graph.edges.set(from, condition);
     return this;
   }
-  
+
   /**
    * Set the entry point node
    */
@@ -385,7 +398,7 @@ export class GraphBuilder<T extends BaseWorkflowState> {
     this.graph.entry_point = nodeName;
     return this;
   }
-  
+
   /**
    * Mark a node as a checkpoint (requires human approval)
    */
@@ -396,13 +409,13 @@ export class GraphBuilder<T extends BaseWorkflowState> {
     this.graph.checkpoints.push(nodeName);
     return this;
   }
-  
+
   /**
    * Build and return the graph definition
    */
   build(): GraphDefinition<T> {
     if (!this.graph.entry_point) {
-      throw new Error('Entry point not set');
+      throw new Error("Entry point not set");
     }
     return this.graph;
   }

@@ -1,16 +1,16 @@
 /**
  * Real-time Log Streaming via WebSocket
- * 
+ *
  * Provides live log streaming to connected clients with filtering capabilities.
  */
 
-import { EventEmitter } from 'events';
+import { EventEmitter } from "events";
 
 // ============================================================================
 // Types
 // ============================================================================
 
-export type LogLevel = 'debug' | 'info' | 'warn' | 'error' | 'fatal';
+export type LogLevel = "debug" | "info" | "warn" | "error" | "fatal";
 
 export interface LogEntry {
   id: string;
@@ -43,7 +43,10 @@ export interface MetricsSnapshot {
   queueDepth: number;
   cacheHitRate: number;
   toolCalls: Record<string, number>;
-  providerUsage: Record<string, { calls: number; tokens: number; cost: number }>;
+  providerUsage: Record<
+    string,
+    { calls: number; tokens: number; cost: number }
+  >;
 }
 
 // ============================================================================
@@ -67,11 +70,11 @@ class LogBuffer {
 
   getRecent(count: number = 100, filter?: LogFilter): LogEntry[] {
     let entries = this.buffer.slice(-count * 2); // Get more to account for filtering
-    
+
     if (filter) {
       entries = this.applyFilter(entries, filter);
     }
-    
+
     return entries.slice(-count);
   }
 
@@ -81,13 +84,26 @@ class LogBuffer {
 
   private applyFilter(entries: LogEntry[], filter: LogFilter): LogEntry[] {
     return entries.filter(entry => {
-      if (filter.levels && filter.levels.length > 0 && !filter.levels.includes(entry.level)) {
+      if (
+        filter.levels &&
+        filter.levels.length > 0 &&
+        !filter.levels.includes(entry.level)
+      ) {
         return false;
       }
-      if (filter.categories && filter.categories.length > 0 && !filter.categories.includes(entry.category)) {
+      if (
+        filter.categories &&
+        filter.categories.length > 0 &&
+        !filter.categories.includes(entry.category)
+      ) {
         return false;
       }
-      if (filter.tools && filter.tools.length > 0 && entry.tool && !filter.tools.includes(entry.tool)) {
+      if (
+        filter.tools &&
+        filter.tools.length > 0 &&
+        entry.tool &&
+        !filter.tools.includes(entry.tool)
+      ) {
         return false;
       }
       if (filter.traceId && entry.traceId !== filter.traceId) {
@@ -99,7 +115,9 @@ class LogBuffer {
       if (filter.search) {
         const searchLower = filter.search.toLowerCase();
         const messageMatch = entry.message.toLowerCase().includes(searchLower);
-        const dataMatch = entry.data ? JSON.stringify(entry.data).toLowerCase().includes(searchLower) : false;
+        const dataMatch = entry.data
+          ? JSON.stringify(entry.data).toLowerCase().includes(searchLower)
+          : false;
         if (!messageMatch && !dataMatch) {
           return false;
         }
@@ -117,8 +135,10 @@ class LogBuffer {
   }
 
   export(filter?: LogFilter): string {
-    const entries = filter ? this.applyFilter(this.buffer, filter) : this.buffer;
-    return entries.map(e => JSON.stringify(e)).join('\n');
+    const entries = filter
+      ? this.applyFilter(this.buffer, filter)
+      : this.buffer;
+    return entries.map(e => JSON.stringify(e)).join("\n");
   }
 }
 
@@ -132,7 +152,10 @@ class MetricsCollector {
   private errors: number = 0;
   private totalRequests: number = 0;
   private toolCalls: Map<string, number> = new Map();
-  private providerUsage: Map<string, { calls: number; tokens: number; cost: number }> = new Map();
+  private providerUsage: Map<
+    string,
+    { calls: number; tokens: number; cost: number }
+  > = new Map();
   private cacheHits: number = 0;
   private cacheMisses: number = 0;
   private queueDepth: number = 0;
@@ -143,7 +166,7 @@ class MetricsCollector {
     this.requestCounts.push(now);
     this.latencies.push(latencyMs);
     this.totalRequests++;
-    
+
     if (!success) {
       this.errors++;
     }
@@ -161,7 +184,11 @@ class MetricsCollector {
   }
 
   recordProviderUsage(provider: string, tokens: number, cost: number): void {
-    const current = this.providerUsage.get(provider) || { calls: 0, tokens: 0, cost: 0 };
+    const current = this.providerUsage.get(provider) || {
+      calls: 0,
+      tokens: 0,
+      cost: 0,
+    };
     current.calls++;
     current.tokens += tokens;
     current.cost += cost;
@@ -183,18 +210,22 @@ class MetricsCollector {
   getSnapshot(activeConnections: number): MetricsSnapshot {
     const now = Date.now();
     const windowSeconds = this.windowMs / 1000;
-    
+
     const recentLatencies = this.latencies.slice(-100);
-    const avgLatency = recentLatencies.length > 0
-      ? recentLatencies.reduce((a, b) => a + b, 0) / recentLatencies.length
-      : 0;
+    const avgLatency =
+      recentLatencies.length > 0
+        ? recentLatencies.reduce((a, b) => a + b, 0) / recentLatencies.length
+        : 0;
 
     const toolCallsObj: Record<string, number> = {};
     for (const [tool, count] of Array.from(this.toolCalls.entries())) {
       toolCallsObj[tool] = count;
     }
 
-    const providerUsageObj: Record<string, { calls: number; tokens: number; cost: number }> = {};
+    const providerUsageObj: Record<
+      string,
+      { calls: number; tokens: number; cost: number }
+    > = {};
     for (const [provider, usage] of Array.from(this.providerUsage.entries())) {
       providerUsageObj[provider] = usage;
     }
@@ -235,8 +266,12 @@ class LogStreamManager extends EventEmitter {
   private static instance: LogStreamManager | null = null;
   private buffer: LogBuffer;
   private metrics: MetricsCollector;
-  private subscribers: Map<string, { filter: LogFilter; callback: (entry: LogEntry) => void }> = new Map();
-  private metricsSubscribers: Map<string, (snapshot: MetricsSnapshot) => void> = new Map();
+  private subscribers: Map<
+    string,
+    { filter: LogFilter; callback: (entry: LogEntry) => void }
+  > = new Map();
+  private metricsSubscribers: Map<string, (snapshot: MetricsSnapshot) => void> =
+    new Map();
   private metricsInterval: ReturnType<typeof setInterval> | null = null;
   private logIdCounter: number = 0;
 
@@ -258,7 +293,12 @@ class LogStreamManager extends EventEmitter {
   // Logging
   // -------------------------------------------------------------------------
 
-  log(level: LogLevel, category: string, message: string, data?: Record<string, unknown>): void {
+  log(
+    level: LogLevel,
+    category: string,
+    message: string,
+    data?: Record<string, unknown>
+  ): void {
     const entry: LogEntry = {
       id: `log_${Date.now()}_${++this.logIdCounter}`,
       timestamp: Date.now(),
@@ -273,7 +313,7 @@ class LogStreamManager extends EventEmitter {
     };
 
     this.buffer.push(entry);
-    this.emit('log', entry);
+    this.emit("log", entry);
 
     // Notify subscribers
     for (const [, sub] of Array.from(this.subscribers.entries())) {
@@ -281,37 +321,61 @@ class LogStreamManager extends EventEmitter {
         try {
           sub.callback(entry);
         } catch (err) {
-          console.error('Error in log subscriber callback:', err);
+          console.error("Error in log subscriber callback:", err);
         }
       }
     }
   }
 
-  debug(category: string, message: string, data?: Record<string, unknown>): void {
-    this.log('debug', category, message, data);
+  debug(
+    category: string,
+    message: string,
+    data?: Record<string, unknown>
+  ): void {
+    this.log("debug", category, message, data);
   }
 
-  info(category: string, message: string, data?: Record<string, unknown>): void {
-    this.log('info', category, message, data);
+  info(
+    category: string,
+    message: string,
+    data?: Record<string, unknown>
+  ): void {
+    this.log("info", category, message, data);
   }
 
-  warn(category: string, message: string, data?: Record<string, unknown>): void {
-    this.log('warn', category, message, data);
+  warn(
+    category: string,
+    message: string,
+    data?: Record<string, unknown>
+  ): void {
+    this.log("warn", category, message, data);
   }
 
-  error(category: string, message: string, data?: Record<string, unknown>): void {
-    this.log('error', category, message, data);
+  error(
+    category: string,
+    message: string,
+    data?: Record<string, unknown>
+  ): void {
+    this.log("error", category, message, data);
   }
 
-  fatal(category: string, message: string, data?: Record<string, unknown>): void {
-    this.log('fatal', category, message, data);
+  fatal(
+    category: string,
+    message: string,
+    data?: Record<string, unknown>
+  ): void {
+    this.log("fatal", category, message, data);
   }
 
   // -------------------------------------------------------------------------
   // Subscriptions
   // -------------------------------------------------------------------------
 
-  subscribe(id: string, filter: LogFilter, callback: (entry: LogEntry) => void): void {
+  subscribe(
+    id: string,
+    filter: LogFilter,
+    callback: (entry: LogEntry) => void
+  ): void {
     this.subscribers.set(id, { filter, callback });
   }
 
@@ -319,7 +383,10 @@ class LogStreamManager extends EventEmitter {
     this.subscribers.delete(id);
   }
 
-  subscribeMetrics(id: string, callback: (snapshot: MetricsSnapshot) => void): void {
+  subscribeMetrics(
+    id: string,
+    callback: (snapshot: MetricsSnapshot) => void
+  ): void {
     this.metricsSubscribers.set(id, callback);
   }
 
@@ -376,13 +443,26 @@ class LogStreamManager extends EventEmitter {
   // -------------------------------------------------------------------------
 
   private matchesFilter(entry: LogEntry, filter: LogFilter): boolean {
-    if (filter.levels && filter.levels.length > 0 && !filter.levels.includes(entry.level)) {
+    if (
+      filter.levels &&
+      filter.levels.length > 0 &&
+      !filter.levels.includes(entry.level)
+    ) {
       return false;
     }
-    if (filter.categories && filter.categories.length > 0 && !filter.categories.includes(entry.category)) {
+    if (
+      filter.categories &&
+      filter.categories.length > 0 &&
+      !filter.categories.includes(entry.category)
+    ) {
       return false;
     }
-    if (filter.tools && filter.tools.length > 0 && entry.tool && !filter.tools.includes(entry.tool)) {
+    if (
+      filter.tools &&
+      filter.tools.length > 0 &&
+      entry.tool &&
+      !filter.tools.includes(entry.tool)
+    ) {
       return false;
     }
     if (filter.traceId && entry.traceId !== filter.traceId) {
@@ -395,14 +475,16 @@ class LogStreamManager extends EventEmitter {
     // Broadcast metrics every 2 seconds
     this.metricsInterval = setInterval(() => {
       const snapshot = this.getMetricsSnapshot();
-      for (const [, callback] of Array.from(this.metricsSubscribers.entries())) {
+      for (const [, callback] of Array.from(
+        this.metricsSubscribers.entries()
+      )) {
         try {
           callback(snapshot);
         } catch (err) {
-          console.error('Error in metrics subscriber callback:', err);
+          console.error("Error in metrics subscriber callback:", err);
         }
       }
-      this.emit('metrics', snapshot);
+      this.emit("metrics", snapshot);
     }, 2000);
   }
 
@@ -425,14 +507,14 @@ export function getLogStream(): LogStreamManager {
 }
 
 export const logger = {
-  debug: (category: string, message: string, data?: Record<string, unknown>) => 
+  debug: (category: string, message: string, data?: Record<string, unknown>) =>
     getLogStream().debug(category, message, data),
-  info: (category: string, message: string, data?: Record<string, unknown>) => 
+  info: (category: string, message: string, data?: Record<string, unknown>) =>
     getLogStream().info(category, message, data),
-  warn: (category: string, message: string, data?: Record<string, unknown>) => 
+  warn: (category: string, message: string, data?: Record<string, unknown>) =>
     getLogStream().warn(category, message, data),
-  error: (category: string, message: string, data?: Record<string, unknown>) => 
+  error: (category: string, message: string, data?: Record<string, unknown>) =>
     getLogStream().error(category, message, data),
-  fatal: (category: string, message: string, data?: Record<string, unknown>) => 
+  fatal: (category: string, message: string, data?: Record<string, unknown>) =>
     getLogStream().fatal(category, message, data),
 };

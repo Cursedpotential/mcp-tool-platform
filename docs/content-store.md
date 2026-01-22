@@ -1,18 +1,18 @@
 # Content Store
 
 **NAME**
-    content-store - SHA-256 content-addressed storage system for forensic artifacts
+content-store - SHA-256 content-addressed storage system for forensic artifacts
 
 **SYNOPSIS**
-    The Content Store manages large artifacts (OCR text, documents, analysis results) using content-addressed storage with SHA-256 hashing and paged retrieval for maximum token efficiency.
+The Content Store manages large artifacts (OCR text, documents, analysis results) using content-addressed storage with SHA-256 hashing and paged retrieval for maximum token efficiency.
 
 **DESCRIPTION**
-    The Content Store implements a content-addressed storage system using SHA-256 hashing to ensure data integrity and deduplication. It provides efficient storage and retrieval of large forensic artifacts with paging support for token-efficient access.
+The Content Store implements a content-addressed storage system using SHA-256 hashing to ensure data integrity and deduplication. It provides efficient storage and retrieval of large forensic artifacts with paging support for token-efficient access.
 
 **CORE FEATURES**
 
 **Content Addressing**
-    SHA-256 hashing ensures data integrity and prevents duplication.
+SHA-256 hashing ensures data integrity and prevents duplication.
 
     **Hashing Process:**
     - Content → SHA-256 digest → Hex string reference
@@ -20,7 +20,7 @@
     - Collision-resistant and tamper-proof
 
 **Paged Retrieval**
-    Large artifacts delivered in manageable chunks.
+Large artifacts delivered in manageable chunks.
 
     **Paging Strategy:**
     - **Default Page Size**: 4096 bytes (4KB)
@@ -29,7 +29,7 @@
     - **Sequential Access**: Page-based navigation
 
 **Deduplication**
-    Identical content stored only once regardless of source.
+Identical content stored only once regardless of source.
 
     **Benefits:**
     - **Storage Efficiency**: Eliminates redundant data
@@ -37,7 +37,7 @@
     - **Cache Effectiveness**: Multiple requests return same reference
 
 **Metadata Management**
-    Rich metadata associated with each stored artifact.
+Rich metadata associated with each stored artifact.
 
     **Metadata Fields:**
     - Content type (MIME type)
@@ -50,14 +50,14 @@
 **DATA STRUCTURES**
 
 **ContentRef**
-    Content-addressed reference using SHA-256.
+Content-addressed reference using SHA-256.
 
     ```typescript
     type ContentRef = `sha256:${string}`;  // e.g., "sha256:a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3"
     ```
 
 **StoredRef**
-    Complete storage metadata for a content reference.
+Complete storage metadata for a content reference.
 
     ```typescript
     interface StoredRef {
@@ -72,7 +72,7 @@
     ```
 
 **PagedContent**
-    Page-based content delivery for large artifacts.
+Page-based content delivery for large artifacts.
 
     ```typescript
     interface PagedContent {
@@ -88,7 +88,7 @@
     ```
 
 **PageRequest**
-    Parameters for paged content retrieval.
+Parameters for paged content retrieval.
 
     ```typescript
     interface PageRequest {
@@ -99,7 +99,7 @@
     ```
 
 **StoreConfig**
-    Content store configuration options.
+Content store configuration options.
 
     ```typescript
     interface ContentStoreConfig {
@@ -113,7 +113,7 @@
 **API METHODS**
 
 **put(content: string | Buffer, mime: string): Promise<StoredRef>**
-    Stores content and returns content-addressed reference.
+Stores content and returns content-addressed reference.
 
     **Parameters:**
     - `content`: Content to store (string or Buffer)
@@ -130,7 +130,7 @@
     - `StoredRef` with complete metadata
 
 **get(ref: ContentRef): Promise<string | Buffer | null>**
-    Retrieves complete content by reference.
+Retrieves complete content by reference.
 
     **Parameters:**
     - `ref`: Content reference
@@ -139,7 +139,7 @@
     - Content data or null if not found
 
 **getPage(request: PageRequest): Promise<PagedContent | null>**
-    Retrieves content page with navigation metadata.
+Retrieves content page with navigation metadata.
 
     **Parameters:**
     - `request`: Page request specification
@@ -148,7 +148,7 @@
     - `PagedContent` or null if not found
 
 **getMeta(ref: ContentRef): Promise<StoredRef | null>**
-    Retrieves metadata without content.
+Retrieves metadata without content.
 
     **Parameters:**
     - `ref`: Content reference
@@ -157,7 +157,7 @@
     - `StoredRef` metadata or null if not found
 
 **exists(ref: ContentRef): Promise<boolean>**
-    Checks if content exists for reference.
+Checks if content exists for reference.
 
     **Parameters:**
     - `ref`: Content reference
@@ -166,13 +166,13 @@
     - Boolean existence status
 
 **list(): StoredRef[]**
-    Returns all stored content metadata.
+Returns all stored content metadata.
 
     **Returns:**
     - Array of all stored references
 
 **delete(ref: ContentRef): Promise<boolean>**
-    Removes content from store.
+Removes content from store.
 
     **Parameters:**
     - `ref`: Content reference
@@ -183,8 +183,7 @@
 **STORAGE ARCHITECTURE**
 
 **Directory Structure**
-    ```
-    content-store/
+`     content-store/
     ├── index.json          # Metadata index
     ├── objects/            # Content objects
     │   ├── a6/            # First 2 chars of hash
@@ -194,10 +193,10 @@
     │   │   └── ...
     │   └── ...
     └── temp/               # Temporary files during storage
-    ```
+    `
 
 **Index File**
-    JSON file containing all metadata for fast lookups.
+JSON file containing all metadata for fast lookups.
 
     ```json
     {
@@ -213,7 +212,7 @@
     ```
 
 **Hash Distribution**
-    SHA-256 hashes distributed across subdirectories for performance.
+SHA-256 hashes distributed across subdirectories for performance.
 
     **Algorithm:**
     - Take first 2 characters of hash
@@ -223,7 +222,7 @@
 **COMPRESSION & OPTIMIZATION**
 
 **Automatic Compression**
-    Large text content compressed to reduce storage.
+Large text content compressed to reduce storage.
 
     **Compression Logic:**
     - Text content >1KB automatically compressed
@@ -231,7 +230,7 @@
     - Metadata tracks compression status
 
 **Size Limits**
-    Configurable maximum file sizes.
+Configurable maximum file sizes.
 
     **Limits:**
     - **Default**: 100MB per file
@@ -239,7 +238,7 @@
     - **Validation**: Enforced on storage
 
 **Memory Management**
-    Efficient handling of large files.
+Efficient handling of large files.
 
     **Strategies:**
     - Streaming for large file storage
@@ -248,85 +247,46 @@
 
 **PERFORMANCE CHARACTERISTICS**
 
-**Storage Performance**
-    - **Small Files** (<1MB): ~10-50ms
-    - **Large Files** (>10MB): ~100-500ms
-    - **Deduplication Check**: ~1-5ms
+**Storage Performance** - **Small Files** (<1MB): ~10-50ms - **Large Files** (>10MB): ~100-500ms - **Deduplication Check**: ~1-5ms
 
-**Retrieval Performance**
-    - **Metadata Only**: ~1-2ms
-    - **Small Content**: ~5-10ms
-    - **Paged Content**: ~10-50ms per page
+**Retrieval Performance** - **Metadata Only**: ~1-2ms - **Small Content**: ~5-10ms - **Paged Content**: ~10-50ms per page
 
-**Index Performance**
-    - **Lookup**: O(1) hash table access
-    - **List**: O(n) where n = stored items
-    - **Memory**: ~50KB per 1000 stored items
+**Index Performance** - **Lookup**: O(1) hash table access - **List**: O(n) where n = stored items - **Memory**: ~50KB per 1000 stored items
 
 **INTEGRATION POINTS**
 
-**MCP Gateway**
-    - `get_ref` endpoint uses paged retrieval
-    - Reference-based returns minimize tokens
-    - Content integrity verification
+**MCP Gateway** - `get_ref` endpoint uses paged retrieval - Reference-based returns minimize tokens - Content integrity verification
 
-**Task Executor**
-    - Stores tool outputs as references
-    - Retrieves cached results by reference
-    - Manages result deduplication
+**Task Executor** - Stores tool outputs as references - Retrieves cached results by reference - Manages result deduplication
 
-**Tool Registry**
-    - Tools store large outputs in content store
-    - References used for tool chaining
-    - Metadata used for result browsing
+**Tool Registry** - Tools store large outputs in content store - References used for tool chaining - Metadata used for result browsing
 
-**Forensic Analysis Pipeline**
-    - Raw evidence files stored with integrity
-    - Analysis results content-addressed
-    - Audit trail maintained through references
+**Forensic Analysis Pipeline** - Raw evidence files stored with integrity - Analysis results content-addressed - Audit trail maintained through references
 
 **SECURITY CONSIDERATIONS**
 
-**Data Integrity**
-    - SHA-256 prevents tampering
-    - Hash verification on retrieval
-    - Immutable storage (no updates)
+**Data Integrity** - SHA-256 prevents tampering - Hash verification on retrieval - Immutable storage (no updates)
 
-**Access Control**
-    - Reference-based access control
-    - User permission checking
-    - Audit logging of all access
+**Access Control** - Reference-based access control - User permission checking - Audit logging of all access
 
-**Privacy Protection**
-    - Content encryption at rest
-    - Secure temporary file handling
-    - No external data leakage
+**Privacy Protection** - Content encryption at rest - Secure temporary file handling - No external data leakage
 
 **ERROR HANDLING**
 
-**Storage Errors**
-    - **Disk Full**: Graceful failure with cleanup
-    - **Permission Denied**: Clear error messages
-    - **Corruption**: Hash verification failures
+**Storage Errors** - **Disk Full**: Graceful failure with cleanup - **Permission Denied**: Clear error messages - **Corruption**: Hash verification failures
 
-**Retrieval Errors**
-    - **Not Found**: Null return with logging
-    - **Corruption**: Hash mismatch detection
-    - **Access Denied**: Permission error returns
+**Retrieval Errors** - **Not Found**: Null return with logging - **Corruption**: Hash mismatch detection - **Access Denied**: Permission error returns
 
-**Recovery Mechanisms**
-    - **Index Reconstruction**: Rebuild from filesystem
-    - **Integrity Checking**: Batch verification
-    - **Backup/Restore**: Full store snapshots
+**Recovery Mechanisms** - **Index Reconstruction**: Rebuild from filesystem - **Integrity Checking**: Batch verification - **Backup/Restore**: Full store snapshots
 
 **SEE ALSO**
-    mcp-gateway(7), task-executor(7), tool-registry(7)
+mcp-gateway(7), task-executor(7), tool-registry(7)
 
 **AUTHOR**
-    Claude Code - Opus 4.1
+Claude Code - Opus 4.1
 
 **VERSION**
-    1.0.0
+1.0.0
 
 **DATE**
-    January 11, 2026
+January 11, 2026

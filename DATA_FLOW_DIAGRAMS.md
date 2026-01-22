@@ -67,6 +67,7 @@
 ## 🔄 **BIDIRECTIONAL MCP FLOW**
 
 ### **INTERNAL SERVICES → PLATFORM**
+
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   DOCKER        │    │   METAMCP       │    │     PLATFORM    │
@@ -81,6 +82,7 @@
 ```
 
 ### **PLATFORM → EXTERNAL CLIENTS**
+
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │     PLATFORM    │    │   METAMCP       │    │   EXTERNAL      │
@@ -95,17 +97,18 @@
 
 ## 🎯 **3-TIER VECTOR STORAGE COMPARISON**
 
-| **Tier** | **Storage** | **TTL** | **Purpose** | **Use Case** |
-|----------|-------------|---------|-------------|--------------|
-| **Tier 1** | PGVector (PostgreSQL) | **Permanent** | Long-term evidence storage | 8yr messages, case context |
-| **Tier 2** | Chroma VPS | **72 Hours** | Human-like short-term memory | Active processing, "what was I looking at?" |
-| **Tier 3** | Chroma In-Process | **Session** | Multi-agent coordination | Agent handoffs, parallel processing |
+| **Tier**   | **Storage**           | **TTL**       | **Purpose**                  | **Use Case**                                |
+| ---------- | --------------------- | ------------- | ---------------------------- | ------------------------------------------- |
+| **Tier 1** | PGVector (PostgreSQL) | **Permanent** | Long-term evidence storage   | 8yr messages, case context                  |
+| **Tier 2** | Chroma VPS            | **72 Hours**  | Human-like short-term memory | Active processing, "what was I looking at?" |
+| **Tier 3** | Chroma In-Process     | **Session**   | Multi-agent coordination     | Agent handoffs, parallel processing         |
 
 ### **Why This Design?**
+
 ```
 HUMAN MEMORY SIMULATION:
 ├── Immediate Context (working memory)
-├── Recent Context (72hr TTL - mimics human span)  
+├── Recent Context (72hr TTL - mimics human span)
 └── Long-term Memory (permanent - case facts)
 ```
 

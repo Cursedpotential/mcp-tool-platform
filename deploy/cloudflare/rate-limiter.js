@@ -1,4 +1,4 @@
-import { Router } from 'itty-router';
+import { Router } from "itty-router";
 
 const router = Router();
 
@@ -6,56 +6,59 @@ const FREE_TIER_LIMIT = 100;
 const PRO_TIER_LIMIT = 1000;
 const WINDOW_DURATION_MS = 60 * 60 * 1000; // 1 hour
 
-const getRateLimit = (tier) => {
+const getRateLimit = tier => {
   switch (tier) {
-    case 'pro':
+    case "pro":
       return PRO_TIER_LIMIT;
-    case 'free':
+    case "free":
     default:
       return FREE_TIER_LIMIT;
   }
 };
 
-const getTierFromApiKey = (apiKey) => {
+const getTierFromApiKey = apiKey => {
   // In a real application, you'd validate the API key against a database
   // and retrieve the associated tier. For this example, we'll use a simple check.
-  if (apiKey && apiKey.startsWith('pro_')) {
-    return 'pro';
+  if (apiKey && apiKey.startsWith("pro_")) {
+    return "pro";
   }
-  return 'free';
+  return "free";
 };
 
-const getCorsHeaders = (request) => {
-  const origin = request.headers.get('Origin');
+const getCorsHeaders = request => {
+  const origin = request.headers.get("Origin");
   if (origin) {
     // You might want to restrict this to specific origins in production
     return {
-      'Access-Control-Allow-Origin': origin,
-      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, X-API-Key',
-      'Access-Control-Max-Age': '86400',
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, X-API-Key",
+      "Access-Control-Max-Age": "86400",
     };
   }
   return {};
 };
 
-const handleOptions = (request) => {
+const handleOptions = request => {
   return new Response(null, {
     status: 204,
     headers: getCorsHeaders(request),
   });
 };
 
-router.options('*', handleOptions);
+router.options("*", handleOptions);
 
-router.get('/health', () => {
-  return new Response('OK', { status: 200 });
+router.get("/health", () => {
+  return new Response("OK", { status: 200 });
 });
 
-router.post('/check', async (request, env) => {
-  const apiKey = request.headers.get('X-API-Key');
+router.post("/check", async (request, env) => {
+  const apiKey = request.headers.get("X-API-Key");
   if (!apiKey) {
-    return new Response('Unauthorized: X-API-Key header missing', { status: 401, headers: getCorsHeaders(request) });
+    return new Response("Unauthorized: X-API-Key header missing", {
+      status: 401,
+      headers: getCorsHeaders(request),
+    });
   }
 
   const tier = getTierFromApiKey(apiKey);
@@ -64,7 +67,7 @@ router.post('/check', async (request, env) => {
   const windowStart = now - WINDOW_DURATION_MS;
 
   const key = `rate_limit:${apiKey}`;
-  let records = await env.KV_NAMESPACE.get(key, { type: 'json' });
+  let records = await env.KV_NAMESPACE.get(key, { type: "json" });
 
   if (!records) {
     records = [];
@@ -78,27 +81,32 @@ router.post('/check', async (request, env) => {
 
   const headers = {
     ...getCorsHeaders(request),
-    'X-RateLimit-Limit': limit.toString(),
-    'X-RateLimit-Remaining': Math.max(0, remaining - 1).toString(), // Subtract 1 for the current request
-    'X-RateLimit-Reset': Math.ceil(resetTime / 1000).toString(), // Unix timestamp in seconds
+    "X-RateLimit-Limit": limit.toString(),
+    "X-RateLimit-Remaining": Math.max(0, remaining - 1).toString(), // Subtract 1 for the current request
+    "X-RateLimit-Reset": Math.ceil(resetTime / 1000).toString(), // Unix timestamp in seconds
   };
 
   if (remaining <= 0) {
-    return new Response('Too Many Requests', { status: 429, headers });
+    return new Response("Too Many Requests", { status: 429, headers });
   }
 
   records.push(now);
   // Store the updated records, setting an expiration for the KV entry
   // The expiration should be slightly longer than the window duration
-  await env.KV_NAMESPACE.put(key, JSON.stringify(records), { expirationTtl: Math.ceil(WINDOW_DURATION_MS / 1000) + 60 });
+  await env.KV_NAMESPACE.put(key, JSON.stringify(records), {
+    expirationTtl: Math.ceil(WINDOW_DURATION_MS / 1000) + 60,
+  });
 
-  return new Response('OK', { status: 200, headers });
+  return new Response("OK", { status: 200, headers });
 });
 
-router.get('/status/:id', async (request, env) => {
+router.get("/status/:id", async (request, env) => {
   const apiKey = request.params.id; // Using :id as the API key for status lookup
   if (!apiKey) {
-    return new Response('Bad Request: API Key missing in path', { status: 400, headers: getCorsHeaders(request) });
+    return new Response("Bad Request: API Key missing in path", {
+      status: 400,
+      headers: getCorsHeaders(request),
+    });
   }
 
   const tier = getTierFromApiKey(apiKey);
@@ -107,7 +115,7 @@ router.get('/status/:id', async (request, env) => {
   const windowStart = now - WINDOW_DURATION_MS;
 
   const key = `rate_limit:${apiKey}`;
-  let records = await env.KV_NAMESPACE.get(key, { type: 'json' });
+  let records = await env.KV_NAMESPACE.get(key, { type: "json" });
 
   if (!records) {
     records = [];
@@ -120,26 +128,29 @@ router.get('/status/:id', async (request, env) => {
 
   const headers = {
     ...getCorsHeaders(request),
-    'X-RateLimit-Limit': limit.toString(),
-    'X-RateLimit-Remaining': remaining.toString(),
-    'X-RateLimit-Reset': Math.ceil(resetTime / 1000).toString(),
+    "X-RateLimit-Limit": limit.toString(),
+    "X-RateLimit-Remaining": remaining.toString(),
+    "X-RateLimit-Reset": Math.ceil(resetTime / 1000).toString(),
   };
 
-  return new Response(JSON.stringify({
-    limit,
-    remaining,
-    reset: Math.ceil(resetTime / 1000),
-    tier,
-  }), {
-    status: 200,
-    headers: {
-      ...headers,
-      'Content-Type': 'application/json',
-    },
-  });
+  return new Response(
+    JSON.stringify({
+      limit,
+      remaining,
+      reset: Math.ceil(resetTime / 1000),
+      tier,
+    }),
+    {
+      status: 200,
+      headers: {
+        ...headers,
+        "Content-Type": "application/json",
+      },
+    }
+  );
 });
 
-router.all('*', () => new Response('Not Found', { status: 404 }));
+router.all("*", () => new Response("Not Found", { status: 404 }));
 
 export default {
   async fetch(request, env, ctx) {

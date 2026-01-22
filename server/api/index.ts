@@ -8,7 +8,11 @@ import { getConfigManager } from "../mcp/config/config-manager";
 import { getStatsCollector } from "../mcp/stats/collector";
 import { getLLMHub } from "../mcp/llm/provider-hub";
 import { getLogStream, type LogFilter } from "../mcp/realtime/log-stream";
-import { getToolForkManager, type PlatformType, type ToolCustomization } from "../mcp/forking/tool-fork";
+import {
+  getToolForkManager,
+  type PlatformType,
+  type ToolCustomization,
+} from "../mcp/forking/tool-fork";
 import { getMCPProxy, type ServerTransport } from "../mcp/proxy/mcp-proxy";
 import { z } from "zod";
 import { settingsRouter } from "./routers/settings";
@@ -16,7 +20,6 @@ import { settingsRouter } from "./routers/settings";
 import {
   createApiKey,
   listApiKeys,
-
   revokeApiKey,
   rotateApiKey,
   logApiKeyUsage,
@@ -43,7 +46,10 @@ import {
   searchWiki,
   getAllWikiPages,
 } from "../mcp/wiki/wiki-content";
-import { getMCPConfigGenerator, type Platform } from "../mcp/config/mcp-generator";
+import {
+  getMCPConfigGenerator,
+  type Platform,
+} from "../mcp/config/mcp-generator";
 import { forensicsRouter } from "../mcp/forensics/forensics-router";
 
 // ============================================================================
@@ -65,21 +71,25 @@ const configRouter = router({
     }),
 
   createPattern: protectedProcedure
-    .input(z.object({
-      name: z.string(),
-      description: z.string().optional().default(''),
-      category: z.string(),
-      patterns: z.array(z.object({
-        id: z.string().optional(),
-        type: z.enum(['regex', 'keyword', 'phrase', 'semantic']),
-        value: z.string(),
-        flags: z.string().optional(),
-        weight: z.number().min(0).max(1).default(1),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-      })),
-      enabled: z.boolean().default(true),
-      version: z.string().default('1.0.0'),
-    }))
+    .input(
+      z.object({
+        name: z.string(),
+        description: z.string().optional().default(""),
+        category: z.string(),
+        patterns: z.array(
+          z.object({
+            id: z.string().optional(),
+            type: z.enum(["regex", "keyword", "phrase", "semantic"]),
+            value: z.string(),
+            flags: z.string().optional(),
+            weight: z.number().min(0).max(1).default(1),
+            metadata: z.record(z.string(), z.unknown()).optional(),
+          })
+        ),
+        enabled: z.boolean().default(true),
+        version: z.string().default("1.0.0"),
+      })
+    )
     .mutation(({ input }) => {
       const patterns = input.patterns.map((p, i) => ({
         ...p,
@@ -89,24 +99,30 @@ const configRouter = router({
     }),
 
   updatePattern: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-      updates: z.object({
-        name: z.string().optional(),
-        description: z.string().optional(),
-        category: z.string().optional(),
-        patterns: z.array(z.object({
-          id: z.string(),
-          type: z.enum(['regex', 'keyword', 'phrase', 'semantic']),
-          value: z.string(),
-          flags: z.string().optional(),
-          weight: z.number().min(0).max(1),
-          metadata: z.record(z.string(), z.unknown()).optional(),
-        })).optional(),
-        enabled: z.boolean().optional(),
-        version: z.string().optional(),
-      }),
-    }))
+    .input(
+      z.object({
+        id: z.string(),
+        updates: z.object({
+          name: z.string().optional(),
+          description: z.string().optional(),
+          category: z.string().optional(),
+          patterns: z
+            .array(
+              z.object({
+                id: z.string(),
+                type: z.enum(["regex", "keyword", "phrase", "semantic"]),
+                value: z.string(),
+                flags: z.string().optional(),
+                weight: z.number().min(0).max(1),
+                metadata: z.record(z.string(), z.unknown()).optional(),
+              })
+            )
+            .optional(),
+          enabled: z.boolean().optional(),
+          version: z.string().optional(),
+        }),
+      })
+    )
     .mutation(({ input }) => {
       return getConfigManager().updatePattern(input.id, input.updates);
     }),
@@ -131,26 +147,38 @@ const configRouter = router({
     }),
 
   createBehavior: protectedProcedure
-    .input(z.object({
-      name: z.string(),
-      description: z.string().optional().default(''),
-      category: z.string(),
-      indicators: z.array(z.object({
-        id: z.string().optional(),
+    .input(
+      z.object({
         name: z.string(),
-        type: z.enum(['keyword', 'pattern', 'sentiment', 'frequency', 'context']),
-        value: z.union([z.string(), z.array(z.string())]),
-        weight: z.number().min(0).max(1).default(1),
-        polarity: z.enum(['positive', 'negative', 'neutral']).default('neutral'),
-      })),
-      thresholds: z.object({
-        low: z.number(),
-        medium: z.number(),
-        high: z.number(),
-      }),
-      enabled: z.boolean().default(true),
-      version: z.string().default('1.0.0'),
-    }))
+        description: z.string().optional().default(""),
+        category: z.string(),
+        indicators: z.array(
+          z.object({
+            id: z.string().optional(),
+            name: z.string(),
+            type: z.enum([
+              "keyword",
+              "pattern",
+              "sentiment",
+              "frequency",
+              "context",
+            ]),
+            value: z.union([z.string(), z.array(z.string())]),
+            weight: z.number().min(0).max(1).default(1),
+            polarity: z
+              .enum(["positive", "negative", "neutral"])
+              .default("neutral"),
+          })
+        ),
+        thresholds: z.object({
+          low: z.number(),
+          medium: z.number(),
+          high: z.number(),
+        }),
+        enabled: z.boolean().default(true),
+        version: z.string().default("1.0.0"),
+      })
+    )
     .mutation(({ input }) => {
       const indicators = input.indicators.map((ind, i) => ({
         ...ind,
@@ -160,12 +188,23 @@ const configRouter = router({
     }),
 
   updateBehavior: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-      updates: z.record(z.string(), z.unknown()),
-    }))
+    .input(
+      z.object({
+        id: z.string(),
+        updates: z.record(z.string(), z.unknown()),
+      })
+    )
     .mutation(({ input }) => {
-      return getConfigManager().updateBehavior(input.id, input.updates as Partial<{ name: string; description: string; category: string; enabled: boolean; version: string }>);
+      return getConfigManager().updateBehavior(
+        input.id,
+        input.updates as Partial<{
+          name: string;
+          description: string;
+          category: string;
+          enabled: boolean;
+          version: string;
+        }>
+      );
     }),
 
   deleteBehavior: protectedProcedure
@@ -188,19 +227,23 @@ const configRouter = router({
     }),
 
   createDictionary: protectedProcedure
-    .input(z.object({
-      name: z.string(),
-      description: z.string().optional().default(''),
-      language: z.string().default('en'),
-      entries: z.array(z.object({
-        term: z.string(),
-        definition: z.string().optional(),
-        synonyms: z.array(z.string()).optional(),
-        category: z.string().optional(),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-      })),
-      version: z.string().default('1.0.0'),
-    }))
+    .input(
+      z.object({
+        name: z.string(),
+        description: z.string().optional().default(""),
+        language: z.string().default("en"),
+        entries: z.array(
+          z.object({
+            term: z.string(),
+            definition: z.string().optional(),
+            synonyms: z.array(z.string()).optional(),
+            category: z.string().optional(),
+            metadata: z.record(z.string(), z.unknown()).optional(),
+          })
+        ),
+        version: z.string().default("1.0.0"),
+      })
+    )
     .mutation(({ input }) => {
       return getConfigManager().createDictionary(input);
     }),
@@ -217,13 +260,17 @@ const configRouter = router({
   }),
 
   importAll: protectedProcedure
-    .input(z.object({
-      config: z.any(),
-      options: z.object({
-        merge: z.boolean().optional(),
-        overwrite: z.boolean().optional(),
-      }).optional(),
-    }))
+    .input(
+      z.object({
+        config: z.any(),
+        options: z
+          .object({
+            merge: z.boolean().optional(),
+            overwrite: z.boolean().optional(),
+          })
+          .optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       return getConfigManager().importAll(input.config, input.options);
     }),
@@ -255,10 +302,14 @@ const statsRouter = router({
     }),
 
   recentCalls: protectedProcedure
-    .input(z.object({
-      limit: z.number().min(1).max(1000).optional().default(100),
-      toolName: z.string().optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          limit: z.number().min(1).max(1000).optional().default(100),
+          toolName: z.string().optional(),
+        })
+        .optional()
+    )
     .query(({ input }) => {
       return getStatsCollector().getRecentCalls(input?.limit, input?.toolName);
     }),
@@ -285,24 +336,32 @@ const llmRouter = router({
   getProvider: protectedProcedure
     .input(z.object({ provider: z.string() }))
     .query(({ input }) => {
-      return getLLMHub().getConfig(input.provider as Parameters<ReturnType<typeof getLLMHub>['getConfig']>[0]);
+      return getLLMHub().getConfig(
+        input.provider as Parameters<
+          ReturnType<typeof getLLMHub>["getConfig"]
+        >[0]
+      );
     }),
 
   configureProvider: protectedProcedure
-    .input(z.object({
-      provider: z.string(),
-      config: z.object({
-        enabled: z.boolean().optional(),
-        apiKey: z.string().optional(),
-        baseUrl: z.string().optional(),
-        defaultModel: z.string().optional(),
-        embeddingModel: z.string().optional(),
-        priority: z.number().optional(),
-      }),
-    }))
+    .input(
+      z.object({
+        provider: z.string(),
+        config: z.object({
+          enabled: z.boolean().optional(),
+          apiKey: z.string().optional(),
+          baseUrl: z.string().optional(),
+          defaultModel: z.string().optional(),
+          embeddingModel: z.string().optional(),
+          priority: z.number().optional(),
+        }),
+      })
+    )
     .mutation(({ input }) => {
       getLLMHub().configureProvider(
-        input.provider as Parameters<ReturnType<typeof getLLMHub>['configureProvider']>[0],
+        input.provider as Parameters<
+          ReturnType<typeof getLLMHub>["configureProvider"]
+        >[0],
         input.config
       );
       return { success: true };
@@ -322,36 +381,49 @@ const llmRouter = router({
       try {
         const hub = getLLMHub();
         const response = await hub.chat({
-          messages: [{ role: 'user', content: 'Say "OK" if you can hear me.' }],
+          messages: [{ role: "user", content: 'Say "OK" if you can hear me.' }],
           maxTokens: 10,
         });
-        return { success: true, response: response.content, latency: response.latencyMs };
+        return {
+          success: true,
+          response: response.content,
+          latency: response.latencyMs,
+        };
       } catch (error) {
-        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        };
       }
     }),
 
   chat: protectedProcedure
-    .input(z.object({
-      messages: z.array(z.object({
-        role: z.enum(['system', 'user', 'assistant']),
-        content: z.string(),
-      })),
-      model: z.string().optional(),
-      temperature: z.number().optional(),
-      maxTokens: z.number().optional(),
-      task: z.string().optional(),
-      complexity: z.enum(['simple', 'medium', 'complex']).optional(),
-    }))
+    .input(
+      z.object({
+        messages: z.array(
+          z.object({
+            role: z.enum(["system", "user", "assistant"]),
+            content: z.string(),
+          })
+        ),
+        model: z.string().optional(),
+        temperature: z.number().optional(),
+        maxTokens: z.number().optional(),
+        task: z.string().optional(),
+        complexity: z.enum(["simple", "medium", "complex"]).optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       return getLLMHub().chat(input);
     }),
 
   embed: protectedProcedure
-    .input(z.object({
-      texts: z.array(z.string()),
-      model: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        texts: z.array(z.string()),
+        model: z.string().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       return getLLMHub().embed(input);
     }),
@@ -363,7 +435,9 @@ const llmRouter = router({
   importConfig: protectedProcedure
     .input(z.object({ config: z.record(z.string(), z.any()) }))
     .mutation(({ input }) => {
-      getLLMHub().importConfig(input.config as Record<string, Record<string, unknown>>);
+      getLLMHub().importConfig(
+        input.config as Record<string, Record<string, unknown>>
+      );
       return { success: true };
     }),
 });
@@ -374,48 +448,71 @@ const llmRouter = router({
 
 const logsRouter = router({
   recent: protectedProcedure
-    .input(z.object({
-      count: z.number().min(1).max(1000).optional().default(100),
-      filter: z.object({
-        levels: z.array(z.enum(['debug', 'info', 'warn', 'error', 'fatal'])).optional(),
-        categories: z.array(z.string()).optional(),
-        tools: z.array(z.string()).optional(),
-        traceId: z.string().optional(),
-        search: z.string().optional(),
-        since: z.number().optional(),
-      }).optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          count: z.number().min(1).max(1000).optional().default(100),
+          filter: z
+            .object({
+              levels: z
+                .array(z.enum(["debug", "info", "warn", "error", "fatal"]))
+                .optional(),
+              categories: z.array(z.string()).optional(),
+              tools: z.array(z.string()).optional(),
+              traceId: z.string().optional(),
+              search: z.string().optional(),
+              since: z.number().optional(),
+            })
+            .optional(),
+        })
+        .optional()
+    )
     .query(({ input }) => {
-      return getLogStream().getRecentLogs(input?.count, input?.filter as LogFilter | undefined);
+      return getLogStream().getRecentLogs(
+        input?.count,
+        input?.filter as LogFilter | undefined
+      );
     }),
 
   query: protectedProcedure
-    .input(z.object({
-      filter: z.object({
-        levels: z.array(z.enum(['debug', 'info', 'warn', 'error', 'fatal'])).optional(),
-        categories: z.array(z.string()).optional(),
-        tools: z.array(z.string()).optional(),
-        traceId: z.string().optional(),
-        search: z.string().optional(),
-        since: z.number().optional(),
-      }),
-      limit: z.number().min(1).max(10000).optional().default(1000),
-    }))
+    .input(
+      z.object({
+        filter: z.object({
+          levels: z
+            .array(z.enum(["debug", "info", "warn", "error", "fatal"]))
+            .optional(),
+          categories: z.array(z.string()).optional(),
+          tools: z.array(z.string()).optional(),
+          traceId: z.string().optional(),
+          search: z.string().optional(),
+          since: z.number().optional(),
+        }),
+        limit: z.number().min(1).max(10000).optional().default(1000),
+      })
+    )
     .query(({ input }) => {
       return getLogStream().queryLogs(input.filter as LogFilter, input.limit);
     }),
 
   export: protectedProcedure
-    .input(z.object({
-      filter: z.object({
-        levels: z.array(z.enum(['debug', 'info', 'warn', 'error', 'fatal'])).optional(),
-        categories: z.array(z.string()).optional(),
-        tools: z.array(z.string()).optional(),
-        traceId: z.string().optional(),
-        search: z.string().optional(),
-        since: z.number().optional(),
-      }).optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          filter: z
+            .object({
+              levels: z
+                .array(z.enum(["debug", "info", "warn", "error", "fatal"]))
+                .optional(),
+              categories: z.array(z.string()).optional(),
+              tools: z.array(z.string()).optional(),
+              traceId: z.string().optional(),
+              search: z.string().optional(),
+              since: z.number().optional(),
+            })
+            .optional(),
+        })
+        .optional()
+    )
     .query(({ input }) => {
       return getLogStream().exportLogs(input?.filter as LogFilter | undefined);
     }),
@@ -431,11 +528,25 @@ const logsRouter = router({
 
 const forkRouter = router({
   list: protectedProcedure
-    .input(z.object({
-      platform: z.enum(['generic', 'claude-mcp', 'gemini-extension', 'openai-function']).optional(),
-    }).optional())
+    .input(
+      z
+        .object({
+          platform: z
+            .enum([
+              "generic",
+              "claude-mcp",
+              "gemini-extension",
+              "openai-function",
+            ])
+            .optional(),
+        })
+        .optional()
+    )
     .query(({ ctx, input }) => {
-      return getToolForkManager().listForks(ctx.user?.openId, input?.platform as PlatformType | undefined);
+      return getToolForkManager().listForks(
+        ctx.user?.openId,
+        input?.platform as PlatformType | undefined
+      );
     }),
 
   get: protectedProcedure
@@ -445,80 +556,126 @@ const forkRouter = router({
     }),
 
   create: protectedProcedure
-    .input(z.object({
-      parentToolName: z.string(),
-      platform: z.enum(['generic', 'claude-mcp', 'gemini-extension', 'openai-function']),
-      name: z.string().optional(),
-      description: z.string().optional(),
-      customizations: z.object({
-        parameterOverrides: z.record(z.string(), z.object({
-          default: z.unknown().optional(),
-          required: z.boolean().optional(),
-          description: z.string().optional(),
-          hidden: z.boolean().optional(),
-        })).optional(),
-        additionalParameters: z.record(z.string(), z.object({
-          type: z.string(),
-          description: z.string(),
-          required: z.boolean().optional(),
-          default: z.unknown().optional(),
-        })).optional(),
-        platformConfig: z.record(z.string(), z.unknown()).optional(),
-        hooks: z.object({
-          preProcess: z.string().optional(),
-          postProcess: z.string().optional(),
-        }).optional(),
-        rateLimit: z.object({
-          maxCallsPerMinute: z.number().optional(),
-          maxCallsPerHour: z.number().optional(),
-        }).optional(),
-      }).optional().default({}),
-    }))
+    .input(
+      z.object({
+        parentToolName: z.string(),
+        platform: z.enum([
+          "generic",
+          "claude-mcp",
+          "gemini-extension",
+          "openai-function",
+        ]),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        customizations: z
+          .object({
+            parameterOverrides: z
+              .record(
+                z.string(),
+                z.object({
+                  default: z.unknown().optional(),
+                  required: z.boolean().optional(),
+                  description: z.string().optional(),
+                  hidden: z.boolean().optional(),
+                })
+              )
+              .optional(),
+            additionalParameters: z
+              .record(
+                z.string(),
+                z.object({
+                  type: z.string(),
+                  description: z.string(),
+                  required: z.boolean().optional(),
+                  default: z.unknown().optional(),
+                })
+              )
+              .optional(),
+            platformConfig: z.record(z.string(), z.unknown()).optional(),
+            hooks: z
+              .object({
+                preProcess: z.string().optional(),
+                postProcess: z.string().optional(),
+              })
+              .optional(),
+            rateLimit: z
+              .object({
+                maxCallsPerMinute: z.number().optional(),
+                maxCallsPerHour: z.number().optional(),
+              })
+              .optional(),
+          })
+          .optional()
+          .default({}),
+      })
+    )
     .mutation(({ ctx, input }) => {
       // Get the parent tool spec from the registry
       const parentSpec = {
         name: input.parentToolName,
-        category: 'custom',
-        description: input.description || 'Custom tool fork',
-        version: '1.0.0',
+        category: "custom",
+        description: input.description || "Custom tool fork",
+        version: "1.0.0",
         tags: [],
-        inputSchema: { type: 'object', properties: {}, required: [] },
-        outputSchema: { type: 'object', properties: {} },
-        permissions: [] as ('read:filesystem' | 'write:filesystem' | 'read:network' | 'write:network' | 'execute:process' | 'access:llm' | 'access:vectordb')[],
+        inputSchema: { type: "object", properties: {}, required: [] },
+        outputSchema: { type: "object", properties: {} },
+        permissions: [] as (
+          | "read:filesystem"
+          | "write:filesystem"
+          | "read:network"
+          | "write:network"
+          | "execute:process"
+          | "access:llm"
+          | "access:vectordb"
+        )[],
       };
       return getToolForkManager().createFork(
         parentSpec,
         input.platform as PlatformType,
         input.customizations as ToolCustomization,
-        ctx.user?.openId || 'anonymous',
+        ctx.user?.openId || "anonymous",
         input.name,
         input.description
       );
     }),
 
   update: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-      updates: z.object({
-        name: z.string().optional(),
-        description: z.string().optional(),
-        version: z.string().optional(),
-        customizations: z.object({
-          parameterOverrides: z.record(z.string(), z.object({
-            default: z.unknown().optional(),
-            required: z.boolean().optional(),
-            description: z.string().optional(),
-            hidden: z.boolean().optional(),
-          })).optional(),
-          additionalParameters: z.record(z.string(), z.object({
-            type: z.string(),
-            description: z.string(),
-            required: z.boolean().optional(),
-            default: z.unknown().optional(),
-          })).optional(),
-        }).optional(),
-      }),
-    }))
+    .input(
+      z.object({
+        id: z.string(),
+        updates: z.object({
+          name: z.string().optional(),
+          description: z.string().optional(),
+          version: z.string().optional(),
+          customizations: z
+            .object({
+              parameterOverrides: z
+                .record(
+                  z.string(),
+                  z.object({
+                    default: z.unknown().optional(),
+                    required: z.boolean().optional(),
+                    description: z.string().optional(),
+                    hidden: z.boolean().optional(),
+                  })
+                )
+                .optional(),
+              additionalParameters: z
+                .record(
+                  z.string(),
+                  z.object({
+                    type: z.string(),
+                    description: z.string(),
+                    required: z.boolean().optional(),
+                    default: z.unknown().optional(),
+                  })
+                )
+                .optional(),
+            })
+            .optional(),
+        }),
+      })
+    )
     .mutation(({ input }) => {
       return getToolForkManager().updateFork(input.id, input.updates);
     }),
@@ -538,7 +695,10 @@ const forkRouter = router({
   exportGeminiExtension: protectedProcedure
     .input(z.object({ id: z.string(), baseUrl: z.string() }))
     .query(({ input }) => {
-      return getToolForkManager().exportAsGeminiExtension(input.id, input.baseUrl);
+      return getToolForkManager().exportAsGeminiExtension(
+        input.id,
+        input.baseUrl
+      );
     }),
 
   exportOpenAIFunction: protectedProcedure
@@ -576,19 +736,21 @@ const proxyRouter = router({
     }),
 
   registerServer: protectedProcedure
-    .input(z.object({
-      name: z.string(),
-      description: z.string().optional(),
-      transport: z.enum(['stdio', 'http', 'websocket']),
-      endpoint: z.string(),
-      apiKey: z.string().optional(),
-      headers: z.record(z.string(), z.string()).optional(),
-      timeout: z.number().optional(),
-      retryAttempts: z.number().optional(),
-      enabled: z.boolean().default(true),
-      tags: z.array(z.string()).optional(),
-      priority: z.number().optional(),
-    }))
+    .input(
+      z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        transport: z.enum(["stdio", "http", "websocket"]),
+        endpoint: z.string(),
+        apiKey: z.string().optional(),
+        headers: z.record(z.string(), z.string()).optional(),
+        timeout: z.number().optional(),
+        retryAttempts: z.number().optional(),
+        enabled: z.boolean().default(true),
+        tags: z.array(z.string()).optional(),
+        priority: z.number().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       return getMCPProxy().registerServer({
         ...input,
@@ -597,17 +759,19 @@ const proxyRouter = router({
     }),
 
   updateServer: protectedProcedure
-    .input(z.object({
-      id: z.string(),
-      updates: z.object({
-        name: z.string().optional(),
-        description: z.string().optional(),
-        endpoint: z.string().optional(),
-        apiKey: z.string().optional(),
-        enabled: z.boolean().optional(),
-        priority: z.number().optional(),
-      }),
-    }))
+    .input(
+      z.object({
+        id: z.string(),
+        updates: z.object({
+          name: z.string().optional(),
+          description: z.string().optional(),
+          endpoint: z.string().optional(),
+          apiKey: z.string().optional(),
+          enabled: z.boolean().optional(),
+          priority: z.number().optional(),
+        }),
+      })
+    )
     .mutation(async ({ input }) => {
       return getMCPProxy().updateServer(input.id, input.updates);
     }),
@@ -630,12 +794,14 @@ const proxyRouter = router({
   }),
 
   invokeTool: protectedProcedure
-    .input(z.object({
-      serverId: z.string().optional(),
-      toolName: z.string(),
-      args: z.record(z.string(), z.unknown()),
-      timeout: z.number().optional(),
-    }))
+    .input(
+      z.object({
+        serverId: z.string().optional(),
+        toolName: z.string(),
+        args: z.record(z.string(), z.unknown()),
+        timeout: z.number().optional(),
+      })
+    )
     .mutation(async ({ input }) => {
       return getMCPProxy().invokeTool(input);
     }),
@@ -657,14 +823,20 @@ const apiKeysRouter = router({
   }),
 
   create: protectedProcedure
-    .input(z.object({
-      name: z.string(),
-      permissions: z.array(z.object({
-        resource: z.string(),
-        actions: z.array(z.enum(['read', 'write', 'execute'])),
-      })).optional(),
-      expiresInDays: z.number().optional(),
-    }))
+    .input(
+      z.object({
+        name: z.string(),
+        permissions: z
+          .array(
+            z.object({
+              resource: z.string(),
+              actions: z.array(z.enum(["read", "write", "execute"])),
+            })
+          )
+          .optional(),
+        expiresInDays: z.number().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       return createApiKey({
         userId: ctx.user!.id,
@@ -705,29 +877,37 @@ const promptsRouter = router({
     }),
 
   create: protectedProcedure
-    .input(z.object({
-      name: z.string(),
-      description: z.string().optional(),
-      toolName: z.string().optional(),
-      promptText: z.string(),
-      variables: z.array(z.object({
+    .input(
+      z.object({
         name: z.string(),
-        description: z.string(),
-        defaultValue: z.string().optional(),
-        required: z.boolean(),
-      })).optional(),
-    }))
+        description: z.string().optional(),
+        toolName: z.string().optional(),
+        promptText: z.string(),
+        variables: z
+          .array(
+            z.object({
+              name: z.string(),
+              description: z.string(),
+              defaultValue: z.string().optional(),
+              required: z.boolean(),
+            })
+          )
+          .optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       return createPrompt({ ...input, userId: ctx.user!.id });
     }),
 
   update: protectedProcedure
-    .input(z.object({
-      id: z.number(),
-      promptText: z.string().optional(),
-      name: z.string().optional(),
-      description: z.string().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        promptText: z.string().optional(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       return updatePrompt(input.id, ctx.user!.id, input);
     }),
@@ -769,41 +949,51 @@ const workflowsRouter = router({
     }),
 
   create: protectedProcedure
-    .input(z.object({
-      name: z.string(),
-      description: z.string().optional(),
-      category: z.string().optional(),
-      steps: z.array(z.object({
-        toolName: z.string(),
-        description: z.string(),
-        inputMapping: z.record(z.string(), z.string()),
-        outputKey: z.string(),
-        optional: z.boolean().optional(),
-        condition: z.string().optional(),
-      })),
-      systemPromptId: z.number().optional(),
-      isPublic: z.boolean().optional(),
-    }))
+    .input(
+      z.object({
+        name: z.string(),
+        description: z.string().optional(),
+        category: z.string().optional(),
+        steps: z.array(
+          z.object({
+            toolName: z.string(),
+            description: z.string(),
+            inputMapping: z.record(z.string(), z.string()),
+            outputKey: z.string(),
+            optional: z.boolean().optional(),
+            condition: z.string().optional(),
+          })
+        ),
+        systemPromptId: z.number().optional(),
+        isPublic: z.boolean().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       return createWorkflow({ ...input, userId: ctx.user!.id });
     }),
 
   update: protectedProcedure
-    .input(z.object({
-      id: z.number(),
-      name: z.string().optional(),
-      description: z.string().optional(),
-      category: z.string().optional(),
-      steps: z.array(z.object({
-        toolName: z.string(),
-        description: z.string(),
-        inputMapping: z.record(z.string(), z.string()),
-        outputKey: z.string(),
-        optional: z.boolean().optional(),
-        condition: z.string().optional(),
-      })).optional(),
-      isPublic: z.boolean().optional(),
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().optional(),
+        description: z.string().optional(),
+        category: z.string().optional(),
+        steps: z
+          .array(
+            z.object({
+              toolName: z.string(),
+              description: z.string(),
+              inputMapping: z.record(z.string(), z.string()),
+              outputKey: z.string(),
+              optional: z.boolean().optional(),
+              condition: z.string().optional(),
+            })
+          )
+          .optional(),
+        isPublic: z.boolean().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       return updateWorkflow(input.id, ctx.user!.id, input);
     }),
@@ -853,42 +1043,83 @@ const wikiRouter = router({
 
 const mcpConfigRouter = router({
   generate: protectedProcedure
-    .input(z.object({
-      platform: z.enum(['claude', 'gemini', 'openai', 'generic']),
-      includeAllTools: z.boolean().optional(),
-      generateWithAI: z.boolean().optional(),
-    }))
+    .input(
+      z.object({
+        platform: z.enum(["claude", "gemini", "openai", "generic"]),
+        includeAllTools: z.boolean().optional(),
+        generateWithAI: z.boolean().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       // First create an API key for this config
       const apiKeyResult = await createApiKey({
         userId: ctx.user!.id,
         name: `MCP Config - ${input.platform}`,
-        permissions: [
-          { resource: 'tools', actions: ['read', 'execute'] },
-        ],
+        permissions: [{ resource: "tools", actions: ["read", "execute"] }],
       });
-      
+
       if (!apiKeyResult) {
-        throw new Error('Failed to create API key');
+        throw new Error("Failed to create API key");
       }
 
       // Get available tools (simplified for now)
       const tools = [
-        { name: 'document.convert', description: 'Convert documents between formats', inputSchema: {} },
-        { name: 'document.ocr', description: 'Extract text from images using OCR', inputSchema: {} },
-        { name: 'document.chunk', description: 'Split documents into chunks', inputSchema: {} },
-        { name: 'nlp.extract_entities', description: 'Extract named entities from text', inputSchema: {} },
-        { name: 'nlp.extract_keywords', description: 'Extract keywords from text', inputSchema: {} },
-        { name: 'nlp.detect_language', description: 'Detect text language', inputSchema: {} },
-        { name: 'nlp.sentiment', description: 'Analyze text sentiment', inputSchema: {} },
-        { name: 'search.ripgrep', description: 'Search files with ripgrep', inputSchema: {} },
-        { name: 'summarization.map_reduce', description: 'Summarize large documents', inputSchema: {} },
-        { name: 'retrieval.bm25_search', description: 'BM25 keyword search', inputSchema: {} },
+        {
+          name: "document.convert",
+          description: "Convert documents between formats",
+          inputSchema: {},
+        },
+        {
+          name: "document.ocr",
+          description: "Extract text from images using OCR",
+          inputSchema: {},
+        },
+        {
+          name: "document.chunk",
+          description: "Split documents into chunks",
+          inputSchema: {},
+        },
+        {
+          name: "nlp.extract_entities",
+          description: "Extract named entities from text",
+          inputSchema: {},
+        },
+        {
+          name: "nlp.extract_keywords",
+          description: "Extract keywords from text",
+          inputSchema: {},
+        },
+        {
+          name: "nlp.detect_language",
+          description: "Detect text language",
+          inputSchema: {},
+        },
+        {
+          name: "nlp.sentiment",
+          description: "Analyze text sentiment",
+          inputSchema: {},
+        },
+        {
+          name: "search.ripgrep",
+          description: "Search files with ripgrep",
+          inputSchema: {},
+        },
+        {
+          name: "summarization.map_reduce",
+          description: "Summarize large documents",
+          inputSchema: {},
+        },
+        {
+          name: "retrieval.bm25_search",
+          description: "BM25 keyword search",
+          inputSchema: {},
+        },
       ];
 
-      const baseUrl = process.env.VITE_APP_URL || 'https://your-domain.manus.space';
+      const baseUrl =
+        process.env.VITE_APP_URL || "https://your-domain.manus.space";
       const generator = getMCPConfigGenerator(baseUrl);
-      
+
       const config = await generator.generateConfig(
         input.platform as Platform,
         apiKeyResult.plainKey,
@@ -899,7 +1130,10 @@ const mcpConfigRouter = router({
         }
       );
 
-      const file = generator.generateConfigFile(config, input.platform as Platform);
+      const file = generator.generateConfigFile(
+        config,
+        input.platform as Platform
+      );
 
       return {
         config,
@@ -910,20 +1144,35 @@ const mcpConfigRouter = router({
     }),
 
   download: protectedProcedure
-    .input(z.object({
-      platform: z.enum(['claude', 'gemini', 'openai', 'generic']),
-      apiKey: z.string(),
-    }))
+    .input(
+      z.object({
+        platform: z.enum(["claude", "gemini", "openai", "generic"]),
+        apiKey: z.string(),
+      })
+    )
     .query(async ({ input }) => {
       const tools = [
-        { name: 'document.convert', description: 'Convert documents between formats', inputSchema: {} },
-        { name: 'nlp.extract_entities', description: 'Extract named entities from text', inputSchema: {} },
-        { name: 'search.ripgrep', description: 'Search files with ripgrep', inputSchema: {} },
+        {
+          name: "document.convert",
+          description: "Convert documents between formats",
+          inputSchema: {},
+        },
+        {
+          name: "nlp.extract_entities",
+          description: "Extract named entities from text",
+          inputSchema: {},
+        },
+        {
+          name: "search.ripgrep",
+          description: "Search files with ripgrep",
+          inputSchema: {},
+        },
       ];
 
-      const baseUrl = process.env.VITE_APP_URL || 'https://your-domain.manus.space';
+      const baseUrl =
+        process.env.VITE_APP_URL || "https://your-domain.manus.space";
       const generator = getMCPConfigGenerator(baseUrl);
-      
+
       const config = await generator.generateConfig(
         input.platform as Platform,
         input.apiKey,
@@ -992,6 +1241,5 @@ export const appRouter = router({
   // Settings (DB/graph/colab)
   settings: settingsRouter,
 });
-
 
 export type AppRouter = typeof appRouter;

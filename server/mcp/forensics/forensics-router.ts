@@ -1,19 +1,27 @@
 // File: server/mcp/forensics/forensics-router.ts | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
 /**
  * Forensics Router
- * 
+ *
  * tRPC router for Communication Pattern Analyzer and HurtLex features.
  */
 
-import { z } from 'zod';
-import { router, protectedProcedure } from '../../core/trpc';
+import { z } from "zod";
+import { router, protectedProcedure } from "../../core/trpc";
 
-import { patternAnalyzer, BUILT_IN_MODULES, BUILT_IN_PATTERNS } from './pattern-analyzer';
-import { hurtlexFetcher, HURTLEX_CATEGORIES } from './hurtlex-fetcher';
-import { getDb } from '../../core/db';
-import { behavioralPatterns, patternCategories, forensicResults, mclFactors } from '../../../drizzle/schema';
-import { eq, and, desc } from 'drizzle-orm';
-
+import {
+  patternAnalyzer,
+  BUILT_IN_MODULES,
+  BUILT_IN_PATTERNS,
+} from "./pattern-analyzer";
+import { hurtlexFetcher, HURTLEX_CATEGORIES } from "./hurtlex-fetcher";
+import { getDb } from "../../core/db";
+import {
+  behavioralPatterns,
+  patternCategories,
+  forensicResults,
+  mclFactors,
+} from "../../../drizzle/schema";
+import { eq, and, desc } from "drizzle-orm";
 
 export const forensicsRouter = router({
   // ============================================================================
@@ -27,10 +35,10 @@ export const forensicsRouter = router({
     return {
       modules: BUILT_IN_MODULES,
       categories: {
-        negative: BUILT_IN_MODULES.filter(m => m.category === 'negative'),
-        positive: BUILT_IN_MODULES.filter(m => m.category === 'positive'),
-        neutral: BUILT_IN_MODULES.filter(m => m.category === 'neutral')
-      }
+        negative: BUILT_IN_MODULES.filter(m => m.category === "negative"),
+        positive: BUILT_IN_MODULES.filter(m => m.category === "positive"),
+        neutral: BUILT_IN_MODULES.filter(m => m.category === "neutral"),
+      },
     };
   }),
 
@@ -55,11 +63,13 @@ export const forensicsRouter = router({
    * Analyze text for communication patterns
    */
   analyzeText: protectedProcedure
-    .input(z.object({
-      text: z.string().min(1),
-      moduleIds: z.array(z.string()).optional(),
-      saveResult: z.boolean().default(true)
-    }))
+    .input(
+      z.object({
+        text: z.string().min(1),
+        moduleIds: z.array(z.string()).optional(),
+        saveResult: z.boolean().default(true),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       // Load user's custom patterns
       await patternAnalyzer.loadUserConfig(ctx.user.id);
@@ -68,7 +78,7 @@ export const forensicsRouter = router({
       const result = await patternAnalyzer.analyze(input.text, {
         moduleIds: input.moduleIds,
         includeContext: true,
-        contextChars: 150
+        contextChars: 150,
       });
 
       // Save result if requested
@@ -83,10 +93,12 @@ export const forensicsRouter = router({
    * Get analysis history
    */
   getAnalysisHistory: protectedProcedure
-    .input(z.object({
-      limit: z.number().min(1).max(100).default(20),
-      offset: z.number().min(0).default(0)
-    }))
+    .input(
+      z.object({
+        limit: z.number().min(1).max(100).default(20),
+        offset: z.number().min(0).default(0),
+      })
+    )
     .query(async ({ ctx, input }) => {
       const db = await getDb();
       if (!db) return { results: [], total: 0 };
@@ -107,10 +119,12 @@ export const forensicsRouter = router({
           analysisType: r.analysisType,
           matchCount: r.matchCount,
           severityScore: r.severityScore,
-          mclFactorsMatched: r.mclFactorsMatched ? JSON.parse(r.mclFactorsMatched) : [],
-          createdAt: r.createdAt
+          mclFactorsMatched: r.mclFactorsMatched
+            ? JSON.parse(r.mclFactorsMatched)
+            : [],
+          createdAt: r.createdAt,
         })),
-        total: results.length
+        total: results.length,
       };
     }),
 
@@ -126,10 +140,12 @@ export const forensicsRouter = router({
       const results = await db
         .select()
         .from(forensicResults)
-        .where(and(
-          eq(forensicResults.id, input.id),
-          eq(forensicResults.userId, ctx.user.id)
-        ))
+        .where(
+          and(
+            eq(forensicResults.id, input.id),
+            eq(forensicResults.userId, ctx.user.id)
+          )
+        )
         .limit(1);
 
       if (results.length === 0) return null;
@@ -138,7 +154,9 @@ export const forensicsRouter = router({
       return {
         ...r,
         results: r.results ? JSON.parse(r.results) : null,
-        mclFactorsMatched: r.mclFactorsMatched ? JSON.parse(r.mclFactorsMatched) : []
+        mclFactorsMatched: r.mclFactorsMatched
+          ? JSON.parse(r.mclFactorsMatched)
+          : [],
       };
     }),
 
@@ -162,7 +180,7 @@ export const forensicsRouter = router({
     return patterns.map(p => ({
       ...p,
       mclFactors: p.mclFactors ? JSON.parse(p.mclFactors) : [],
-      examples: p.examples ? JSON.parse(p.examples) : []
+      examples: p.examples ? JSON.parse(p.examples) : [],
     }));
   }),
 
@@ -170,20 +188,22 @@ export const forensicsRouter = router({
    * Create custom pattern
    */
   createCustomPattern: protectedProcedure
-    .input(z.object({
-      name: z.string().min(1),
-      category: z.string(),
-      pattern: z.string().min(1),
-      description: z.string().optional(),
-      severity: z.number().min(0).max(100).default(50),
-      mclFactors: z.array(z.string()).optional(),
-      examples: z.array(z.string()).optional()
-    }))
+    .input(
+      z.object({
+        name: z.string().min(1),
+        category: z.string(),
+        pattern: z.string().min(1),
+        description: z.string().optional(),
+        severity: z.number().min(0).max(100).default(50),
+        mclFactors: z.array(z.string()).optional(),
+        examples: z.array(z.string()).optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new Error('Database not initialized');
+      if (!db) throw new Error("Database not initialized");
 
-      const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const nowStr = new Date().toISOString().slice(0, 19).replace("T", " ");
 
       const result = await db.insert(behavioralPatterns).values({
         userId: ctx.user.id,
@@ -194,11 +214,11 @@ export const forensicsRouter = router({
         severity: input.severity,
         mclFactors: input.mclFactors ? JSON.stringify(input.mclFactors) : null,
         examples: input.examples ? JSON.stringify(input.examples) : null,
-        isActive: 'true',
-        isCustom: 'true',
+        isActive: "true",
+        isCustom: "true",
         matchCount: 0,
         createdAt: nowStr,
-        updatedAt: nowStr
+        updatedAt: nowStr,
       });
 
       return { id: Number(result[0].insertId) };
@@ -208,41 +228,49 @@ export const forensicsRouter = router({
    * Update custom pattern
    */
   updateCustomPattern: protectedProcedure
-    .input(z.object({
-      id: z.number(),
-      name: z.string().min(1).optional(),
-      category: z.string().optional(),
-      pattern: z.string().min(1).optional(),
-      description: z.string().optional(),
-      severity: z.number().min(0).max(100).optional(),
-      mclFactors: z.array(z.string()).optional(),
-      examples: z.array(z.string()).optional(),
-      isActive: z.boolean().optional()
-    }))
+    .input(
+      z.object({
+        id: z.number(),
+        name: z.string().min(1).optional(),
+        category: z.string().optional(),
+        pattern: z.string().min(1).optional(),
+        description: z.string().optional(),
+        severity: z.number().min(0).max(100).optional(),
+        mclFactors: z.array(z.string()).optional(),
+        examples: z.array(z.string()).optional(),
+        isActive: z.boolean().optional(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new Error('Database not initialized');
+      if (!db) throw new Error("Database not initialized");
 
-      const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const nowStr = new Date().toISOString().slice(0, 19).replace("T", " ");
       const { id, ...updates } = input;
 
       const setData: Record<string, unknown> = { updatedAt: nowStr };
       if (updates.name !== undefined) setData.name = updates.name;
       if (updates.category !== undefined) setData.category = updates.category;
       if (updates.pattern !== undefined) setData.pattern = updates.pattern;
-      if (updates.description !== undefined) setData.description = updates.description;
+      if (updates.description !== undefined)
+        setData.description = updates.description;
       if (updates.severity !== undefined) setData.severity = updates.severity;
-      if (updates.mclFactors !== undefined) setData.mclFactors = JSON.stringify(updates.mclFactors);
-      if (updates.examples !== undefined) setData.examples = JSON.stringify(updates.examples);
-      if (updates.isActive !== undefined) setData.isActive = updates.isActive ? 'true' : 'false';
+      if (updates.mclFactors !== undefined)
+        setData.mclFactors = JSON.stringify(updates.mclFactors);
+      if (updates.examples !== undefined)
+        setData.examples = JSON.stringify(updates.examples);
+      if (updates.isActive !== undefined)
+        setData.isActive = updates.isActive ? "true" : "false";
 
       await db
         .update(behavioralPatterns)
         .set(setData)
-        .where(and(
-          eq(behavioralPatterns.id, id),
-          eq(behavioralPatterns.userId, ctx.user.id)
-        ));
+        .where(
+          and(
+            eq(behavioralPatterns.id, id),
+            eq(behavioralPatterns.userId, ctx.user.id)
+          )
+        );
 
       return { success: true };
     }),
@@ -254,15 +282,17 @@ export const forensicsRouter = router({
     .input(z.object({ id: z.number() }))
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new Error('Database not initialized');
+      if (!db) throw new Error("Database not initialized");
 
       await db
         .delete(behavioralPatterns)
-        .where(and(
-          eq(behavioralPatterns.id, input.id),
-          eq(behavioralPatterns.userId, ctx.user.id),
-          eq(behavioralPatterns.isCustom, 'true')
-        ));
+        .where(
+          and(
+            eq(behavioralPatterns.id, input.id),
+            eq(behavioralPatterns.userId, ctx.user.id),
+            eq(behavioralPatterns.isCustom, "true")
+          )
+        );
 
       return { success: true };
     }),
@@ -291,18 +321,23 @@ export const forensicsRouter = router({
    * Create pattern category
    */
   createPatternCategory: protectedProcedure
-    .input(z.object({
-      name: z.string().min(1),
-      description: z.string().optional(),
-      color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional(),
-      icon: z.string().optional(),
-      defaultSeverity: z.number().min(0).max(100).default(50)
-    }))
+    .input(
+      z.object({
+        name: z.string().min(1),
+        description: z.string().optional(),
+        color: z
+          .string()
+          .regex(/^#[0-9A-Fa-f]{6}$/)
+          .optional(),
+        icon: z.string().optional(),
+        defaultSeverity: z.number().min(0).max(100).default(50),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const db = await getDb();
-      if (!db) throw new Error('Database not initialized');
+      if (!db) throw new Error("Database not initialized");
 
-      const nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+      const nowStr = new Date().toISOString().slice(0, 19).replace("T", " ");
 
       // Get max sort order
       const existing = await db
@@ -315,13 +350,13 @@ export const forensicsRouter = router({
         userId: ctx.user.id,
         name: input.name,
         description: input.description || null,
-        color: input.color || '#6366f1',
+        color: input.color || "#6366f1",
         icon: input.icon || null,
         defaultSeverity: input.defaultSeverity,
-        isActive: 'true',
+        isActive: "true",
         sortOrder: maxOrder + 1,
         createdAt: nowStr,
-        updatedAt: nowStr
+        updatedAt: nowStr,
       });
 
       return { id: Number(result[0].insertId) };
@@ -338,8 +373,21 @@ export const forensicsRouter = router({
     const statuses = await hurtlexFetcher.getAllSyncStatuses();
     return {
       statuses,
-      supportedLanguages: ['EN', 'IT', 'ES', 'DE', 'FR', 'PT', 'RO', 'SL', 'HR', 'SQ', 'NL', 'PL'],
-      categories: HURTLEX_CATEGORIES
+      supportedLanguages: [
+        "EN",
+        "IT",
+        "ES",
+        "DE",
+        "FR",
+        "PT",
+        "RO",
+        "SL",
+        "HR",
+        "SQ",
+        "NL",
+        "PL",
+      ],
+      categories: HURTLEX_CATEGORIES,
     };
   }),
 
@@ -347,10 +395,12 @@ export const forensicsRouter = router({
    * Sync HurtLex from GitHub
    */
   syncHurtlex: protectedProcedure
-    .input(z.object({
-      language: z.string().length(2),
-      level: z.enum(['conservative', 'inclusive']).default('inclusive')
-    }))
+    .input(
+      z.object({
+        language: z.string().length(2),
+        level: z.enum(["conservative", "inclusive"]).default("inclusive"),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       const termCount = await hurtlexFetcher.syncToDatabase(
         input.language,
@@ -364,17 +414,22 @@ export const forensicsRouter = router({
    * Get HurtLex terms
    */
   getHurtlexTerms: protectedProcedure
-    .input(z.object({
-      language: z.string().length(2),
-      categories: z.array(z.string()).optional(),
-      limit: z.number().min(1).max(1000).default(100),
-      offset: z.number().min(0).default(0)
-    }))
+    .input(
+      z.object({
+        language: z.string().length(2),
+        categories: z.array(z.string()).optional(),
+        limit: z.number().min(1).max(1000).default(100),
+        offset: z.number().min(0).default(0),
+      })
+    )
     .query(async ({ input }) => {
-      const terms = await hurtlexFetcher.getTerms(input.language, input.categories);
+      const terms = await hurtlexFetcher.getTerms(
+        input.language,
+        input.categories
+      );
       return {
         terms: terms.slice(input.offset, input.offset + input.limit),
-        total: terms.length
+        total: terms.length,
       };
     }),
 
@@ -389,12 +444,18 @@ export const forensicsRouter = router({
    * Toggle HurtLex category
    */
   toggleHurtlexCategory: protectedProcedure
-    .input(z.object({
-      categoryCode: z.string(),
-      isActive: z.boolean()
-    }))
+    .input(
+      z.object({
+        categoryCode: z.string(),
+        isActive: z.boolean(),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
-      await hurtlexFetcher.toggleCategory(ctx.user.id, input.categoryCode, input.isActive);
+      await hurtlexFetcher.toggleCategory(
+        ctx.user.id,
+        input.categoryCode,
+        input.isActive
+      );
       return { success: true };
     }),
 
@@ -402,16 +463,18 @@ export const forensicsRouter = router({
    * Add custom HurtLex term
    */
   addHurtlexTerm: protectedProcedure
-    .input(z.object({
-      term: z.string().min(1),
-      category: z.string(),
-      language: z.string().length(2).default('EN')
-    }))
+    .input(
+      z.object({
+        term: z.string().min(1),
+        category: z.string(),
+        language: z.string().length(2).default("EN"),
+      })
+    )
     .mutation(async ({ ctx, input }) => {
       await hurtlexFetcher.addCustomTerm(ctx.user.id, {
         term: input.term,
         category: input.category,
-        language: input.language
+        language: input.language,
       });
       return { success: true };
     }),
@@ -428,7 +491,7 @@ export const forensicsRouter = router({
     if (!db) return [];
 
     const factors = await db.select().from(mclFactors);
-    
+
     // Return built-in factors if none in DB
     if (factors.length === 0) {
       return MCL_FACTORS;
@@ -439,23 +502,82 @@ export const forensicsRouter = router({
       name: f.name,
       description: f.description,
       keywords: f.keywords ? JSON.parse(f.keywords) : [],
-      patternCategories: f.patternCategories ? JSON.parse(f.patternCategories) : []
+      patternCategories: f.patternCategories
+        ? JSON.parse(f.patternCategories)
+        : [],
     }));
-  })
+  }),
 });
 
 // Built-in MCL 722.23 factors
 const MCL_FACTORS = [
-  { letter: 'a', name: 'Love, Affection, and Emotional Ties', description: 'The love, affection, and other emotional ties existing between the parties involved and the child.' },
-  { letter: 'b', name: 'Capacity to Continue Education', description: 'The capacity and disposition of the parties involved to give the child love, affection, and guidance and to continue the education and raising of the child in his or her religion or creed.' },
-  { letter: 'c', name: 'Capacity to Provide', description: 'The capacity and disposition of the parties involved to provide the child with food, clothing, medical care or other remedial care.' },
-  { letter: 'd', name: 'Length of Time in Environment', description: 'The length of time the child has lived in a stable, satisfactory environment, and the desirability of maintaining continuity.' },
-  { letter: 'e', name: 'Permanence of Family Unit', description: 'The permanence, as a family unit, of the existing or proposed custodial home or homes.' },
-  { letter: 'f', name: 'Moral Fitness', description: 'The moral fitness of the parties involved.' },
-  { letter: 'g', name: 'Mental and Physical Health', description: 'The mental and physical health of the parties involved.' },
-  { letter: 'h', name: 'Home, School, and Community Record', description: 'The home, school, and community record of the child.' },
-  { letter: 'i', name: 'Reasonable Preference of Child', description: 'The reasonable preference of the child, if the court considers the child to be of sufficient age to express preference.' },
-  { letter: 'j', name: 'Domestic Violence', description: 'The willingness and ability of each of the parties to facilitate and encourage a close and continuing parent-child relationship between the child and the other parent or the child and the parents. A court may not consider negatively for the purposes of this factor any reasonable action taken by a parent to protect a child or that parent from sexual assault or domestic violence by the child\'s other parent.' },
-  { letter: 'k', name: 'Willingness to Facilitate Relationship', description: 'Domestic violence, regardless of whether the violence was directed against or witnessed by the child.' },
-  { letter: 'l', name: 'Other Factors', description: 'Any other factor considered by the court to be relevant to a particular child custody dispute.' }
+  {
+    letter: "a",
+    name: "Love, Affection, and Emotional Ties",
+    description:
+      "The love, affection, and other emotional ties existing between the parties involved and the child.",
+  },
+  {
+    letter: "b",
+    name: "Capacity to Continue Education",
+    description:
+      "The capacity and disposition of the parties involved to give the child love, affection, and guidance and to continue the education and raising of the child in his or her religion or creed.",
+  },
+  {
+    letter: "c",
+    name: "Capacity to Provide",
+    description:
+      "The capacity and disposition of the parties involved to provide the child with food, clothing, medical care or other remedial care.",
+  },
+  {
+    letter: "d",
+    name: "Length of Time in Environment",
+    description:
+      "The length of time the child has lived in a stable, satisfactory environment, and the desirability of maintaining continuity.",
+  },
+  {
+    letter: "e",
+    name: "Permanence of Family Unit",
+    description:
+      "The permanence, as a family unit, of the existing or proposed custodial home or homes.",
+  },
+  {
+    letter: "f",
+    name: "Moral Fitness",
+    description: "The moral fitness of the parties involved.",
+  },
+  {
+    letter: "g",
+    name: "Mental and Physical Health",
+    description: "The mental and physical health of the parties involved.",
+  },
+  {
+    letter: "h",
+    name: "Home, School, and Community Record",
+    description: "The home, school, and community record of the child.",
+  },
+  {
+    letter: "i",
+    name: "Reasonable Preference of Child",
+    description:
+      "The reasonable preference of the child, if the court considers the child to be of sufficient age to express preference.",
+  },
+  {
+    letter: "j",
+    name: "Domestic Violence",
+    description:
+      "The willingness and ability of each of the parties to facilitate and encourage a close and continuing parent-child relationship between the child and the other parent or the child and the parents. A court may not consider negatively for the purposes of this factor any reasonable action taken by a parent to protect a child or that parent from sexual assault or domestic violence by the child's other parent.",
+  },
+  {
+    letter: "k",
+    name: "Willingness to Facilitate Relationship",
+    description:
+      "Domestic violence, regardless of whether the violence was directed against or witnessed by the child.",
+  },
+  {
+    letter: "l",
+    name: "Other Factors",
+    description:
+      "Any other factor considered by the court to be relevant to a particular child custody dispute.",
+  },
 ];

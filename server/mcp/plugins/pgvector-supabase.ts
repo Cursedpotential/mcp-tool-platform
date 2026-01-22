@@ -1,11 +1,11 @@
 /**
  * pgvector + Supabase Integration
- * 
+ *
  * Persistent vector storage using Supabase Postgres with pgvector extension.
  * This is the long-term storage layer (unlike Chroma's 72hr TTL working memory).
  */
 
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 // ============================================================================
 // Configuration
@@ -23,8 +23,8 @@ const config: PgVectorConfig = {
   enabled: !!process.env.SUPABASE_URL && !!process.env.SUPABASE_KEY,
   supabaseUrl: process.env.SUPABASE_URL,
   supabaseKey: process.env.SUPABASE_KEY,
-  tableName: process.env.PGVECTOR_TABLE || 'embeddings',
-  dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || '1536', 10),
+  tableName: process.env.PGVECTOR_TABLE || "embeddings",
+  dimensions: parseInt(process.env.EMBEDDING_DIMENSIONS || "1536", 10),
 };
 
 let supabaseClient: SupabaseClient | null = null;
@@ -34,13 +34,15 @@ let supabaseClient: SupabaseClient | null = null;
  */
 function getSupabaseClient(): SupabaseClient {
   if (!config.enabled) {
-    throw new Error('Supabase not configured. Set SUPABASE_URL and SUPABASE_KEY env vars.');
+    throw new Error(
+      "Supabase not configured. Set SUPABASE_URL and SUPABASE_KEY env vars."
+    );
   }
-  
+
   if (!supabaseClient) {
     supabaseClient = createClient(config.supabaseUrl!, config.supabaseKey!);
   }
-  
+
   return supabaseClient;
 }
 
@@ -74,33 +76,35 @@ export interface SearchResult {
  */
 export async function initPgVectorTable(): Promise<void> {
   const client = getSupabaseClient();
-  
+
   // Check if table exists
   const { data: tables, error: listError } = await client
-    .from('information_schema.tables')
-    .select('table_name')
-    .eq('table_name', config.tableName!);
-  
+    .from("information_schema.tables")
+    .select("table_name")
+    .eq("table_name", config.tableName!);
+
   if (listError) {
     throw new Error(`Failed to check table existence: ${listError.message}`);
   }
-  
+
   if (tables && tables.length > 0) {
     console.log(`[pgvector] Table ${config.tableName} already exists`);
     return;
   }
-  
+
   // Create table with pgvector extension
-  const { error: createError } = await client.rpc('create_embeddings_table', {
+  const { error: createError } = await client.rpc("create_embeddings_table", {
     table_name: config.tableName,
     dimensions: config.dimensions,
   });
-  
+
   if (createError) {
     throw new Error(`Failed to create pgvector table: ${createError.message}`);
   }
-  
-  console.log(`[pgvector] Created table ${config.tableName} with ${config.dimensions} dimensions`);
+
+  console.log(
+    `[pgvector] Created table ${config.tableName} with ${config.dimensions} dimensions`
+  );
 }
 
 /**
@@ -117,8 +121,8 @@ export async function addEmbeddings(
   }>
 ): Promise<void> {
   const client = getSupabaseClient();
-  
-  const rows = records.map((r) => ({
+
+  const rows = records.map(r => ({
     id: r.id,
     user_id: r.userId,
     collection: r.collection,
@@ -127,9 +131,9 @@ export async function addEmbeddings(
     metadata: r.metadata || {},
     created_at: new Date().toISOString(),
   }));
-  
+
   const { error } = await client.from(config.tableName!).insert(rows);
-  
+
   if (error) {
     throw new Error(`Failed to insert embeddings: ${error.message}`);
   }
@@ -148,33 +152,37 @@ export async function searchEmbeddings(
   } = {}
 ): Promise<SearchResult[]> {
   const client = getSupabaseClient();
-  
+
   const { collection, userId, topK = 10, threshold = 0.7 } = options;
-  
+
   // Use pgvector's <-> operator for cosine distance
-  let query = client
-    .rpc('match_embeddings', {
-      query_embedding: queryEmbedding,
-      match_threshold: threshold,
-      match_count: topK,
-    });
-  
+  let query = client.rpc("match_embeddings", {
+    query_embedding: queryEmbedding,
+    match_threshold: threshold,
+    match_count: topK,
+  });
+
   if (collection) {
-    query = query.eq('collection', collection);
+    query = query.eq("collection", collection);
   }
-  
+
   if (userId) {
-    query = query.eq('user_id', userId);
+    query = query.eq("user_id", userId);
   }
-  
+
   const { data, error } = await query;
-  
+
   if (error) {
     throw new Error(`Failed to search embeddings: ${error.message}`);
   }
-  
+
   return (data || []).map((row: unknown) => {
-    const r = row as { id: string; content: string; metadata: Record<string, unknown>; similarity: number };
+    const r = row as {
+      id: string;
+      content: string;
+      metadata: Record<string, unknown>;
+      similarity: number;
+    };
     return {
       id: r.id,
       content: r.content,
@@ -195,76 +203,83 @@ export async function deleteEmbeddings(
   } = {}
 ): Promise<number> {
   const client = getSupabaseClient();
-  
-  let query = client.from(config.tableName!).delete().in('id', ids);
-  
+
+  let query = client.from(config.tableName!).delete().in("id", ids);
+
   if (options.collection) {
-    query = query.eq('collection', options.collection);
+    query = query.eq("collection", options.collection);
   }
-  
+
   if (options.userId) {
-    query = query.eq('user_id', options.userId);
+    query = query.eq("user_id", options.userId);
   }
-  
+
   const { error, count } = await query;
-  
+
   if (error) {
     throw new Error(`Failed to delete embeddings: ${error.message}`);
   }
-  
+
   return count || 0;
 }
 
 /**
  * Get embedding by ID
  */
-export async function getEmbedding(id: string): Promise<EmbeddingRecord | null> {
+export async function getEmbedding(
+  id: string
+): Promise<EmbeddingRecord | null> {
   const client = getSupabaseClient();
-  
+
   const { data, error } = await client
     .from(config.tableName!)
-    .select('*')
-    .eq('id', id)
+    .select("*")
+    .eq("id", id)
     .single();
-  
+
   if (error) {
-    if (error.code === 'PGRST116') {
+    if (error.code === "PGRST116") {
       return null; // Not found
     }
     throw new Error(`Failed to get embedding: ${error.message}`);
   }
-  
+
   return data as EmbeddingRecord;
 }
 
 /**
  * List collections
  */
-export async function listCollections(userId?: number): Promise<Array<{ name: string; count: number }>> {
+export async function listCollections(
+  userId?: number
+): Promise<Array<{ name: string; count: number }>> {
   const client = getSupabaseClient();
-  
+
   let query = client
     .from(config.tableName!)
-    .select('collection', { count: 'exact' });
-  
+    .select("collection", { count: "exact" });
+
   if (userId) {
-    query = query.eq('user_id', userId);
+    query = query.eq("user_id", userId);
   }
-  
+
   const { data, error } = await query;
-  
+
   if (error) {
     throw new Error(`Failed to list collections: ${error.message}`);
   }
-  
+
   // Group by collection and count
   const collections = new Map<string, number>();
   (data || []).forEach((row: { collection?: string }) => {
-    const name = row.collection || 'default';
+    const name = row.collection || "default";
     collections.set(name, (collections.get(name) || 0) + 1);
   });
-  
-  return Array.from(collections.entries()).map(([name, count]) => ({ name, count }));
+
+  return Array.from(collections.entries()).map(([name, count]) => ({
+    name,
+    count,
+  }));
 }
 
 /**
@@ -284,19 +299,19 @@ export async function getStats(): Promise<{
       dimensions: config.dimensions || 0,
     };
   }
-  
+
   const client = getSupabaseClient();
-  
+
   const { count, error } = await client
     .from(config.tableName!)
-    .select('*', { count: 'exact', head: true });
-  
+    .select("*", { count: "exact", head: true });
+
   if (error) {
     throw new Error(`Failed to get stats: ${error.message}`);
   }
-  
+
   const collections = await listCollections();
-  
+
   return {
     enabled: true,
     totalEmbeddings: count || 0,
@@ -312,10 +327,10 @@ export async function getStats(): Promise<{
 /**
  * SQL to create embeddings table with pgvector
  * Run this in Supabase SQL editor:
- * 
+ *
  * -- Enable pgvector extension
  * CREATE EXTENSION IF NOT EXISTS vector;
- * 
+ *
  * -- Create embeddings table
  * CREATE TABLE IF NOT EXISTS embeddings (
  *   id TEXT PRIMARY KEY,
@@ -326,12 +341,12 @@ export async function getStats(): Promise<{
  *   metadata JSONB DEFAULT '{}',
  *   created_at TIMESTAMPTZ DEFAULT NOW()
  * );
- * 
+ *
  * -- Create index for vector similarity search
- * CREATE INDEX IF NOT EXISTS embeddings_embedding_idx ON embeddings 
+ * CREATE INDEX IF NOT EXISTS embeddings_embedding_idx ON embeddings
  * USING ivfflat (embedding vector_cosine_ops)
  * WITH (lists = 100);
- * 
+ *
  * -- Create function for similarity search
  * CREATE OR REPLACE FUNCTION match_embeddings(
  *   query_embedding vector(1536),

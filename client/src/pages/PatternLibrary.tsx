@@ -1,20 +1,48 @@
 import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export default function PatternLibrary() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string | undefined>();
+  const [selectedCategory, setSelectedCategory] = useState<
+    string | undefined
+  >();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedPattern, setSelectedPattern] = useState<any>(null);
@@ -65,9 +93,7 @@ export default function PatternLibrary() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">256</div>
-            <p className="text-xs text-muted-foreground">
-              Built-in + Custom
-            </p>
+            <p className="text-xs text-muted-foreground">Built-in + Custom</p>
           </CardContent>
         </Card>
 
@@ -79,9 +105,7 @@ export default function PatternLibrary() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">12</div>
-            <p className="text-xs text-muted-foreground">
-              User-created
-            </p>
+            <p className="text-xs text-muted-foreground">User-created</p>
           </CardContent>
         </Card>
 
@@ -107,9 +131,7 @@ export default function PatternLibrary() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">6.8</div>
-            <p className="text-xs text-muted-foreground">
-              Out of 10
-            </p>
+            <p className="text-xs text-muted-foreground">Out of 10</p>
           </CardContent>
         </Card>
       </div>
@@ -122,10 +144,13 @@ export default function PatternLibrary() {
               <Input
                 placeholder="Search patterns by name or description..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
               />
             </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
               <SelectTrigger className="w-[200px]">
                 <SelectValue placeholder="All Categories" />
               </SelectTrigger>
@@ -133,16 +158,23 @@ export default function PatternLibrary() {
                 <SelectItem value="all">All Categories</SelectItem>
                 <SelectItem value="gaslighting">Gaslighting</SelectItem>
                 <SelectItem value="darvo">DARVO</SelectItem>
-                <SelectItem value="parental_alienation">Parental Alienation</SelectItem>
+                <SelectItem value="parental_alienation">
+                  Parental Alienation
+                </SelectItem>
                 <SelectItem value="substance_abuse">Substance Abuse</SelectItem>
-                <SelectItem value="financial_control">Financial Control</SelectItem>
+                <SelectItem value="financial_control">
+                  Financial Control
+                </SelectItem>
                 {/* TODO: Populate from categories query */}
               </SelectContent>
             </Select>
-            <Button variant="outline" onClick={() => {
-              setSearchQuery("");
-              setSelectedCategory(undefined);
-            }}>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedCategory(undefined);
+              }}
+            >
               Clear Filters
             </Button>
           </div>
@@ -160,7 +192,7 @@ export default function PatternLibrary() {
         <CardContent>
           {/* TODO: Add loading skeleton */}
           {/* TODO: Add empty state */}
-          
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -176,7 +208,10 @@ export default function PatternLibrary() {
             <TableBody>
               {/* TODO: Map over patternsData.patterns */}
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground">
+                <TableCell
+                  colSpan={7}
+                  className="text-center text-muted-foreground"
+                >
                   TODO: Implement patterns table
                 </TableCell>
               </TableRow>
@@ -194,7 +229,7 @@ export default function PatternLibrary() {
               Create a custom behavioral pattern for forensic analysis
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Pattern Name</Label>
@@ -214,7 +249,9 @@ export default function PatternLibrary() {
                 <SelectContent>
                   <SelectItem value="gaslighting">Gaslighting</SelectItem>
                   <SelectItem value="darvo">DARVO</SelectItem>
-                  <SelectItem value="parental_alienation">Parental Alienation</SelectItem>
+                  <SelectItem value="parental_alienation">
+                    Parental Alienation
+                  </SelectItem>
                   {/* TODO: Populate from categories */}
                 </SelectContent>
               </Select>
@@ -298,10 +335,12 @@ export default function PatternLibrary() {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={() => {
-              // TODO: Call createPattern.mutate()
-              toast("TODO: Implement pattern creation");
-            }}>
+            <Button
+              onClick={() => {
+                // TODO: Call createPattern.mutate()
+                toast("TODO: Implement pattern creation");
+              }}
+            >
               Add Pattern
             </Button>
           </DialogFooter>

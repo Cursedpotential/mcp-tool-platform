@@ -1,21 +1,41 @@
-import { useState } from 'react';
-import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { trpc } from '@/lib/trpc';
-import { toast } from 'sonner';
-import { 
-  Plus, 
-  Server, 
-  RefreshCw, 
-  Trash2, 
+import { useState } from "react";
+import DashboardLayout from "@/components/DashboardLayout";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
+import {
+  Plus,
+  Server,
+  RefreshCw,
+  Trash2,
   Settings,
   CheckCircle,
   XCircle,
@@ -25,10 +45,10 @@ import {
   Terminal,
   Wifi,
   Download,
-  Wrench
-} from 'lucide-react';
+  Wrench,
+} from "lucide-react";
 
-type ServerStatus = 'connected' | 'disconnected' | 'error' | 'connecting';
+type ServerStatus = "connected" | "disconnected" | "error" | "connecting";
 
 const statusIcons: Record<ServerStatus, React.ReactNode> = {
   connected: <CheckCircle className="h-4 w-4 text-green-500" />,
@@ -46,11 +66,11 @@ const transportIcons: Record<string, React.ReactNode> = {
 export default function Proxy() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [newServer, setNewServer] = useState({
-    name: '',
-    description: '',
-    transport: 'http' as 'http' | 'websocket' | 'stdio',
-    endpoint: '',
-    apiKey: '',
+    name: "",
+    description: "",
+    transport: "http" as "http" | "websocket" | "stdio",
+    endpoint: "",
+    apiKey: "",
     enabled: true,
     priority: 50,
   });
@@ -61,28 +81,28 @@ export default function Proxy() {
 
   const registerMutation = trpc.proxy.registerServer.useMutation({
     onSuccess: () => {
-      toast.success('Server registered successfully');
+      toast.success("Server registered successfully");
       setIsAddDialogOpen(false);
       setNewServer({
-        name: '',
-        description: '',
-        transport: 'http',
-        endpoint: '',
-        apiKey: '',
+        name: "",
+        description: "",
+        transport: "http",
+        endpoint: "",
+        apiKey: "",
         enabled: true,
         priority: 50,
       });
       utils.proxy.listServers.invalidate();
       utils.proxy.getAllTools.invalidate();
     },
-    onError: (error) => {
+    onError: error => {
       toast.error(`Failed to register server: ${error.message}`);
     },
   });
 
   const unregisterMutation = trpc.proxy.unregisterServer.useMutation({
     onSuccess: () => {
-      toast.success('Server removed');
+      toast.success("Server removed");
       utils.proxy.listServers.invalidate();
       utils.proxy.getAllTools.invalidate();
     },
@@ -90,7 +110,7 @@ export default function Proxy() {
 
   const refreshMutation = trpc.proxy.refreshServer.useMutation({
     onSuccess: () => {
-      toast.success('Server refreshed');
+      toast.success("Server refreshed");
       utils.proxy.listServers.invalidate();
       utils.proxy.getAllTools.invalidate();
     },
@@ -98,7 +118,7 @@ export default function Proxy() {
 
   const handleAddServer = () => {
     if (!newServer.name || !newServer.endpoint) {
-      toast.error('Name and endpoint are required');
+      toast.error("Name and endpoint are required");
       return;
     }
     registerMutation.mutate(newServer);
@@ -135,7 +155,9 @@ export default function Proxy() {
                   <Input
                     placeholder="my-mcp-server"
                     value={newServer.name}
-                    onChange={(e) => setNewServer({ ...newServer, name: e.target.value })}
+                    onChange={e =>
+                      setNewServer({ ...newServer, name: e.target.value })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -143,14 +165,24 @@ export default function Proxy() {
                   <Input
                     placeholder="Optional description"
                     value={newServer.description}
-                    onChange={(e) => setNewServer({ ...newServer, description: e.target.value })}
+                    onChange={e =>
+                      setNewServer({
+                        ...newServer,
+                        description: e.target.value,
+                      })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
                   <Label>Transport</Label>
                   <Select
                     value={newServer.transport}
-                    onValueChange={(v) => setNewServer({ ...newServer, transport: v as 'http' | 'websocket' | 'stdio' })}
+                    onValueChange={v =>
+                      setNewServer({
+                        ...newServer,
+                        transport: v as "http" | "websocket" | "stdio",
+                      })
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -165,9 +197,15 @@ export default function Proxy() {
                 <div className="space-y-2">
                   <Label>Endpoint</Label>
                   <Input
-                    placeholder={newServer.transport === 'stdio' ? '/path/to/mcp-server' : 'https://api.example.com'}
+                    placeholder={
+                      newServer.transport === "stdio"
+                        ? "/path/to/mcp-server"
+                        : "https://api.example.com"
+                    }
                     value={newServer.endpoint}
-                    onChange={(e) => setNewServer({ ...newServer, endpoint: e.target.value })}
+                    onChange={e =>
+                      setNewServer({ ...newServer, endpoint: e.target.value })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
@@ -176,23 +214,35 @@ export default function Proxy() {
                     type="password"
                     placeholder="Bearer token or API key"
                     value={newServer.apiKey}
-                    onChange={(e) => setNewServer({ ...newServer, apiKey: e.target.value })}
+                    onChange={e =>
+                      setNewServer({ ...newServer, apiKey: e.target.value })
+                    }
                   />
                 </div>
                 <div className="flex items-center justify-between">
                   <Label>Enabled</Label>
                   <Switch
                     checked={newServer.enabled}
-                    onCheckedChange={(checked) => setNewServer({ ...newServer, enabled: checked })}
+                    onCheckedChange={checked =>
+                      setNewServer({ ...newServer, enabled: checked })
+                    }
                   />
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAddDialogOpen(false)}
+                >
                   Cancel
                 </Button>
-                <Button onClick={handleAddServer} disabled={registerMutation.isPending}>
-                  {registerMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                <Button
+                  onClick={handleAddServer}
+                  disabled={registerMutation.isPending}
+                >
+                  {registerMutation.isPending && (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  )}
                   Register
                 </Button>
               </DialogFooter>
@@ -208,7 +258,9 @@ export default function Proxy() {
                 <Server className="h-8 w-8 text-blue-500" />
                 <div>
                   <p className="text-2xl font-bold">{servers?.length || 0}</p>
-                  <p className="text-sm text-muted-foreground">Registered Servers</p>
+                  <p className="text-sm text-muted-foreground">
+                    Registered Servers
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -219,7 +271,7 @@ export default function Proxy() {
                 <CheckCircle className="h-8 w-8 text-green-500" />
                 <div>
                   <p className="text-2xl font-bold">
-                    {servers?.filter(s => s.status === 'connected').length || 0}
+                    {servers?.filter(s => s.status === "connected").length || 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Connected</p>
                 </div>
@@ -231,8 +283,12 @@ export default function Proxy() {
               <div className="flex items-center gap-3">
                 <Wrench className="h-8 w-8 text-purple-500" />
                 <div>
-                  <p className="text-2xl font-bold">{aggregatedTools?.length || 0}</p>
-                  <p className="text-sm text-muted-foreground">Aggregated Tools</p>
+                  <p className="text-2xl font-bold">
+                    {aggregatedTools?.length || 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Aggregated Tools
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -243,9 +299,7 @@ export default function Proxy() {
         <Card>
           <CardHeader>
             <CardTitle>Registered Servers</CardTitle>
-            <CardDescription>
-              Manage your connected MCP servers
-            </CardDescription>
+            <CardDescription>Manage your connected MCP servers</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -255,7 +309,7 @@ export default function Proxy() {
               </div>
             ) : servers && servers.length > 0 ? (
               <div className="space-y-4">
-                {servers.map((server) => (
+                {servers.map(server => (
                   <div
                     key={server.config.id}
                     className="flex items-center justify-between p-4 border rounded-lg"
@@ -267,7 +321,9 @@ export default function Proxy() {
                           <h3 className="font-medium">{server.config.name}</h3>
                           <Badge variant="outline" className="text-xs">
                             {transportIcons[server.config.transport]}
-                            <span className="ml-1">{server.config.transport}</span>
+                            <span className="ml-1">
+                              {server.config.transport}
+                            </span>
                           </Badge>
                           {!server.config.enabled && (
                             <Badge variant="secondary">Disabled</Badge>
@@ -278,9 +334,13 @@ export default function Proxy() {
                         </p>
                         <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
                           <span>{server.tools.length} tools</span>
-                          {server.latencyMs && <span>{server.latencyMs}ms latency</span>}
+                          {server.latencyMs && (
+                            <span>{server.latencyMs}ms latency</span>
+                          )}
                           {server.lastError && (
-                            <span className="text-red-500">{server.lastError}</span>
+                            <span className="text-red-500">
+                              {server.lastError}
+                            </span>
                           )}
                         </div>
                       </div>
@@ -289,16 +349,20 @@ export default function Proxy() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => refreshMutation.mutate({ id: server.config.id })}
+                        onClick={() =>
+                          refreshMutation.mutate({ id: server.config.id })
+                        }
                         disabled={refreshMutation.isPending}
                       >
-                        <RefreshCw className={`h-4 w-4 ${refreshMutation.isPending ? 'animate-spin' : ''}`} />
+                        <RefreshCw
+                          className={`h-4 w-4 ${refreshMutation.isPending ? "animate-spin" : ""}`}
+                        />
                       </Button>
                       <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => {
-                          if (confirm('Remove this server?')) {
+                          if (confirm("Remove this server?")) {
                             unregisterMutation.mutate({ id: server.config.id });
                           }
                         }}
@@ -336,7 +400,7 @@ export default function Proxy() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {aggregatedTools.map((tool) => (
+                {aggregatedTools.map(tool => (
                   <div
                     key={tool.name}
                     className="p-3 border rounded-lg hover:bg-muted/50 transition-colors"
