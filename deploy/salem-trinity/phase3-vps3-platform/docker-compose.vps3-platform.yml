@@ -49,11 +49,11 @@ services:
         reservations:
           memory: 1G
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-changeme}" ]
-      interval: 10s
+      test: [ "CMD-SHELL", "mysqladmin ping -h localhost || exit 1" ]
+      interval: 30s
       timeout: 10s
-      retries: 10
-      start_period: 60s
+      retries: 5
+      start_period: 120s
 
   # ===========================================================================
   # MCP Platform - Main Application
@@ -116,7 +116,7 @@ services:
       - mcp_platform_logs:/app/logs
     depends_on:
       mysql:
-        condition: service_healthy
+        condition: service_started
     networks:
       - salem-platform-network
     deploy:
