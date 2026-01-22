@@ -1,0 +1,172 @@
+version: '3.8'
+
+# =============================================================================
+# Salem Forensic Trinity - VPS3 (salem-platform) Platform Layer
+# =============================================================================
+# VPS: 116.203.40.1 (Public) / 10.10.0.4 (Private Network)
+# Role: Application layer, external gateway, application database
+# Services: MCP Platform, MetaMCP External, MySQL (Migrated from Manus)
+# 
+# CRITICAL: Uses Hetzner private network (10.10.0.x) for cross-VPS connections
+# - VPS1 Postgres: 10.10.0.2:5432
+# - VPS2 Chroma: 10.10.0.3:8000
+# - LiteLLM (VPS2): 10.10.0.3:4000
+# =============================================================================
+
+networks:
+  salem-platform-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  mcp_platform_logs:
+
+services:
+  # ===========================================================================
+  # MySQL - Application Database (Migrated from Manus)
+  # ===========================================================================
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    hostname: mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-salem_app}
+      - MYSQL_USER=${MYSQL_USER:-salem_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # Initialization scripts can be placed here if needed
+      # - ./init:/docker-entrypoint-initdb.d
+    networks:
+      - salem-platform-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===========================================================================
+  # MCP Platform - Main Application
+  # ===========================================================================
+  mcp-platform:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    image: mcp-platform:latest
+    container_name: mcp-platform
+    hostname: mcp-platform
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      
+      # MySQL Connection (Local on VPS3)
+      - DB_TYPE=mysql
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER:-salem_user}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-salem_app}
+      
+      # VPS1 Postgres Connection (via Private Network)
+      - POSTGRES_HOST=10.10.0.2
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-salem}
+      
+      # VPS2 Chroma Connection (via Private Network)
+      - CHROMA_URL=http://10.10.0.3:8000
+      - CHROMA_API_KEY=${CHROMA_API_KEY}
+      
+      # LiteLLM Connection (via Private Network)
+      - LITELLM_URL=http://10.10.0.3:4000
+      - LITELLM_API_KEY=${LITELLM_MASTER_KEY}
+      
+      # Directus Connection (via Private Network)
+      - DIRECTUS_URL=http://10.10.0.2:8055
+      - DIRECTUS_TOKEN=${DIRECTUS_TOKEN}
+      
+      # Neo4j Aura (Cloud)
+      - NEO4J_URI=${NEO4J_URI}
+      - NEO4J_USERNAME=${NEO4J_USERNAME}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      
+      # Auth & Security
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=https://app.${DOMAIN:-mitechconsult.com}
+      - JWT_SECRET=${JWT_SECRET}
+      
+      # External AI APIs (passed through to LiteLLM if needed or used directly)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      
+    volumes:
+      - mcp_platform_logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - salem-platform-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mcp-platform.rule=Host(`app.${DOMAIN:-mitechconsult.com}`)"
+      - "traefik.http.routers.mcp-platform.entrypoints=websecure"
+      - "traefik.http.routers.mcp-platform.tls.certresolver=letsencrypt"
+      - "traefik.http.services.mcp-platform.loadbalancer.server.port=3000"
+      - "coolify.managed=true"
+
+  # ===========================================================================
+  # MetaMCP External - Public Gateway
+  # ===========================================================================
+  metamcp-external:
+    image: node:22-alpine
+    container_name: metamcp-external
+    hostname: metamcp-external
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install -g @modelcontextprotocol/server-registry && mcp-registry serve"
+    environment:
+      - MCP_REGISTRY_PORT=3002
+      - MCP_REGISTRY_HOST=0.0.0.0
+      - MCP_REGISTRY_LOG_LEVEL=info
+      
+      # Access to internal MetaMCP on VPS2
+      - INTERNAL_MCP_URL=http://10.10.0.3:3001
+    networks:
+      - salem-platform-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.metamcp-ext.rule=Host(`mcp.${DOMAIN:-mitechconsult.com}`)"
+      - "traefik.http.routers.metamcp-ext.entrypoints=websecure"
+      - "traefik.http.routers.metamcp-ext.tls.certresolver=letsencrypt"
+      - "traefik.http.services.metamcp-ext.loadbalancer.server.port=3002"
+      - "coolify.managed=true"
+
+# =============================================================================
+# Deployment Notes
+# =============================================================================
+# 1. Ensure MySQL is migrated from Manus BEFORE starting mcp-platform
+# 2. Check private network connectivity to 10.10.0.2 and 10.10.0.3
+# 3. All containers use Traefik labels for automatic SSL
+# =============================================================================

@@ -1,0 +1,413 @@
+version: '3.8'
+
+# =============================================================================
+# Salem Forensic Trinity - VPS2 (salem-forge) Compute Layer
+# =============================================================================
+# VPS: 116.203.198.77 (Public) / 10.10.0.3 (Private Network)
+# Role: Compute services, vector storage, browser automation
+# Services: LiteLLM, ChromaDB, Dragonfly, Ollama, Kasm, Browserless, Playwright, MetaMCP Internal
+# 
+# CRITICAL: Uses Hetzner private network (10.10.0.x) for database connections
+# - VPS1 Postgres: 10.10.0.2:5432 (NOT 188.245.189.218)
+# - Free bandwidth, better security, lower latency
+# =============================================================================
+
+networks:
+  salem-forge-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  litellm_data:
+  metamcp_internal_data:
+  chroma_data:
+  dragonfly_data:
+  ollama_data:
+  kasm_profiles:
+  kasm_data:
+
+services:
+  # ===========================================================================
+  # LiteLLM - Multi-Provider LLM Gateway with Caching
+  # ===========================================================================
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: litellm
+    hostname: litellm
+    restart: unless-stopped
+    environment:
+      # Database Configuration - USES PRIVATE NETWORK IP
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@10.10.0.2:5432/${POSTGRES_DB:-salem}?sslmode=disable
+      
+      # Master Key (generate with: openssl rand -hex 32)
+      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
+      
+      # Model Configuration
+      - LITELLM_CONFIG_PATH=/app/config.yaml
+      
+      # Caching - Uses Dragonfly (internal)
+      - LITELLM_CACHE=redis
+      - REDIS_HOST=dragonfly
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${DRAGONFLY_PASSWORD:-}
+      
+      # Logging
+      - LITELLM_LOG=INFO
+      - LITELLM_LOG_TO_FILE=true
+      
+      # Rate Limiting
+      - LITELLM_MAX_PARALLEL_REQUESTS=100
+      - LITELLM_REQUEST_TIMEOUT=600
+      
+      # Optional: Prometheus Metrics
+      - LITELLM_ENABLE_PROMETHEUS=true
+      - LITELLM_PROMETHEUS_PORT=9090
+    volumes:
+      - litellm_data:/app/logs
+      - ${LITELLM_CONFIG_PATH:-./litellm-config.yaml}:/app/config.yaml:ro
+    networks:
+      - salem-forge-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.litellm.rule=Host(`llm.${DOMAIN:-mitechconsult.com}`)"
+      - "traefik.http.routers.litellm.entrypoints=websecure"
+      - "traefik.http.routers.litellm.tls.certresolver=letsencrypt"
+      - "traefik.http.services.litellm.loadbalancer.server.port=4000"
+      - "coolify.managed=true"
+
+  # ===========================================================================
+  # ChromaDB - Vector Database (72hr TTL Working Memory)
+  # ===========================================================================
+  chroma:
+    image: ghcr.io/chroma-core/chroma:latest
+    container_name: chroma
+    hostname: chroma
+    restart: unless-stopped
+    environment:
+      # Server Configuration
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8000
+      - CHROMA_SERVER_CORS_ALLOW_ORIGINS=["*"]
+      
+      # Authentication
+      - CHROMA_SERVER_AUTH_CREDENTIALS_PROVIDER=chromadb.auth.token_authn.TokenAuthenticationServerProvider
+      - CHROMA_SERVER_AUTH_CREDENTIALS=${CHROMA_API_KEY}
+      - CHROMA_SERVER_AUTH_PROVIDER=chromadb.auth.token_authn.TokenAuthenticationServerProvider
+      - CHROMA_AUTH_TOKEN_TRANSPORT_HEADER=X-Chroma-Token
+      
+      # Storage
+      - IS_PERSISTENT=TRUE
+      - PERSIST_DIRECTORY=/chroma/data
+      
+      # Performance
+      - CHROMA_SERVER_GRPC_PORT=8001
+      - ANONYMIZED_TELEMETRY=FALSE
+    volumes:
+      - chroma_data:/chroma/data
+    networks:
+      - salem-forge-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.chroma.rule=Host(`chroma.${DOMAIN:-mitechconsult.com}`)"
+      - "traefik.http.routers.chroma.entrypoints=websecure"
+      - "traefik.http.routers.chroma.tls.certresolver=letsencrypt"
+      - "traefik.http.services.chroma.loadbalancer.server.port=8000"
+      - "coolify.managed=true"
+
+  # ===========================================================================
+  # Dragonfly - Redis-Compatible Cache (10x faster than Redis)
+  # ===========================================================================
+  dragonfly:
+    image: docker.dragonflydb.io/dragonflydb/dragonfly:latest
+    container_name: dragonfly
+    hostname: dragonfly
+    restart: unless-stopped
+    command: >
+      dragonfly
+      --logtostderr
+      --requirepass=${DRAGONFLY_PASSWORD:-}
+      --maxmemory=2gb
+      --cache_mode=true
+      --keys_output_limit=12288
+      --dbfilename=dump.rdb
+      --dir=/data
+    volumes:
+      - dragonfly_data:/data
+    networks:
+      - salem-forge-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # Internal only - no Traefik labels
+
+  # ===========================================================================
+  # Ollama - Local LLM Inference (Embeddings + Small Models)
+  # ===========================================================================
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    hostname: ollama
+    restart: unless-stopped
+    environment:
+      - OLLAMA_HOST=0.0.0.0:11434
+      - OLLAMA_MODELS=/root/.ollama/models
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_MAX_LOADED_MODELS=3
+      - OLLAMA_NUM_PARALLEL=4
+      - OLLAMA_MAX_QUEUE=512
+    volumes:
+      - ollama_data:/root/.ollama
+    networks:
+      - salem-forge-network
+    deploy:
+      resources:
+        limits:
+          memory: 8G
+        reservations:
+          memory: 4G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ollama.rule=Host(`ollama.${DOMAIN:-mitechconsult.com}`)"
+      - "traefik.http.routers.ollama.entrypoints=websecure"
+      - "traefik.http.routers.ollama.tls.certresolver=letsencrypt"
+      - "traefik.http.services.ollama.loadbalancer.server.port=11434"
+      - "coolify.managed=true"
+
+  # ===========================================================================
+  # Kasm Workspaces - Browser-Based Desktops
+  # ===========================================================================
+  kasm:
+    image: lscr.io/linuxserver/kasm:latest
+    container_name: kasm
+    hostname: kasm
+    restart: unless-stopped
+    privileged: true
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ:-America/New_York}
+      - KASM_PORT=3000
+      - DOCKER_HUB_USERNAME=${DOCKER_HUB_USERNAME:-}
+      - DOCKER_HUB_PASSWORD=${DOCKER_HUB_PASSWORD:-}
+    volumes:
+      - kasm_data:/opt
+      - kasm_profiles:/profiles
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - salem-forge-network
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kasm.rule=Host(`desktop.${DOMAIN:-mitechconsult.com}`)"
+      - "traefik.http.routers.kasm.entrypoints=websecure"
+      - "traefik.http.routers.kasm.tls.certresolver=letsencrypt"
+      - "traefik.http.services.kasm.loadbalancer.server.port=3000"
+      - "coolify.managed=true"
+
+  # ===========================================================================
+  # Browserless - Headless Chrome as a Service
+  # ===========================================================================
+  browserless:
+    image: browserless/chrome:latest
+    container_name: browserless
+    hostname: browserless
+    restart: unless-stopped
+    environment:
+      - TOKEN=${BROWSERLESS_TOKEN}
+      - MAX_CONCURRENT_SESSIONS=10
+      - CONNECTION_TIMEOUT=60000
+      - MAX_QUEUE_LENGTH=20
+      - PREBOOT_CHROME=true
+      - KEEP_ALIVE=true
+      - CHROME_REFRESH_TIME=3600000
+      - DEFAULT_BLOCK_ADS=true
+      - DEFAULT_STEALTH=true
+      - ENABLE_DEBUGGER=false
+      - ENABLE_CORS=true
+    networks:
+      - salem-forge-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/pressure"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.browserless.rule=Host(`browser.${DOMAIN:-mitechconsult.com}`)"
+      - "traefik.http.routers.browserless.entrypoints=websecure"
+      - "traefik.http.routers.browserless.tls.certresolver=letsencrypt"
+      - "traefik.http.services.browserless.loadbalancer.server.port=3000"
+      - "coolify.managed=true"
+
+  # ===========================================================================
+  # Playwright - Browser Automation Framework
+  # ===========================================================================
+  playwright:
+    image: mcr.microsoft.com/playwright:latest
+    container_name: playwright
+    hostname: playwright
+    restart: unless-stopped
+    command: >
+      sh -c "
+      npm install -g playwright &&
+      npx playwright install &&
+      npx -y playwright-server --port 3100 --host 0.0.0.0
+      "
+    environment:
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    volumes:
+      - /ms-playwright:/ms-playwright
+    networks:
+      - salem-forge-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3100"]
+      interval: 60s
+      timeout: 30s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.playwright.rule=Host(`playwright.${DOMAIN:-mitechconsult.com}`)"
+      - "traefik.http.routers.playwright.entrypoints=websecure"
+      - "traefik.http.routers.playwright.tls.certresolver=letsencrypt"
+      - "traefik.http.services.playwright.loadbalancer.server.port=3100"
+      - "coolify.managed=true"
+
+  # ===========================================================================
+  # MetaMCP Internal - MCP Tool Orchestration (Internal Only)
+  # ===========================================================================
+  metamcp-internal:
+    image: node:22-alpine
+    container_name: metamcp-internal
+    hostname: metamcp-internal
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install -g @modelcontextprotocol/server-registry && mcp-registry serve"
+    environment:
+      - MCP_REGISTRY_PORT=3001
+      - MCP_REGISTRY_HOST=0.0.0.0
+      - MCP_REGISTRY_DATA_DIR=/app/data
+      - MCP_REGISTRY_LOG_LEVEL=info
+      
+      # Database connection - USES PRIVATE NETWORK IP
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@10.10.0.2:5432/${POSTGRES_DB:-salem}?sslmode=disable
+    volumes:
+      - metamcp_internal_data:/app/data
+    networks:
+      - salem-forge-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    # Internal only - no Traefik labels (accessed from VPS3 MCP Platform)
+
+# =============================================================================
+# Network Notes
+# =============================================================================
+# 
+# PRIVATE NETWORK CONNECTIONS (10.10.0.x):
+# - LiteLLM → VPS1 Postgres: 10.10.0.2:5432
+# - MetaMCP Internal → VPS1 Postgres: 10.10.0.2:5432
+# - LiteLLM → Dragonfly: dragonfly:6379 (internal)
+# 
+# PUBLIC CONNECTIONS (via Traefik):
+# - llm.mitechconsult.com → LiteLLM:4000
+# - chroma.mitechconsult.com → ChromaDB:8000
+# - ollama.mitechconsult.com → Ollama:11434
+# - desktop.mitechconsult.com → Kasm:3000
+# - browser.mitechconsult.com → Browserless:3000
+# - playwright.mitechconsult.com → Playwright:3100
+# 
+# INTERNAL ONLY (no public access):
+# - Dragonfly:6379 (Redis cache)
+# - MetaMCP Internal:3001 (accessed from VPS3 only)
+# 
+# =============================================================================
+# Deployment Commands
+# =============================================================================
+# 
+# 1. Create .env file from template:
+#    cp .env.vps2.template .env
+#    nano .env  # Fill in required values
+# 
+# 2. Deploy via Coolify UI:
+#    - Server: salem-forge (116.203.198.77)
+#    - Source: Raw Compose
+#    - Paste this file content
+#    - Add environment variables from .env
+#    - Deploy
+# 
+# 3. Verify services:
+#    ssh salem-forge "docker ps"
+#    # Should show all 8 containers running
+# 
+# 4. Test private network:
+#    ssh salem-forge "docker exec litellm nc -zv 10.10.0.2 5432"
+#    # Should connect successfully to VPS1 Postgres
+# 
+# =============================================================================

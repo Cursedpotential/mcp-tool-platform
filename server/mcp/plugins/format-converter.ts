@@ -637,4 +637,25 @@ export const formatConverterTools = [
 ];
 
 export { parseFile, checkSchema, ocrImage, ocrPdf, toJson, toCsv, toMarkdown };
+// Wrapper functions for direct gateway calls
+export const formatConverter = {
+  async markdownToPdf(markdown: string, title?: string): Promise<Buffer | null> {
+    return convertWithPandoc(markdown, 'pdf', title);
+  },
+
+  async pdfToMarkdown(filePath: string): Promise<string> {
+    const { messages, format } = await parseFile(filePath);
+    return toMarkdown(messages);
+  },
+
+  async docxToMarkdown(filePath: string): Promise<string> {
+    const { messages, format } = await parseFile(filePath);
+    return toMarkdown(messages);
+  },
+
+  async markdownToDocx(markdown: string, title?: string): Promise<Buffer | null> {
+    return convertWithPandoc(markdown, 'docx', title);
+  }
+};
+
 export default formatConverterTools;

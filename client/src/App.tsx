@@ -15,6 +15,7 @@ import Forks from "./pages/Forks";
 import Wiki from "./pages/Wiki";
 import ApiKeys from "./pages/ApiKeys";
 import McpConfig from "./pages/McpConfig";
+import PatternLibrary from "./pages/PatternLibrary";
 
 function Router() {
   return (
@@ -30,6 +31,7 @@ function Router() {
       <Route path={"/wiki"} component={Wiki} />
       <Route path={"/api-keys"} component={ApiKeys} />
       <Route path={"/mcp-config"} component={McpConfig} />
+      <Route path={"/patterns"} component={PatternLibrary} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

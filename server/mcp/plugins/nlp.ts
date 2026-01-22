@@ -36,6 +36,7 @@ interface NLPProvider {
   extractKeywords(text: string, topK: number): Promise<KeywordResult[]>;
   analyzeSentiment(text: string): Promise<SentimentResult>;
   splitSentences(text: string): Promise<SentenceSpan[]>;
+  detectToxicity(text: string): Promise<{ toxicity: 'low' | 'medium' | 'high'; confidence: number; reasons?: string[] }>;
 }
 
 // ============================================================================
@@ -312,6 +313,92 @@ class JavaScriptNLPProvider implements NLPProvider {
 
     return sentences;
   }
+
+  async detectToxicity(text: string): Promise<{ toxicity: 'low' | 'medium' | 'high'; confidence: number; reasons?: string[] }> {
+    // Pattern-based toxicity detection
+    const toxicityPatterns = {
+      high: [
+        /\b(?:fuck|shit|cunt|asshole|bastard|bitch|dick|cock|pussy)\b/gi,
+        /\b(?:kill|murder|rape|assault|abuse|violence|harm|damage)\b.*\b(?:you|them|her|him|it)\b/gi,
+        /\b(?:hate|despise|loathe|detest)\b.*\b(?:you|them|her|him|it)\b/gi,
+      ],
+      medium: [
+        /\b(?:stupid|idiot|dumb|moron|retard|loser|failure|pathetic)\b/gi,
+        /\b(?:hate|dislike|annoyed|frustrated|angry)\b.*\b(?:you|them|her|him|it)\b/gi,
+        /\b(?:threat|warning|danger|risk)\b.*\b(?:you|them|her|him|it)\b/gi,
+      ],
+      low: [
+        /\b(?:annoying|bothersome|irritating|frustrating)\b/gi,
+        /\b(?:dislike|prefer not|don't like)\b.*\b(?:you|them|her|him|it)\b/gi,
+      ]
+    };
+
+    let toxicityScore = 0;
+    const reasons: string[] = [];
+    const sampleText = text.toLowerCase();
+
+    // Check for high toxicity patterns
+    for (const pattern of toxicityPatterns.high) {
+      const matches = sampleText.match(pattern);
+      if (matches) {
+        toxicityScore += matches.length * 3;
+        reasons.push(`High toxicity indicators: ${matches.slice(0, 2).join(', ')}`);
+      }
+    }
+
+    // Check for medium toxicity patterns
+    for (const pattern of toxicityPatterns.medium) {
+      const matches = sampleText.match(pattern);
+      if (matches) {
+        toxicityScore += matches.length * 2;
+        reasons.push(`Medium toxicity indicators: ${matches.slice(0, 2).join(', ')}`);
+      }
+    }
+
+    // Check for low toxicity patterns
+    for (const pattern of toxicityPatterns.low) {
+      const matches = sampleText.match(pattern);
+      if (matches) {
+        toxicityScore += matches.length * 1;
+        reasons.push(`Low toxicity indicators: ${matches.slice(0, 2).join(', ')}`);
+      }
+    }
+
+    // Additional heuristics
+    const exclamationCount = (text.match(/!/g) || []).length;
+    const capsRatio = text.replace(/[^A-Z]/g, '').length / text.replace(/[^a-zA-Z]/g, '').length;
+
+    if (exclamationCount > 5) {
+      toxicityScore += 1;
+      reasons.push('Excessive exclamation marks');
+    }
+
+    if (capsRatio > 0.3) {
+      toxicityScore += 1;
+      reasons.push('Excessive capitalization');
+    }
+
+    // Determine toxicity level
+    let toxicity: 'low' | 'medium' | 'high';
+    let confidence: number;
+
+    if (toxicityScore >= 5) {
+      toxicity = 'high';
+      confidence = Math.min(0.9 + (toxicityScore - 5) * 0.05, 0.95);
+    } else if (toxicityScore >= 2) {
+      toxicity = 'medium';
+      confidence = 0.7 + (toxicityScore - 2) * 0.1;
+    } else {
+      toxicity = 'low';
+      confidence = Math.max(0.5 - toxicityScore * 0.1, 0.3);
+    }
+
+    return {
+      toxicity,
+      confidence: Math.round(confidence * 100) / 100,
+      reasons: reasons.length > 0 ? reasons : undefined
+    };
+  }
 }
 
 // ============================================================================
@@ -366,6 +453,22 @@ class PythonNLPProvider implements NLPProvider {
       endOffset: s.end,
       index: s.index,
     }));
+  }
+
+  async detectToxicity(text: string): Promise<{ toxicity: 'low' | 'medium' | 'high'; confidence: number; reasons?: string[] }> {
+    try {
+      const result = await pythonBridge.detectToxicity(text);
+      return {
+        toxicity: result.toxicity as 'low' | 'medium' | 'high',
+        confidence: result.confidence,
+        reasons: result.reasons
+      };
+    } catch (error) {
+      // Fallback to JavaScript implementation if Python bridge fails
+      console.warn('[PythonNLPProvider] Toxicity detection failed, using fallback');
+      const fallbackProvider = new JavaScriptNLPProvider();
+      return fallbackProvider.detectToxicity(text);
+    }
   }
 }
 
@@ -447,6 +550,11 @@ interface AnalyzeSentimentArgs {
 }
 
 interface SplitSentencesArgs {
+  textRef: string;
+  provider?: string;
+}
+
+interface DetectToxicityArgs {
   textRef: string;
   provider?: string;
 }
@@ -566,6 +674,24 @@ export async function splitSentences(args: SplitSentencesArgs): Promise<{
   }
 
   return { sentences: sentences.slice(0, 50), sentencesRef };
+}
+
+/**
+ * Detect toxic or harmful language in text
+ */
+export async function detectToxicity(args: DetectToxicityArgs): Promise<{
+  toxicity: 'low' | 'medium' | 'high';
+  confidence: number;
+  reasons?: string[];
+}> {
+  const store = await getContentStore();
+  const text = await store.getString(args.textRef as ContentRef);
+  if (!text) {
+    throw new Error(`Content not found: ${args.textRef}`);
+  }
+
+  const provider = getProvider(args.provider);
+  return provider.detectToxicity(text);
 }
 
 /**

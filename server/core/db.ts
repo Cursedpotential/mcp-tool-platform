@@ -1,58 +1,420 @@
-// File: server/core/db.ts | Date: 2026-01-18 | SQL.js for local development
-import initSqlJs, { Database } from 'sql.js';
-import { resolve, dirname } from 'path';
-import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
+// File: server/core/db.ts
+// Date: 2026-01-18
+// Multi-System Database Router for Salem Forensic Trinity
+//
+// ARCHITECTURE (Per PROJECT_INTEL_SSOT.md):
+// - PostgreSQL + PGVector (VPS1): Primary relational data & semantic embeddings
+// - Neo4j + Graphiti (Cloud): Temporal knowledge graph (Zep-style)
+// - ChromaDB (VPS2): Short-term working memory (72hr TTL)
+// - Directus CMS (VPS1): Binary file vault and metadata
+//
+// DATA FLOW:
+// 1. Raw evidence → Directus (Binary Storage)
+// 2. Parsed messages → PostgreSQL (Structured Data + PGVector)
+// 3. Entities/Relationships → Neo4j/Graphiti (Temporal Graph)
+// 4. Active investigation context → Chroma (72hr TTL)
 
-const DB_PATH = resolve(process.env.DATA_ROOT || './data', 'salem.db');
+import { getPgClient, getDb as getPgDb, testConnection, checkPgVector, closeDb as closePg } from './db.postgres';
 
-let _db: Database | null = null;
+// ============================================================================
+// DATABASE ROLE DEFINITIONS
+// ============================================================================
+
+export const DATABASE_ROLES = {
+  /** PostgreSQL + PGVector (VPS1): Structured data and semantic embeddings */
+  PRIMARY: 'primary',
+  
+  /** Neo4j + Graphiti: Temporal knowledge graph (Zep-style) */
+  TEMPORAL_GRAPH: 'temporal_graph',
+  
+  /** ChromaDB (VPS2): Short-term working memory (72hr TTL) */
+  WORKING_MEMORY: 'working_memory',
+  
+  /** Directus CMS (VPS1): Binary file vault */
+  FILE_VAULT: 'file_vault',
+  
+  /** Scratch work (local SQLite for dev) */
+  SCRATCH: 'scratch'
+} as const;
+
+export type DatabaseRole = typeof DATABASE_ROLES[keyof typeof DATABASE_ROLES];
+
+// ============================================================================
+// CONNECTION STATE
+// ============================================================================
+
+let _pgClient: ReturnType<any> | null = null;
+let _pgDb: ReturnType<any> | null = null;
+let _graphitiClient: any = null;
+let _chromaClient: any = null;
+let _directusClient: any = null;
+let _sqliteDb: any = null;
+
+// ============================================================================
+// POSTGRESQL + PGVECTOR (VPS1 - PRIMARY)
+// ============================================================================
+
+export async function getPrimaryDb() {
+  return await getPgDb();
+}
+
+export async function getPrimaryClient() {
+  return await getPgClient();
+}
+
+export async function testPrimaryConnection(): Promise<{ success: boolean; latency?: number; error?: string }> {
+  return await testConnection();
+}
+
+export async function isPgVectorReady(): Promise<boolean> {
+  return await checkPgVector();
+}
+
+// ============================================================================
+// NEO4J + GRAPHITI (TEMPORAL KNOWLEDGE GRAPH)
+// ============================================================================
+
+export interface GraphitiConfig {
+  uri: string;
+  username: string;
+  password: string;
+}
+
+export async function getTemporalGraphClient(): Promise<any> {
+  if (!_graphitiClient) {
+    const config: GraphitiConfig = {
+      uri: process.env.GRAPHITI_URI || process.env.NEO4J_URL || 'bolt://localhost:7687',
+      username: process.env.GRAPHITI_USERNAME || process.env.NEO4J_USERNAME || 'neo4j',
+      password: process.env.GRAPHITI_PASSWORD || process.env.NEO4J_PASSWORD || ''
+    };
+    
+    const { GraphitiClient } = await import('../mcp/storage/graphiti-client');
+    _graphitiClient = new GraphitiClient(config);
+    console.log('[Database] Temporal Graph client initialized');
+  }
+  return _graphitiClient;
+}
+
+export async function testTemporalConnection(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const client = await getTemporalGraphClient();
+    await client.connect();
+    return { success: true };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+// ============================================================================
+// CHROMADB (VPS2 - WORKING MEMORY, 72hr TTL)
+// ============================================================================
+
+export interface ChromaConfig {
+  url: string;
+  collectionName: string;
+}
+
+export async function getWorkingMemoryClient(): Promise<any> {
+  if (!_chromaClient) {
+    const config: ChromaConfig = {
+      url: process.env.CHROMA_URL || 'http://localhost:8000',
+      collectionName: 'evidence_processing'
+    };
+    
+    const { ChromaEvidenceClient } = await import('../mcp/storage/chroma-client');
+    _chromaClient = new ChromaEvidenceClient(config);
+    console.log('[Database] Working memory client initialized');
+  }
+  return _chromaClient;
+}
+
+export async function testWorkingMemoryConnection(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const client = await getWorkingMemoryClient();
+    await client.healthCheck();
+    return { success: true };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+// ============================================================================
+// DIRECTUS CMS (VPS1 - FILE VAULT)
+// ============================================================================
+
+export interface DirectusConfig {
+  url: string;
+  email: string;
+  password: string;
+}
+
+export async function getFileVaultClient(): Promise<any> {
+  if (!_directusClient) {
+    const config: DirectusConfig = {
+      url: process.env.DIRECTUS_URL || 'http://localhost:8055',
+      email: process.env.DIRECTUS_EMAIL || '',
+      password: process.env.DIRECTUS_PASSWORD || ''
+    };
+    
+    const { DirectusClient } = await import('../mcp/storage/directus-client');
+    _directusClient = new DirectusClient(config);
+    console.log('[Database] File vault client initialized');
+  }
+  return _directusClient;
+}
+
+export async function testFileVaultConnection(): Promise<{ success: boolean; error?: string }> {
+  try {
+    const client = await getFileVaultClient();
+    await client.connect();
+    return { success: true };
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+// ============================================================================
+// SCRATCH WORK (SQLite - Local Dev)
+// ============================================================================
+
 let _SQL: any = null;
+const SQLITE_PATH = process.env.SQLITE_PATH || './data/salem_scratch.db';
 
-// Lazily create the database instance
-export async function getDb() {
-  if (!_db) {
-    try {
-      // Ensure data directory exists
-      const dataDir = dirname(DB_PATH);
-      if (!existsSync(dataDir)) {
-        mkdirSync(dataDir, { recursive: true });
-      }
+async function initSqlite(): Promise<any> {
+  if (!_SQL) {
+    const initSqlJs = (await import('sql.js')).default;
+    _SQL = await initSqlJs();
+  }
+  return _SQL;
+}
 
-      // Initialize sql.js
-      if (!_SQL) {
-        _SQL = await initSqlJs();
-      }
-
-      // Load existing database or create new one
-      if (existsSync(DB_PATH)) {
-        const fileBuffer = readFileSync(DB_PATH);
-        _db = new _SQL.Database(fileBuffer);
-        console.log(`[Database] Loaded existing SQLite: ${DB_PATH}`);
-      } else {
-        _db = new _SQL.Database();
-        console.log(`[Database] Created new SQLite: ${DB_PATH}`);
-      }
-    } catch (error) {
-      console.warn('[Database] Failed to connect:', error);
-      _db = null;
+export async function getScratchDb(): Promise<any> {
+  if (!_sqliteDb) {
+    const SQL = await initSqlite();
+    const { existsSync, readFileSync, mkdirSync } = await import('fs');
+    const { dirname, resolve } = await import('path');
+    
+    const dbPath = resolve(SQLITE_PATH);
+    const dataDir = dirname(dbPath);
+    
+    if (!existsSync(dataDir)) {
+      mkdirSync(dataDir, { recursive: true });
     }
+    
+    if (existsSync(dbPath)) {
+      const fileBuffer = readFileSync(dbPath);
+      _sqliteDb = new SQL(fileBuffer);
+    } else {
+      _sqliteDb = new SQL.Database();
+    }
+    
+    console.log('[Database] Scratch SQLite initialized');
   }
-  return _db;
+  return _sqliteDb;
 }
 
-// Save database to file
+// ============================================================================
+// MULTI-SYSTEM ROUTER
+// ============================================================================
+
+/**
+ * Route database operations based on data type and retention requirements
+ * Implements the 3-Tier Memory Architecture from SSoT
+ */
+export function getDatabaseForOperation(operation: {
+  /** Type of data being stored/queried */
+  type: 'messages' | 'documents' | 'entities' | 'relationships' | 'embeddings' | 'files' | 'context' | 'scratch';
+  /** How long the data should be retained */
+  retention: 'temporary' | 'short_term' | 'permanent';
+  /** Whether this is a vector search operation */
+  isVectorSearch?: boolean;
+  /** Whether this requires graph traversal */
+  isGraphQuery?: boolean;
+}): DatabaseRole {
+  
+  // Vector embeddings → PostgreSQL (PGVector)
+  if (operation.isVectorSearch || operation.type === 'embeddings') {
+    return DATABASE_ROLES.PRIMARY;
+  }
+  
+  // Graph queries (entities, relationships) → Neo4j/Graphiti
+  if (operation.isGraphQuery || operation.type === 'entities' || operation.type === 'relationships') {
+    return DATABASE_ROLES.TEMPORAL_GRAPH;
+  }
+  
+  // Short-term evidence processing → Chroma (72hr TTL)
+  if (operation.retention === 'short_term' || operation.type === 'context') {
+    return DATABASE_ROLES.WORKING_MEMORY;
+  }
+  
+  // Full files (PDF, images, exports) → Directus
+  if (operation.type === 'files' || operation.type === 'documents') {
+    return DATABASE_ROLES.FILE_VAULT;
+  }
+  
+  // Scratch work for local dev → SQLite
+  if (operation.type === 'scratch' || operation.retention === 'temporary') {
+    return DATABASE_ROLES.SCRATCH;
+  }
+  
+  // Default: Structured data → PostgreSQL
+  return DATABASE_ROLES.PRIMARY;
+}
+
+/**
+ * Get appropriate database client for a given role
+ */
+export async function getDatabaseClient(role: DatabaseRole): Promise<any> {
+  switch (role) {
+    case DATABASE_ROLES.PRIMARY:
+      return await getPrimaryDb();
+      
+    case DATABASE_ROLES.TEMPORAL_GRAPH:
+      return await getTemporalGraphClient();
+      
+    case DATABASE_ROLES.WORKING_MEMORY:
+      return await getWorkingMemoryClient();
+      
+    case DATABASE_ROLES.FILE_VAULT:
+      return await getFileVaultClient();
+      
+    case DATABASE_ROLES.SCRATCH:
+      return await getScratchDb();
+      
+    default:
+      throw new Error(`Unknown database role: ${role}`);
+  }
+}
+
+// ============================================================================
+// INITIALIZATION & HEALTH CHECKS
+// ============================================================================
+
+export interface DatabaseHealth {
+  primary: boolean;
+  temporalGraph: boolean;
+  workingMemory: boolean;
+  fileVault: boolean;
+  scratch: boolean;
+}
+
+export async function initAllDatabases(): Promise<DatabaseHealth> {
+  const health: DatabaseHealth = {
+    primary: false,
+    temporalGraph: false,
+    workingMemory: false,
+    fileVault: false,
+    scratch: false
+  };
+  
+  // Test Primary (PostgreSQL)
+  try {
+    const result = await testPrimaryConnection();
+    health.primary = result.success;
+    console.log(`[Database] ${health.primary ? '✓' : '✗'} Primary (PostgreSQL + PGVector)`);
+  } catch (error) {
+    console.log(`[Database] ✗ Primary (PostgreSQL): ${error}`);
+  }
+  
+  // Test Temporal Graph (Neo4j/Graphiti)
+  try {
+    const result = await testTemporalConnection();
+    health.temporalGraph = result.success;
+    console.log(`[Database] ${health.temporalGraph ? '✓' : '✗'} Temporal Graph (Neo4j/Graphiti)`);
+  } catch (error) {
+    console.log(`[Database] ✗ Temporal Graph: ${error}`);
+  }
+  
+  // Test Working Memory (Chroma)
+  try {
+    const result = await testWorkingMemoryConnection();
+    health.workingMemory = result.success;
+    console.log(`[Database] ${health.workingMemory ? '✓' : '✗'} Working Memory (Chroma VPS)`);
+  } catch (error) {
+    console.log(`[Database] ✗ Working Memory: ${error}`);
+  }
+  
+  // Test File Vault (Directus)
+  try {
+    const result = await testFileVaultConnection();
+    health.fileVault = result.success;
+    console.log(`[Database] ${health.fileVault ? '✓' : '✗'} File Vault (Directus)`);
+  } catch (error) {
+    console.log(`[Database] ✗ File Vault: ${error}`);
+  }
+  
+  // Initialize Scratch (SQLite)
+  try {
+    await getScratchDb();
+    health.scratch = true;
+    console.log(`[Database] ✓ Scratch (SQLite)`);
+  } catch (error) {
+    console.log(`[Database] ✗ Scratch: ${error}`);
+  }
+  
+  return health;
+}
+
+export async function closeAllConnections(): Promise<void> {
+  await closePg();
+  _graphitiClient = null;
+  _chromaClient = null;
+  _directusClient = null;
+  _sqliteDb = null;
+  console.log('[Database] All connections closed');
+}
+
+// Re-export from postgres module
+export { checkPgVector, testConnection as testPgConnection };
+
+// ============================================================================
+// BACKWARD COMPATIBILITY LAYER (SQLite Scratch Work)
+// These functions maintain compatibility with existing code that uses SQLite
+// ============================================================================
+
+const DB_PATH = process.env.DATA_ROOT || './data';
+
+/**
+ * Get SQLite database instance (backward compatibility wrapper for scratch work)
+ */
+export async function getDb() {
+  return await getScratchDb();
+}
+
+/**
+ * Save SQLite database to file
+ */
 export async function saveDb() {
-  if (_db) {
-    const data = _db.export();
+  const db = await getScratchDb();
+  if (db) {
+    const data = db.export();
     const buffer = Buffer.from(data);
-    writeFileSync(DB_PATH, buffer);
-    console.log(`[Database] Saved to ${DB_PATH}`);
+    const { writeFileSync, mkdirSync } = await import('fs');
+    const { dirname, resolve } = await import('path');
+    const dbPath = resolve(DB_PATH, 'salem.db');
+    const dataDir = dirname(dbPath);
+    if (!existsSync(dataDir)) {
+      mkdirSync(dataDir, { recursive: true });
+    }
+    writeFileSync(dbPath, buffer);
+    console.log(`[Database] Saved scratch SQLite to ${dbPath}`);
   }
 }
 
-// Execute a query and return results
+/**
+ * Execute a query and return results (SQLite)
+ */
 export async function query(sql: string, params: any[] = []): Promise<any[]> {
-  const db = await getDb();
+  const db = await getScratchDb();
   if (!db) throw new Error('Database not available');
 
   const stmt = db.prepare(sql);
@@ -68,22 +430,36 @@ export async function query(sql: string, params: any[] = []): Promise<any[]> {
   return results;
 }
 
-// Execute without returning results
+/**
+ * Execute without returning results (SQLite)
+ */
 export async function run(sql: string, params: any[] = []): Promise<void> {
-  const db = await getDb();
+  const db = await getScratchDb();
   if (!db) throw new Error('Database not available');
   db.run(sql, params);
   await saveDb();
 }
 
-// Insert and return last rowid
+/**
+ * Insert and return last rowid (SQLite)
+ */
 export async function insert(sql: string, params: any[] = []): Promise<number> {
-  const db = await getDb();
+  const db = await getScratchDb();
   if (!db) throw new Error('Database not available');
   db.run(sql, params);
   await saveDb();
-  
-  // Get last insert id
+
   const result = await query('SELECT last_insert_rowid() as id');
   return result[0]?.id || 0;
+}
+
+// Helper for saveDb
+async function existsSync(path: string): Promise<boolean> {
+  try {
+    const { statSync } = await import('fs');
+    statSync(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
