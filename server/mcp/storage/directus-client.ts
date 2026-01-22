@@ -130,7 +130,7 @@ export class DirectusClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}/server${path}`;
-    
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...((options.headers as Record<string, string>) || {})
@@ -162,7 +162,7 @@ export class DirectusClient {
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}/files${path}`;
-    
+
     const headers: Record<string, string> = {
       ...((options.headers as Record<string, string>) || {})
     };
@@ -238,7 +238,7 @@ export class DirectusClient {
 
     // Create form data using Node.js Buffer directly
     const formData = new FormData();
-    (formData as any).append('file', new Blob([fileBuffer]), filename);
+    (formData as any).append('file', new Blob([new Uint8Array(fileBuffer)]), filename);
     if (options.title) {
       formData.append('title', options.title);
     }

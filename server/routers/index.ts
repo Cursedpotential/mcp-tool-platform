@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, publicProcedure, protectedProcedure } from "../_core/trpc";
+import { router, publicProcedure, protectedProcedure } from "../core/trpc";
 import { settingsRouter } from "./settings";
 
 // Stub routers with placeholder procedures for client compatibility

@@ -6,7 +6,7 @@
  */
 
 import { z } from "zod";
-import { protectedProcedure, router } from "../_core/trpc";
+import { protectedProcedure, router } from "../core/trpc";
 import { getDb } from "../core/db";
 import {
   userSettings,
@@ -81,6 +81,17 @@ const DEFAULT_WORKFLOW_CONFIG = {
   },
   severityThreshold: 8,
 };
+
+
+const DEFAULT_COLAB_CONFIG = {
+  projectId: "",
+  region: "",
+  runtimeTemplate: "",
+  serviceAccountJson: "",
+  notebookPath: "",
+  syncBucket: "",
+};
+
 
 // ============================================================================
 // Settings Router
@@ -178,7 +189,7 @@ export const settingsRouter = router({
       .where(eq(llmProviders.userId, ctx.user.id))
       .orderBy(desc(llmProviders.priority));
 
-    return providers.map((p) => ({
+    return providers.map((p: any) => ({
       id: p.id,
       providerName: p.providerName,
       apiKeyMasked: maskApiKey(decrypt(p.apiKeyEncrypted)),
@@ -287,12 +298,77 @@ export const settingsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // TODO: Implement actual connection tests
-      // For now, return success to unblock UI
-      return {
-        success: true,
-        message: `${input.type} connection test: OK (placeholder - implement real test)`,
-      };
+      const { type, providerId } = input;
+      let result = { success: false, message: "" };
+
+      try {
+        if (type === "supabase") {
+          const { createClient } = await import("@supabase/supabase-js");
+          const url = process.env.SUPABASE_URL;
+          const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+
+          if (!url || !key) throw new Error("Missing Supabase credentials in environment");
+
+          const supabase = createClient(url, key);
+          // Simple health check query
+          const { error } = await supabase.from("user_settings").select("id").limit(1);
+
+          if (error) throw error;
+          result = { success: true, message: "Supabase connection successful" };
+
+        } else if (type === "neo4j") {
+          const neo4j = await import("neo4j-driver");
+          const uri = process.env.NEO4J_URI;
+          const user = process.env.NEO4J_USERNAME;
+          const password = process.env.NEO4J_PASSWORD;
+
+          if (!uri || !user || !password) throw new Error("Missing Neo4j credentials in environment");
+
+          const driver = neo4j.driver(uri, neo4j.auth.basic(user, password));
+          const session = driver.session();
+
+          try {
+            await session.run("RETURN 1");
+            result = { success: true, message: "Neo4j connection successful" };
+          } finally {
+            await session.close();
+            await driver.close();
+          }
+
+        } else if (type === "llm_provider") {
+          if (!providerId) throw new Error("Provider ID required for LLM test");
+
+          const db = await getDb();
+          if (!db) throw new Error("Database not available");
+
+          const provider = await db.query.llmProviders.findFirst({
+            where: eq(llmProviders.id, providerId),
+          });
+
+          if (!provider) throw new Error("Provider not found");
+
+          const apiKey = decrypt(provider.apiKeyEncrypted);
+          const baseUrl = provider.baseUrl || "https://api.openai.com/v1"; // Default fallbacks
+
+          // Simple test request (list models is standard usually, or a tiny completion)
+          // Using axios directly to avoid dependency on specific SDKs
+          const axios = (await import("axios")).default;
+
+          // Construct request based on likely standards (OpenAI-compatible)
+          await axios.get(`${baseUrl}/models`, {
+            headers: { Authorization: `Bearer ${apiKey}` },
+          });
+
+          result = { success: true, message: `Connected to ${provider.providerName}` };
+        }
+      } catch (error: any) {
+        result = {
+          success: false,
+          message: `Connection failed: ${error.message || "Unknown error"}`
+        };
+      }
+
+      return result;
     }),
 
   // ============================================================================
@@ -387,6 +463,113 @@ export const settingsRouter = router({
       }
 
       return input;
+    }),
+
+  // ============================================================================
+  // Colab Enterprise Configuration
+  // ============================================================================
+
+  getColabConfig: protectedProcedure.query(async ({ ctx }) => {
+    const db = await getDb();
+    if (!db) return DEFAULT_COLAB_CONFIG;
+
+    const settings = await db
+      .select()
+      .from(userSettings)
+      .where(
+        and(
+          eq(userSettings.userId, ctx.user.id),
+          eq(userSettings.settingKey, "colabConfig")
+        )
+      )
+      .limit(1);
+
+    if (settings.length === 0) return DEFAULT_COLAB_CONFIG;
+
+    try {
+      return JSON.parse(settings[0].settingValue);
+    } catch {
+      return DEFAULT_COLAB_CONFIG;
+    }
+  }),
+
+  saveColabConfig: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+        region: z.string(),
+        runtimeTemplate: z.string(),
+        serviceAccountJson: z.string().optional(),
+        notebookPath: z.string().optional(),
+        syncBucket: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const db = await getDb();
+      if (!db) throw new Error("Database not available");
+
+      const existing = await db
+        .select()
+        .from(userSettings)
+        .where(
+          and(
+            eq(userSettings.userId, ctx.user.id),
+            eq(userSettings.settingKey, "colabConfig")
+          )
+        )
+        .limit(1);
+
+      const settingValue = JSON.stringify(input);
+
+      if (existing.length > 0) {
+        await db
+          .update(userSettings)
+          .set({ settingValue })
+          .where(eq(userSettings.id, existing[0].id));
+      } else {
+        await db.insert(userSettings).values({
+          userId: ctx.user.id,
+          settingKey: "colabConfig",
+          settingValue,
+        });
+      }
+
+      return { success: true, message: "Colab configuration saved" };
+    }),
+
+  testColabConfig: protectedProcedure
+    .input(
+      z.object({
+        projectId: z.string(),
+        region: z.string(),
+        runtimeTemplate: z.string(),
+        serviceAccountJson: z.string().optional(),
+        notebookPath: z.string().optional(),
+        syncBucket: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      // Perform validation check
+      if (!input.projectId || !input.region) {
+        throw new Error("Project ID and Region are required");
+      }
+
+      // Validate Service Account JSON if provided
+      if (input.serviceAccountJson) {
+        try {
+          const sa = JSON.parse(input.serviceAccountJson);
+          if (!sa.project_id || !sa.private_key || !sa.client_email) {
+            throw new Error("Invalid Service Account JSON format");
+          }
+          if (sa.project_id !== input.projectId) {
+            throw new Error("Service Account project_id does not match configuration");
+          }
+        } catch (e: any) {
+          throw new Error(`Service Account JSON error: ${e.message}`);
+        }
+      }
+
+      return { success: true, message: "Colab configuration is valid (Validation Only)" };
     }),
 
   // ============================================================================
@@ -549,9 +732,9 @@ export const settingsRouter = router({
       .from(llmProviders)
       .where(eq(llmProviders.userId, ctx.user.id));
 
-    const providerMap = new Map(providers.map((p) => [p.id, p.providerName]));
+    const providerMap = new Map(providers.map((p: any) => [p.id, p.providerName]));
 
-    return rules.map((r) => ({
+    return rules.map((r: any) => ({
       id: r.id,
       taskType: r.taskType,
       primaryProvider: providerMap.get(r.primaryProviderId) || "Unknown",
@@ -620,7 +803,7 @@ export const settingsRouter = router({
         .where(eq(llmProviders.userId, ctx.user.id));
 
       const totalCostCents = providers.reduce(
-        (sum, p) => sum + p.totalCostCents,
+        (sum: number, p: any) => sum + p.totalCostCents,
         0
       );
       const byProvider: Record<string, number> = {};

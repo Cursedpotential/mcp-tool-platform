@@ -7,6 +7,7 @@
 
 import type { LoadedDocument, DocumentChunk } from "./base-loader";
 import type { EmbeddingVector } from "./embedding-pipeline";
+import { supabaseManager } from "../storage/supabase-client";
 
 // ============================================================================
 // HIERARCHY TYPES
@@ -98,12 +99,19 @@ export class DocumentHierarchyManager {
       metadata: metadata || {},
     };
 
-    console.log(`[Hierarchy] Created case: ${caseId} - ${name}`);
+    try {
+      const { error } = await supabaseManager['client']
+        .from('cases')
+        .insert(newCase);
 
-    // In production, insert into Supabase:
-    // const { createClient } = await import('@supabase/supabase-js');
-    // const supabase = createClient(process.env.SUPABASE_URL!, process.env.SUPABASE_KEY!);
-    // await supabase.from('cases').insert(newCase);
+      if (error) {
+        console.warn(`[Hierarchy] Failed to persist case to Supabase: ${error.message}`);
+      } else {
+        console.log(`[Hierarchy] Created case: ${caseId} - ${name}`);
+      }
+    } catch (e) {
+      console.warn(`[Hierarchy] Error persisting case: ${e}`);
+    }
 
     return newCase;
   }
@@ -133,12 +141,19 @@ export class DocumentHierarchyManager {
       metadata: metadata || {},
     };
 
-    console.log(
-      `[Hierarchy] Created conversation: ${conversationId} in case ${caseId}`
-    );
+    try {
+      const { error } = await supabaseManager['client']
+        .from('conversations')
+        .insert(conversation);
 
-    // In production, insert into Supabase:
-    // await supabase.from('conversations').insert(conversation);
+      if (error) {
+        console.warn(`[Hierarchy] Failed to persist conversation: ${error.message}`);
+      } else {
+        console.log(`[Hierarchy] Created conversation: ${conversationId} in case ${caseId}`);
+      }
+    } catch (e) {
+      console.warn(`[Hierarchy] Error persisting conversation: ${e}`);
+    }
 
     return conversation;
   }
@@ -163,12 +178,19 @@ export class DocumentHierarchyManager {
       metadata: document.metadata,
     };
 
-    console.log(
-      `[Hierarchy] Linked document ${document.id} to conversation ${conversationId}`
-    );
+    try {
+      const { error } = await supabaseManager['client']
+        .from('documents')
+        .insert(docRef);
 
-    // In production, insert into Supabase:
-    // await supabase.from('documents').insert(docRef);
+      if (error) {
+        console.warn(`[Hierarchy] Failed to link document: ${error.message}`);
+      } else {
+        console.log(`[Hierarchy] Linked document ${document.id} to conversation ${conversationId}`);
+      }
+    } catch (e) {
+      console.warn(`[Hierarchy] Error linking document: ${e}`);
+    }
 
     return docRef;
   }
@@ -192,12 +214,21 @@ export class DocumentHierarchyManager {
       metadata: chunk.metadata,
     }));
 
-    console.log(
-      `[Hierarchy] Linked ${chunks.length} chunks to document ${documentId}`
-    );
+    try {
+      if (chunkRefs.length > 0) {
+        const { error } = await supabaseManager['client']
+          .from('chunks')
+          .insert(chunkRefs);
 
-    // In production, insert into Supabase:
-    // await supabase.from('chunks').insert(chunkRefs);
+        if (error) {
+          console.warn(`[Hierarchy] Failed to persist chunks: ${error.message}`);
+        } else {
+          console.log(`[Hierarchy] Linked ${chunks.length} chunks to document ${documentId}`);
+        }
+      }
+    } catch (e) {
+      console.warn(`[Hierarchy] Error persisting chunks: ${e}`);
+    }
 
     return chunkRefs;
   }
@@ -211,29 +242,42 @@ export class DocumentHierarchyManager {
     documents: DocumentReference[];
     chunk_count: number;
   }> {
-    console.log(`[Hierarchy] Fetching hierarchy for case: ${caseId}`);
+    try {
+      const { data: caseData, error: caseError } = await supabaseManager['client']
+        .from('cases')
+        .select('*')
+        .eq('id', caseId)
+        .single();
 
-    // In production, query Supabase:
-    // const { data: caseData } = await supabase.from('cases').select('*').eq('id', caseId).single();
-    // const { data: conversations } = await supabase.from('conversations').select('*').eq('case_id', caseId);
-    // const { data: documents } = await supabase.from('documents').select('*').eq('case_id', caseId);
-    // const { count: chunkCount } = await supabase.from('chunks').select('*', { count: 'exact', head: true }).eq('case_id', caseId);
+      if (caseError || !caseData) throw new Error(caseError?.message || 'Case not found');
 
-    // Mock data
-    return {
-      case: {
-        id: caseId,
-        name: "Mock Case",
-        owner_id: "user_001",
-        created_at: new Date(),
-        updated_at: new Date(),
-        status: "active",
-        metadata: {},
-      },
-      conversations: [],
-      documents: [],
-      chunk_count: 0,
-    };
+      const { data: conversations } = await supabaseManager['client']
+        .from('conversations')
+        .select('*')
+        .eq('case_id', caseId);
+
+      const { data: documents } = await supabaseManager['client']
+        .from('documents')
+        .select('*')
+        .eq('case_id', caseId);
+
+      const { count } = await supabaseManager['client']
+        .from('chunks')
+        .select('*', { count: 'exact', head: true })
+        .eq('case_id', caseId);
+
+      return {
+        case: caseData as Case,
+        conversations: (conversations || []) as Conversation[],
+        documents: (documents || []) as DocumentReference[],
+        chunk_count: count || 0
+      };
+
+    } catch (e) {
+      // Fallback or rethrow
+      console.error(`[Hierarchy] Failed to fetch hierarchy: ${e}`);
+      throw e;
+    }
   }
 
   /**
@@ -244,28 +288,34 @@ export class DocumentHierarchyManager {
     documents: DocumentReference[];
     chunks: ChunkReference[];
   }> {
-    console.log(
-      `[Hierarchy] Fetching details for conversation: ${conversationId}`
-    );
+    try {
+      const { data: conversation, error: convError } = await supabaseManager['client']
+        .from('conversations')
+        .select('*')
+        .eq('id', conversationId)
+        .single();
 
-    // In production, query Supabase with joins
+      if (convError || !conversation) throw new Error(convError?.message || 'Conversation not found');
 
-    // Mock data
-    return {
-      conversation: {
-        id: conversationId,
-        case_id: "case_001",
-        participants: [],
-        platforms: [],
-        start_date: new Date(),
-        end_date: new Date(),
-        message_count: 0,
-        document_ids: [],
-        metadata: {},
-      },
-      documents: [],
-      chunks: [],
-    };
+      const { data: documents } = await supabaseManager['client']
+        .from('documents')
+        .select('*')
+        .eq('conversation_id', conversationId);
+
+      const { data: chunks } = await supabaseManager['client']
+        .from('chunks')
+        .select('*')
+        .eq('conversation_id', conversationId);
+
+      return {
+        conversation: conversation as Conversation,
+        documents: (documents || []) as DocumentReference[],
+        chunks: (chunks || []) as ChunkReference[]
+      };
+    } catch (e) {
+      console.error(`[Hierarchy] Failed to fetch conversation details: ${e}`);
+      throw e;
+    }
   }
 
   /**
@@ -275,18 +325,13 @@ export class DocumentHierarchyManager {
     caseId: string,
     participants: string[]
   ): Promise<Conversation[]> {
-    console.log(
-      `[Hierarchy] Finding conversations with participants: ${participants.join(", ")}`
-    );
+    const { data } = await supabaseManager['client']
+      .from('conversations')
+      .select('*')
+      .eq('case_id', caseId)
+      .contains('participants', participants);
 
-    // In production, query Supabase:
-    // const { data } = await supabase
-    //   .from('conversations')
-    //   .select('*')
-    //   .eq('case_id', caseId)
-    //   .contains('participants', participants);
-
-    return [];
+    return (data || []) as Conversation[];
   }
 
   /**
@@ -300,53 +345,52 @@ export class DocumentHierarchyManager {
       chunk_count: number;
     }[]
   > {
-    console.log(
-      `[Hierarchy] Fetching timeline for conversation: ${conversationId}`
-    );
+    const { data } = await supabaseManager['client']
+      .from('documents')
+      .select('id, platform, metadata, chunk_count')
+      .eq('conversation_id', conversationId)
+      .order('metadata->created_at', { ascending: true }); // Note: simplified
 
-    // In production, query with ordering:
-    // const { data } = await supabase
-    //   .from('documents')
-    //   .select('id, platform, metadata, chunk_count')
-    //   .eq('conversation_id', conversationId)
-    //   .order('metadata->created_at', { ascending: true });
-
-    return [];
+    // Map result to simpler structure if needed
+    return data?.map(d => ({
+      document_id: d.id,
+      platform: d.platform,
+      timestamp: new Date(d.metadata?.created_at || Date.now()),
+      chunk_count: d.chunk_count
+    })) || [];
   }
 
   /**
    * Update conversation date range based on documents
    */
   async updateConversationDateRange(conversationId: string): Promise<void> {
-    console.log(
-      `[Hierarchy] Updating date range for conversation: ${conversationId}`
-    );
+    const { data: documents } = await supabaseManager['client']
+      .from('documents')
+      .select('metadata')
+      .eq('conversation_id', conversationId);
 
-    // In production:
-    // const { data: documents } = await supabase
-    //   .from('documents')
-    //   .select('metadata')
-    //   .eq('conversation_id', conversationId);
-    //
-    // const dates = documents.map(d => new Date(d.metadata.created_at));
-    // const startDate = new Date(Math.min(...dates.map(d => d.getTime())));
-    // const endDate = new Date(Math.max(...dates.map(d => d.getTime())));
-    //
-    // await supabase
-    //   .from('conversations')
-    //   .update({ start_date: startDate, end_date: endDate })
-    //   .eq('id', conversationId);
+    if (!documents || documents.length === 0) return;
+
+    const dates = documents
+      .map(d => d.metadata?.created_at ? new Date(d.metadata.created_at) : null)
+      .filter(d => d !== null) as Date[];
+
+    if (dates.length > 0) {
+      const startDate = new Date(Math.min(...dates.map(d => d.getTime())));
+      const endDate = new Date(Math.max(...dates.map(d => d.getTime())));
+
+      await supabaseManager['client']
+        .from('conversations')
+        .update({ start_date: startDate, end_date: endDate })
+        .eq('id', conversationId);
+    }
   }
 
   /**
    * Delete case and all related data (cascade)
    */
   async deleteCase(caseId: string): Promise<void> {
-    console.log(`[Hierarchy] Deleting case: ${caseId} (cascade)`);
-
-    // In production, delete with cascade:
-    // await supabase.from('cases').delete().eq('id', caseId);
-    // (Foreign key constraints will cascade to conversations, documents, chunks, embeddings)
+    await supabaseManager['client'].from('cases').delete().eq('id', caseId);
   }
 }
 

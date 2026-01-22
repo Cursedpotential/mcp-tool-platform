@@ -501,7 +501,7 @@ export class ProductionPipeline {
           character_count: msg.text.length,
           direction: this.detectDirection(msg.sender, documentRecord.userId),
           content_hash: createHash("sha256").update(msg.text).digest("hex"),
-          // TODO: Add behavior flags, previous/next message linking
+          // Note: Message linking handled via serial_number. Behavior flags managed via messaging_behaviors table.
         })
       );
 
@@ -566,18 +566,19 @@ export class ProductionPipeline {
 
     try {
       // Use Graphiti client for entity storage
-      for (const entity of entities) {
-        await graphitiClient.addEntity({
-          name: entity.value,
-          type: entity.type,
-          metadata: {
-            documentId,
-            messageId: entity.messageId,
-            confidence: entity.confidence,
-            extractedAt: new Date().toISOString(),
-          },
-        });
-      }
+      const neo4jEntities = entities.map(entity => ({
+        id: `${documentId}_${entity.type}_${entity.value.replace(/[^a-zA-Z0-9]/g, '')}`,
+        type: entity.type,
+        name: entity.value,
+        properties: {
+          confidence: entity.confidence,
+          extractedAt: new Date().toISOString(),
+        },
+        sourceMessageId: entity.messageId,
+        sourceDocumentId: documentId,
+      }));
+
+      await graphitiClient.storeEntities(neo4jEntities);
 
       console.log(
         `✅ Inserted ${entities.length} entities into Neo4j for document ${documentId}`

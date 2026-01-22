@@ -1,4 +1,4 @@
-// File: client/src/pages/Settings.tsx | Date: 2026-01-11 | Agent: Claude Code | Model: Opus 4.1
+// File: client/src/pages/Settings.tsx | Date: 2026-01-21 | Agent: Antigravity | Model: Gemini 2.0 Flash
 import { useAuth } from "@/core/hooks/useAuth";
 
 import DashboardLayout from "@/components/DashboardLayout";
@@ -15,19 +15,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
-  Settings as SettingsIcon,
-  Key,
   Cloud,
   Cpu,
   Terminal,
   CheckCircle,
-  XCircle,
   RefreshCw,
   Save,
   Download,
@@ -38,15 +33,24 @@ import {
   Rocket,
 } from "lucide-react";
 
-const PROVIDER_INFO: Record<
-  string,
-  {
-    name: string;
-    icon: React.ReactNode;
-    description: string;
-    type: "local" | "cloud" | "cli";
-  }
-> = {
+// Types for our providers to avoid implicit any
+type ProviderInfo = {
+  name: string;
+  icon: React.ReactNode;
+  description: string;
+  type: "local" | "cloud" | "cli";
+};
+
+type ConfiguredKey = {
+  id: number;
+  providerName: string;
+  apiKeyMasked: string;
+  baseUrl: string | null;
+  isActive: boolean;
+  priority: number;
+};
+
+const PROVIDER_INFO: Record<string, ProviderInfo> = {
   ollama: {
     name: "Ollama",
     icon: <Cpu className="h-4 w-4" />,
@@ -80,7 +84,7 @@ const PROVIDER_INFO: Record<
   google: {
     name: "Google Gemini",
     icon: <Cloud className="h-4 w-4" />,
-    description: "Gemini Pro, Flash",
+    description: "Gemini Pro, Flash, Ultra",
     type: "cloud",
   },
   groq: {
@@ -143,13 +147,17 @@ export default function Settings() {
   const { user, loading: authLoading } = useAuth();
   const [apiKeys, setApiKeys] = useState<Record<string, string>>({});
 
+  // Fetch configured keys
   const {
-    data: providers,
+    data: configuredKeys,
     isLoading,
     refetch,
-  } = trpc.llm.listProviders.useQuery();
-  const { data: available } = trpc.llm.detectAvailable.useQuery();
-  const { data: configExport } = trpc.config.exportAll.useQuery();
+  } = trpc.settings.getApiKeys.useQuery();
+
+  // Mock detection for now
+  const available: string[] = ["ollama"];
+
+  const { data: configExport } = trpc.settings.getNlpConfig.useQuery();
 
   const [colabConfig, setColabConfig] = useState({
     projectId: "",
@@ -160,34 +168,47 @@ export default function Settings() {
     syncBucket: "",
   });
 
-  const configureMutation = trpc.llm.configureProvider.useMutation({
+  const addKeyMutation = trpc.settings.addApiKey.useMutation({
     onSuccess: () => {
       toast.success("Provider configured");
       refetch();
     },
-    onError: err => toast.error(err.message),
+    onError: (err: any) => toast.error(err.message),
   });
 
-  const testMutation = trpc.llm.testProvider.useMutation({
-    onSuccess: result => {
+  const updateKeyMutation = trpc.settings.updateApiKey.useMutation({
+    onSuccess: () => {
+      toast.success("Provider updated");
+      refetch();
+    },
+    onError: (err: any) => toast.error(err.message),
+  });
+
+  const testConnectionMutation = trpc.settings.testConnection.useMutation({
+    onSuccess: (result: any) => {
       if (result.success) {
-        toast.success(
-          `Provider working! Response: "${result.response}" (${result.latency}ms)`
-        );
+        toast.success(result.message);
       } else {
-        toast.error(`Test failed: ${result.error}`);
+        toast.error(`Test failed: ${result.message}`);
       }
     },
+    onError: (err: any) => toast.error(err.message),
   });
 
-  const testColab = trpc.settings.testColab.useMutation({
-    onSuccess: res => toast.success(res.message),
-    onError: err => toast.error(err.message),
+  trpc.settings.getColabConfig.useQuery(undefined, {
+    onSuccess: (data) => {
+      if (data) setColabConfig(data);
+    }
+  });
+
+  const testColab = trpc.settings.testColabConfig.useMutation({
+    onSuccess: (res) => toast.success(res.message),
+    onError: (err) => toast.error(err.message),
   });
 
   const saveColab = trpc.settings.saveColabConfig.useMutation({
-    onSuccess: res => toast.success(res.message),
-    onError: err => toast.error(err.message),
+    onSuccess: (res) => toast.success(res.message),
+    onError: (err) => toast.error(err.message),
   });
 
   if (authLoading || isLoading) {
@@ -212,14 +233,45 @@ export default function Settings() {
     );
   }
 
-  const handleSaveProvider = (provider: string, enabled: boolean) => {
-    configureMutation.mutate({
-      provider,
-      config: {
-        enabled,
-        apiKey: apiKeys[provider],
-      },
-    });
+  const handleSaveProvider = (providerKey: string, enabled: boolean) => {
+    // configuredKeys might be undefined if loading or error
+    // Use 'any' cast if necessary or proper type if inference works
+    // We expect configuredKeys to be Array<{id, providerName...}>
+    const keysList = (configuredKeys as unknown as ConfiguredKey[]) || [];
+    const existingKey = keysList.find((k) => k.providerName === providerKey);
+    const newKeyValue = apiKeys[providerKey];
+
+    if (existingKey) {
+      updateKeyMutation.mutate({
+        id: existingKey.id,
+        isActive: enabled,
+        apiKey: newKeyValue || undefined,
+      });
+    } else {
+      if (!newKeyValue && enabled) {
+        toast.error("API Key is required to enable a new provider");
+        return;
+      }
+      if (newKeyValue) {
+        addKeyMutation.mutate({
+          providerName: providerKey,
+          apiKey: newKeyValue,
+        });
+      }
+    }
+  };
+
+  const handleTestProvider = (providerKey: string) => {
+    const keysList = (configuredKeys as unknown as ConfiguredKey[]) || [];
+    const existingKey = keysList.find((k) => k.providerName === providerKey);
+    if (existingKey) {
+      testConnectionMutation.mutate({
+        type: 'llm_provider',
+        providerId: existingKey.id
+      });
+    } else {
+      toast.error("Please save the provider first before testing");
+    }
   };
 
   const handleExport = () => {
@@ -237,12 +289,23 @@ export default function Settings() {
     }
   };
 
-  const localProviders =
-    providers?.filter(p => PROVIDER_INFO[p.type]?.type === "local") || [];
-  const cloudProviders =
-    providers?.filter(p => PROVIDER_INFO[p.type]?.type === "cloud") || [];
-  const cliProviders =
-    providers?.filter(p => PROVIDER_INFO[p.type]?.type === "cli") || [];
+  const getAllProviders = (typeFilter: "local" | "cloud" | "cli") => {
+    return Object.entries(PROVIDER_INFO)
+      .filter(([_, info]) => info.type === typeFilter)
+      .map(([key, _]) => {
+        const keysList = (configuredKeys as unknown as ConfiguredKey[]) || [];
+        const config = keysList.find((k) => k.providerName === key);
+        return {
+          type: key,
+          enabled: config?.isActive ?? false,
+          apiKeyMasked: config?.apiKeyMasked,
+        };
+      });
+  };
+
+  const localProviders = getAllProviders("local");
+  const cloudProviders = getAllProviders("cloud");
+  const cliProviders = getAllProviders("cli");
 
   return (
     <DashboardLayout>
@@ -359,9 +422,9 @@ export default function Settings() {
                             variant="outline"
                             size="sm"
                             onClick={() =>
-                              testMutation.mutate({ provider: provider.type })
+                              handleTestProvider(provider.type)
                             }
-                            disabled={!isAvailable || testMutation.isPending}
+                            disabled={!isAvailable || testConnectionMutation.isPending}
                           >
                             Test
                           </Button>
@@ -452,9 +515,9 @@ export default function Settings() {
                           <Button
                             variant="outline"
                             onClick={() =>
-                              testMutation.mutate({ provider: provider.type })
+                              handleTestProvider(provider.type)
                             }
-                            disabled={testMutation.isPending}
+                            disabled={testConnectionMutation.isPending}
                           >
                             Test
                           </Button>

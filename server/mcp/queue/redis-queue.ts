@@ -164,46 +164,229 @@ class InMemoryQueue {
 
 class RedisQueue {
   private redisUrl: string;
+  private client: any; // ioredis client
   private connected: boolean = false;
+  private prefix = "mcp:queue";
 
   constructor(redisUrl: string) {
     this.redisUrl = redisUrl;
   }
 
   async connect(): Promise<void> {
-    // TODO: Implement Redis connection
-    // For now, throw to fall back to in-memory
-    throw new Error("Redis queue not yet implemented");
+    const Redis = (await import("ioredis")).default;
+    this.client = new Redis(this.redisUrl, {
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+      retryStrategy: (times) => Math.min(times * 50, 2000),
+    });
+
+    this.client.on("connect", () => {
+      this.connected = true;
+      logger.info("queue", "Connected to Dragonfly/Redis");
+    });
+
+    this.client.on("error", (err: any) => {
+      logger.error("queue", "Redis connection error", { error: err.message });
+      this.connected = false;
+    });
+
+    // Wait for connection
+    await new Promise<void>((resolve, reject) => {
+      this.client.once("ready", resolve);
+      this.client.once("error", reject);
+    });
   }
 
   async push(
-    _task: Omit<QueueTask, "id" | "createdAt" | "attempts" | "status">
+    task: Omit<QueueTask, "id" | "createdAt" | "attempts" | "status">
   ): Promise<string> {
-    throw new Error("Redis queue not yet implemented");
+    if (!this.connected) await this.connect();
+
+    const id = nanoid();
+    const fullTask: QueueTask = {
+      ...task,
+      id,
+      createdAt: Date.now(),
+      attempts: 0,
+      status: "pending",
+    };
+
+    const pipeline = this.client.pipeline();
+
+    // Store task data
+    pipeline.set(`${this.prefix}:task:${id}`, JSON.stringify(fullTask));
+
+    // Add to pending sorted set (score = priority)
+    // ZADD adds to a sorted set. We want higher priority popped first.
+    // If we use ZREVRANGE later, higher score comes first.
+    pipeline.zadd(`${this.prefix}:pending`, task.priority, id);
+
+    await pipeline.exec();
+
+    logger.info("queue", `Task pushed to Redis: ${id}`, {
+      type: task.type,
+      priority: task.priority,
+    });
+    return id;
   }
 
   async pop(): Promise<QueueTask | null> {
-    throw new Error("Redis queue not yet implemented");
+    if (!this.connected) await this.connect();
+
+    // lua script to atomically pop highest priority task
+    // ZREVRANGE index 0 0 -> get highest score
+    // move to processing set
+    // return task
+
+    // Simple approach without blocking pop for priority queue:
+    // 1. Watch pending
+    // 2. Get highest priority
+    // 3. Multi/Exec move
+    // Or just use a lock/lua. 
+    // Dragonfly supports Lua.
+
+    const script = `
+      local pending = KEYS[1]
+      local processing = KEYS[2]
+      local prefix = ARGV[1]
+      
+      -- Get highest priority task (with highest score)
+      local result = redis.call('ZREVRANGE', pending, 0, 0)
+      if #result == 0 then
+        return nil
+      end
+      
+      local taskId = result[1]
+      
+      -- Move to processing set
+      redis.call('ZREM', pending, taskId)
+      redis.call('SADD', processing, taskId)
+      
+      -- Get task data and update status
+      local taskKey = prefix .. ':task:' .. taskId
+      local taskJson = redis.call('GET', taskKey)
+      
+      return {taskId, taskJson}
+    `;
+
+    const result = await this.client.eval(
+      script,
+      2,
+      `${this.prefix}:pending`,
+      `${this.prefix}:processing`,
+      this.prefix
+    );
+
+    if (!result) return null;
+
+    const [taskId, taskJson] = result as [string, string];
+    if (!taskJson) {
+      // Data missing ? Clean up
+      await this.client.srem(`${this.prefix}:processing`, taskId);
+      return null;
+    }
+
+    const task: QueueTask = JSON.parse(taskJson);
+    task.status = "processing";
+    task.attempts += 1;
+
+    // Update task in Redis with new status/attempts
+    await this.client.set(`${this.prefix}:task:${taskId}`, JSON.stringify(task));
+
+    return task;
   }
 
-  async complete(_taskId: string, _result: unknown): Promise<void> {
-    throw new Error("Redis queue not yet implemented");
+  async complete(taskId: string, result: unknown): Promise<void> {
+    if (!this.connected) await this.connect();
+
+    const taskJson = await this.client.get(`${this.prefix}:task:${taskId}`);
+    if (!taskJson) return;
+
+    const task: QueueTask = JSON.parse(taskJson);
+    task.status = "completed";
+    task.result = result;
+
+    const pipeline = this.client.pipeline();
+    pipeline.set(`${this.prefix}:task:${taskId}`, JSON.stringify(task));
+    pipeline.srem(`${this.prefix}:processing`, taskId);
+    pipeline.sadd(`${this.prefix}:completed`, taskId);
+
+    // Set expiry for completed tasks (e.g. 24h) to clean up
+    pipeline.expire(`${this.prefix}:task:${taskId}`, 86400);
+
+    await pipeline.exec();
+    logger.info("queue", `Task completed in Redis: ${taskId}`);
   }
 
-  async fail(_taskId: string, _error: string): Promise<void> {
-    throw new Error("Redis queue not yet implemented");
+  async fail(taskId: string, error: string): Promise<void> {
+    if (!this.connected) await this.connect();
+
+    const taskJson = await this.client.get(`${this.prefix}:task:${taskId}`);
+    if (!taskJson) return;
+
+    const task: QueueTask = JSON.parse(taskJson);
+
+    if (task.attempts < task.maxAttempts) {
+      // Retry
+      task.status = "pending";
+
+      const pipeline = this.client.pipeline();
+      pipeline.set(`${this.prefix}:task:${taskId}`, JSON.stringify(task));
+      pipeline.srem(`${this.prefix}:processing`, taskId);
+      pipeline.zadd(`${this.prefix}:pending`, task.priority, taskId);
+      await pipeline.exec();
+
+      logger.warn("queue", `Task retry in Redis: ${taskId}`, {
+        attempt: task.attempts,
+        maxAttempts: task.maxAttempts,
+      });
+    } else {
+      // Failed permanently
+      task.status = "failed";
+      task.error = error;
+
+      const pipeline = this.client.pipeline();
+      pipeline.set(`${this.prefix}:task:${taskId}`, JSON.stringify(task));
+      pipeline.srem(`${this.prefix}:processing`, taskId);
+      pipeline.sadd(`${this.prefix}:failed`, taskId);
+      pipeline.expire(`${this.prefix}:task:${taskId}`, 86400); // 24h retention
+      await pipeline.exec();
+
+      logger.error("queue", `Task failed in Redis: ${taskId}`, { error });
+    }
   }
 
-  async getTask(_taskId: string): Promise<QueueTask | null> {
-    throw new Error("Redis queue not yet implemented");
+  async getTask(taskId: string): Promise<QueueTask | null> {
+    if (!this.connected) await this.connect();
+    const json = await this.client.get(`${this.prefix}:task:${taskId}`);
+    return json ? JSON.parse(json) : null;
   }
 
   async getStats(): Promise<QueueStats> {
-    throw new Error("Redis queue not yet implemented");
+    if (!this.connected) await this.connect();
+
+    const [pending, processing, completed, failed] = await Promise.all([
+      this.client.zcard(`${this.prefix}:pending`),
+      this.client.scard(`${this.prefix}:processing`),
+      this.client.scard(`${this.prefix}:completed`),
+      this.client.scard(`${this.prefix}:failed`),
+    ]);
+
+    return {
+      pending: pending || 0,
+      processing: processing || 0,
+      completed: completed || 0,
+      failed: failed || 0,
+      workers: 1, // Distributed, can't easily know total workers without heartbeat
+    };
   }
 
   async clear(): Promise<void> {
-    throw new Error("Redis queue not yet implemented");
+    if (!this.connected) await this.connect();
+    const keys = await this.client.keys(`${this.prefix}:*`);
+    if (keys.length) {
+      await this.client.del(...keys);
+    }
   }
 }
 

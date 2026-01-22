@@ -469,8 +469,8 @@ async function convertWithPandoc(
   } catch {
     return null;
   } finally {
-    await fs.unlink(tmpInput).catch(() => {});
-    await fs.unlink(tmpOutput).catch(() => {});
+    await fs.unlink(tmpInput).catch(() => { });
+    await fs.unlink(tmpOutput).catch(() => { });
   }
 }
 
@@ -654,7 +654,71 @@ export const formatConverter = {
   },
 
   async markdownToDocx(markdown: string, title?: string): Promise<Buffer | null> {
-    return convertWithPandoc(markdown, 'docx', title);
+    try {
+      const docx = await import("docx");
+      const { Document, Packer, Paragraph, TextRun, HeadingLevel } = docx;
+
+      const children: any[] = [];
+
+      if (title) {
+        children.push(
+          new Paragraph({
+            text: title,
+            heading: HeadingLevel.TITLE,
+          })
+        );
+      }
+
+      // Simple markdown parsing
+      const lines = markdown.split("\n");
+      for (const line of lines) {
+        const trimmed = line.trim();
+
+        if (trimmed.startsWith("# ")) {
+          children.push(new Paragraph({
+            text: trimmed.substring(2),
+            heading: HeadingLevel.HEADING_1,
+          }));
+        } else if (trimmed.startsWith("## ")) {
+          children.push(new Paragraph({
+            text: trimmed.substring(3),
+            heading: HeadingLevel.HEADING_2,
+          }));
+        } else if (trimmed.startsWith("### ")) {
+          children.push(new Paragraph({
+            text: trimmed.substring(4),
+            heading: HeadingLevel.HEADING_3,
+          }));
+        } else if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
+          children.push(new Paragraph({
+            text: trimmed.substring(2),
+            bullet: { level: 0 },
+          }));
+        } else if (trimmed === "") {
+          children.push(new Paragraph({ text: "" })); // Empty line
+        } else {
+          // Regular paragraph
+          children.push(new Paragraph({
+            children: [new TextRun(trimmed)],
+          }));
+        }
+      }
+
+      const doc = new Document({
+        sections: [
+          {
+            properties: {},
+            children: children,
+          },
+        ],
+      });
+
+      const buffer = await Packer.toBuffer(doc);
+      return buffer as Buffer;
+    } catch (error) {
+      console.error("Failed to convert markdown to docx:", error);
+      return null;
+    }
   }
 };
 
