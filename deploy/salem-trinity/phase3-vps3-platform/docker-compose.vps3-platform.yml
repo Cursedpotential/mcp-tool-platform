@@ -49,10 +49,11 @@ services:
         reservations:
           memory: 1G
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
-      interval: 30s
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-changeme}" ]
+      interval: 10s
       timeout: 10s
-      retries: 3
+      retries: 10
+      start_period: 60s
 
   # ===========================================================================
   # MCP Platform - Main Application
