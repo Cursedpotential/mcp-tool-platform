@@ -36,6 +36,7 @@ This document clarifies the **backend architecture** and **database responsibili
 | **Neo4j + Graphiti** | Cloud/VPS1 | Knowledge Graph | Entities, relationships, temporal facts | TrinityRouter + MCP Tools |
 | **ChromaDB** | VPS2 (Forge) | Working Memory | Temporary embeddings (72hr TTL) | TrinityRouter |
 | **pgvector** | VPS1 (PostgreSQL) | Semantic Search | Permanent embeddings for RAG | TrinityRouter (needs integration) |
+| **PostGIS** | VPS1 (PostgreSQL) | Geospatial Analysis | GPS coordinates, location tracking, spatial queries | TraceIQ → TrinityRouter |
 | **Directus** | VPS1 (Nexus) | File Vault | Binary files with SHA-256 chain of custody | TrinityRouter |
 
 ---
@@ -190,6 +191,104 @@ Services:
 ├── MySQL:3306           # Application database
 └── MetaMCP Ext:3001     # External public MCP gateway
 ```
+
+---
+
+## 🗺️ TraceIQ - GPS & Geospatial Processing
+
+### PostGIS Integration
+
+**Status:** PostGIS fully installed (8 extensions), TraceIQ ingestion pipeline in development
+
+**PostGIS Extensions (Part of 37 PostgreSQL Extensions):**
+1. `postgis` - Core geometry/geography types
+2. `postgis_raster` - Raster data support
+3. `postgis_sfcgal` - 3D geometry operations
+4. `postgis_tiger_geocoder` - US address geocoding
+5. `postgis_topology` - Topology support
+6. `address_standardizer` - Address normalization
+7. `address_standardizer_data_us` - US address data
+8. `pgrouting` - Routing on PostGIS networks
+
+### TraceIQ Data Flow
+
+```
+1. GPS Data Ingestion (TraceIQ Pipeline - Separate Process)
+   └─> Raw GPS logs (KML, GPX, JSON, CSV)
+   └─> Parse coordinates, timestamps, metadata
+   └─> Validate and clean location data
+
+2. Database Write (via TrinityRouter)
+   └─> TrinityRouter.storeEvidence({
+         type: 'location',
+         content: 'GPS coordinate data',
+         metadata: {
+           latitude: 37.7749,
+           longitude: -122.4194,
+           timestamp: '2026-02-01T12:00:00Z',
+           accuracy: 10,
+           source: 'device-001'
+         }
+       })
+
+3. PostGIS Storage (PostgreSQL)
+   └─> INSERT INTO evidence (geom, ...)
+       VALUES (ST_SetSRID(ST_MakePoint(longitude, latitude), 4326), ...)
+   └─> Spatial index created automatically (GIST)
+
+4. Meta-Analysis Integration
+   └─> Spatial queries via TrinityRouter:
+       - Proximity search (find evidence near location)
+       - Geofencing (was entity in specific area at time X?)
+       - Route reconstruction (connect GPS points into paths)
+       - Location clustering (identify frequently visited places)
+       - Temporal spatial analysis (movement patterns over time)
+```
+
+### Spatial Query Examples
+
+**Proximity Search:**
+```typescript
+// Find all evidence within 100 meters of a location
+const results = await router.query({
+  type: 'spatial',
+  query: 'proximity',
+  params: {
+    center: { lat: 37.7749, lon: -122.4194 },
+    radius: 100, // meters
+    caseId: 'case-001'
+  }
+});
+```
+
+**Geofence Check:**
+```typescript
+// Was entity at location X during time window?
+const results = await pgClient`
+  SELECT * FROM evidence
+  WHERE case_id = ${caseId}
+    AND ST_DWithin(
+          geom::geography,
+          ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326)::geography,
+          ${radius}
+        )
+    AND created_at BETWEEN ${startTime} AND ${endTime}
+`;
+```
+
+**Route Reconstruction:**
+```typescript
+// Connect GPS points into a path
+const route = await pgClient`
+  SELECT ST_MakeLine(geom ORDER BY created_at) AS route
+  FROM evidence
+  WHERE case_id = ${caseId}
+    AND metadata->>'source' = ${deviceId}
+    AND created_at BETWEEN ${startTime} AND ${endTime}
+`;
+```
+
+**Note:** TraceIQ handles GPS ingestion separately. Once data reaches PostgreSQL, it integrates with the meta-analysis pipeline for cross-analysis with other evidence types (messages, documents, entities).
 
 ---
 
