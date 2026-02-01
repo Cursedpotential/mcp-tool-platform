@@ -13,13 +13,13 @@ This platform serves as a **centralized tool gateway** where heavy computational
 - 🔍 **Search** - ripgrep/ugrep integration with JSON output and JavaScript fallbacks
 - 🧠 **NLP** - Entity extraction, sentiment analysis, keyword extraction, language detection
 - 🔐 **Forensics** - Cryptographic evidence chain of custody with SHA-256 hashing
-- 📊 **Vector Databases** - Chroma (in-memory + persistent), Qdrant, pgvector support
+- 📊 **Vector Databases** - Chroma (72-hour TTL working memory), pgvector support
 - 📚 **Library Tools** - Cheerio, XML, JSON5, YAML, CSV, Natural.js, Compromise
 - 🗄️ **Pattern Management** - Store and manage behavioral patterns with full CRUD
 - ⚙️ **Settings Management** - Configure LLM providers, databases, workflows
 
 **Partially Implemented (Requires External Services):**
-- 🤖 ML/Embeddings, Graph Databases (Neo4j/Graphiti), Python Bridge
+- 🤖 ML/Embeddings, Graph Databases (Neo4j + Graphiti), Python Bridge
 - 🌐 Browser Search (Tavily/Perplexity), Workflow Automation (n8n)
 - 📝 Summarization (requires LLM API), NotebookLM integration
 
@@ -93,11 +93,62 @@ BUILT_IN_FORGE_API_KEY=your_key
                      ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                   Storage Layer                             │
-│  • Chroma (in-process working memory)                       │
-│  • PostgreSQL/MySQL (structured data via Drizzle)           │
-│  • pgvector (embeddings - requires Supabase)                │
-│  • Neo4j (graph relationships - requires setup)             │
+│  • Chroma (72-hour TTL working memory)                      │
+│  • PostgreSQL (37 extensions: pgvector, postgis, etc.)      │
+│  • MySQL (structured data via Drizzle)                      │
+│  • Neo4j + Graphiti (temporal knowledge graphs)             │
+│  • Directus (file vault with forensic integrity)            │
+│  • Redis/Dragonfly (caching)                                │
 └─────────────────────────────────────────────────────────────┘
+```
+
+### PostgreSQL Extensions (37 Total)
+
+**Core (2):** plpgsql, uuid-ossp
+
+**Cryptography & Security (1):** pgcrypto
+
+**Vector Search (1):** vector (pgvector)
+
+**Text Search & Processing (4):** pg_trgm, citext, unaccent, fuzzystrmatch
+
+**Indexing (4):** btree_gin, btree_gist, bloom, hypopg
+
+**Data Types (2):** hstore, ltree
+
+**PostGIS Suite (8):** postgis, postgis_raster, postgis_sfcgal, postgis_tiger_geocoder, postgis_topology, address_standardizer, address_standardizer_data_us, pgrouting
+
+**Monitoring & Auditing (2):** pg_stat_statements, pgaudit
+
+**Job Scheduling (2):** pg_cron, pgmq
+
+**Webhooks (1):** pg_net
+
+**Foreign Data Wrappers (2):** dblink, postgres_fdw
+
+**JSON Validation (1):** pg_jsonschema
+
+**Utilities (5):** tablefunc, intarray, moddatetime, insert_username, tcn
+
+### Graphiti + Neo4j Integration
+
+**Graphiti** is a temporal knowledge graph library that acts as a middleware layer on top of Neo4j, providing:
+- **Entity Extraction** - Automatic extraction from text
+- **Temporal Tracking** - Track how relationships change over time
+- **Contradiction Detection** - Find conflicting claims automatically
+- **Community Detection** - Identify clusters of related entities
+- **Fact Versioning** - Historical relationship tracking
+
+**Architecture:**
+```
+Graphiti Library (Middleware)
+    ├── Entity Extractor (LLM-powered)
+    ├── Relationship Builder
+    ├── Temporal Tracker
+    ├── Contradiction Detector
+    └── Neo4j Driver
+            ↓
+    Neo4j Database
 ```
 
 ## 🔧 API Usage
@@ -146,7 +197,7 @@ const result = await trpc.mcp.invokeTool.mutate({
 | **document** | 15+ | Pandoc conversion, OCR, text extraction, segmentation |
 | **search** | 8+ | ripgrep, ugrep, BM25 retrieval, similarity search |
 | **nlp** | 12+ | Entity extraction, sentiment, keywords, language detection |
-| **vector-db** | 10+ | Chroma, Qdrant, pgvector operations |
+| **vector-db** | 10+ | Chroma, pgvector operations |
 | **forensics** | 6+ | Evidence hashing, chain of custody, verification |
 | **library** | 15+ | Cheerio, XML, JSON5, YAML, Natural.js, Compromise |
 | **diff** | 4+ | Text comparison, similarity analysis |
@@ -272,8 +323,8 @@ This platform can be used for:
 > For detailed VPS deployment (salem-nexus/salem-forge), see [DEPLOYMENT.md](DEPLOYMENT.md) and [Master Deployment Guide](deploy/salem-trinity/MASTER_DEPLOYMENT_GUIDE.md)
 
 **Multi-VPS "Trinity" Architecture:**
-- **VPS1 (Nexus)**: PostgreSQL, Directus, PhotoPrism, n8n, Coolify
-- **VPS2 (Forge)**: LiteLLM, MetaMCP, ChromaDB, Ollama, Kasm
+- **VPS1 (Nexus)**: PostgreSQL (37 extensions), Directus, PhotoPrism, n8n, Coolify
+- **VPS2 (Forge)**: LiteLLM, MetaMCP, ChromaDB (72hr TTL), Ollama, Kasm, FerretDB
 - **VPS3 (Main)**: MySQL, Primary application backend
 
 ## Documentation Structure

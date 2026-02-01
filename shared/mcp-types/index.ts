@@ -73,21 +73,20 @@ export interface ToolExample {
 }
 
 export type ToolPermission =
-  | "read:filesystem"
-  | "write:filesystem"
-  | "read:network"
-  | "write:network"
-  | "execute:process"
-  | "access:llm"
-  | "access:vectordb"
-  | "access:graphdb"
-  | "access:mem0"
-  | "access:n8n"
-  | "access:notebooklm"
-  | "fs_read"
-  | "fs_write"
-  | "network"
-  | "write";
+  | 'read:filesystem'
+  | 'write:filesystem'
+  | 'read:network'
+  | 'write:network'
+  | 'execute:process'
+  | 'access:llm'
+  | 'access:vectordb'
+  | 'access:graphdb'
+  | 'access:n8n'
+  | 'access:notebooklm'
+  | 'fs_read'
+  | 'fs_write'
+  | 'network'
+  | 'write';
 
 export interface CostEstimate {
   tokens?: number;

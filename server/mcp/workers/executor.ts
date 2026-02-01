@@ -651,46 +651,6 @@ export class TaskExecutor {
       return executeNotebookLMTool("notebooklm.stats", {});
     });
 
-    this.registerHandler("mem0.add", async args => {
-      const { addMemory } = await import("../plugins/mem0");
-      return addMemory(
-        args as {
-          content: string;
-          metadata?: Record<string, unknown>;
-          userId?: string;
-          agentId?: string;
-          projectId?: string;
-          scope?: "agent" | "project" | "user" | "global";
-        }
-      );
-    });
-
-    this.registerHandler("mem0.search", async args => {
-      const { searchMemories } = await import("../plugins/mem0");
-      return searchMemories(
-        args as {
-          query: string;
-          userId?: string;
-          agentId?: string;
-          projectId?: string;
-          scope?: "agent" | "project" | "user" | "global";
-          limit?: number;
-        }
-      );
-    });
-
-    this.registerHandler("mem0.share_context", async args => {
-      const { shareContext } = await import("../plugins/mem0");
-      return shareContext(
-        args as {
-          fromAgentId: string;
-          toAgentId: string;
-          query: string;
-          limit?: number;
-        }
-      );
-    });
-
     this.registerHandler("n8n.trigger", async args => {
       const { triggerWorkflow } = await import("../plugins/n8n");
       const { workflowId, data } = args as {
