@@ -1,18 +1,20 @@
 /**
  * TrinityRouter - Multi-System Database Orchestrator for Salem Forensic Trinity
- * Implements the 3-Tier Memory Architecture from PROJECT_INTEL_SSOT.md
- * 
+ * Implements the 4-Tier Memory Architecture (updated Feb 2026)
+ *
  * ARCHITECTURE:
- * - Tier 1: PostgreSQL + PGVector (VPS1) - Primary relational & semantic data
+ * - Tier 1: PostgreSQL (VPS1) - Primary relational data & audit logs
  * - Tier 1: Neo4j + Graphiti (Cloud) - Temporal knowledge graph
  * - Tier 1: Directus (VPS1) - Binary file vault
  * - Tier 2: ChromaDB (VPS2) - Short-term working memory (72hr TTL)
+ * - Tier 3: PGVector (VPS1) - Permanent semantic search (LangChain)
  */
 
 import { getPgClient, getDb as getPgDb, checkPgVector } from '../../core/db.postgres';
 import { graphitiClient } from './graphiti-client';
 import { chromaManager } from './chroma-client';
 import { createDirectusClient } from './directus-client';
+import { getPgVectorClient } from './pgvector-client';
 import * as crypto from 'crypto';
 
 // ============================================================================
@@ -62,10 +64,11 @@ export class TrinityRouter {
   private graphiti = graphitiClient;
   private chroma = chromaManager;
   private directus = createDirectusClient();
+  private pgvector = getPgVectorClient();
   private initialized: boolean = false;
 
   constructor() {
-    console.log('[TrinityRouter] Orchestrator initialized');
+    console.log('[TrinityRouter] Orchestrator initialized (4-tier architecture)');
   }
 
   /**
@@ -75,7 +78,7 @@ export class TrinityRouter {
     if (this.initialized) return true;
 
     try {
-      console.log('[TrinityRouter] Connecting to all storage systems...');
+      console.log('[TrinityRouter] Connecting to all storage systems (4-tier)...');
 
       // 1. Postgres
       this.pgClient = await getPgClient();
@@ -84,11 +87,20 @@ export class TrinityRouter {
       // 2. Graphiti (Neo4j)
       await this.graphiti.testConnection();
 
-      // 3. ChromaDB
+      // 3. ChromaDB (Tier 2 - Working Memory)
       await this.chroma.initialize();
 
       // 4. Directus
       await this.directus.connect();
+
+      // 5. PGVector (Tier 3 - Permanent Semantic Search)
+      try {
+        await this.pgvector.initialize();
+        console.log('[TrinityRouter] PGVector (Tier 3) initialized successfully');
+      } catch (err) {
+        console.warn('[TrinityRouter] PGVector initialization failed, continuing without Tier 3:', err);
+        // Non-fatal - system can operate without pgvector
+      }
 
       this.initialized = true;
       console.log('[TrinityRouter] All storage tiers connected successfully');
@@ -225,6 +237,26 @@ export class TrinityRouter {
         console.warn('[TrinityRouter] Chroma storage failed:', err.message);
       }
 
+      // --- TIER 3: PERMANENT SEMANTIC SEARCH (PGVECTOR) ---
+      try {
+        const pgvectorId = await this.pgvector.storeEmbedding({
+          caseId: payload.caseId,
+          content: payload.content,
+          metadata: {
+            ...payload.metadata,
+            evidence_type: payload.type,
+            timestamp
+          },
+          postgresId: result.postgresId,
+          hash: result.hash
+        });
+        console.log('[TrinityRouter] Tier 3 (PGVector) storage successful:', pgvectorId);
+      } catch (err: any) {
+        result.errors?.push({ system: 'pgvector', message: err.message });
+        console.warn('[TrinityRouter] PGVector storage failed:', err.message);
+        // Non-fatal - evidence still stored in other tiers
+      }
+
     } catch (err: any) {
       result.success = false;
       console.error('[TrinityRouter] Critical error in storeEvidence:', err);
@@ -286,22 +318,18 @@ export class TrinityRouter {
     }
   }
 
+  /**
+   * Query pgvector using LangChain integration (Tier 3)
+   * Performs permanent semantic search with Ollama embeddings
+   */
   private async queryPgVector(query: string, caseId?: string, limit: number = 5): Promise<any[]> {
-    if (!this.pgClient) return [];
-
-    const isVectorReady = await checkPgVector();
-    if (!isVectorReady) {
-      return [];
-    }
-
     try {
-      return await this.pgClient`
-        SELECT *, (embedding <=> '[0,0,0...]'::vector) as distance 
-        FROM evidence 
-        WHERE case_id = ${caseId}
-        ORDER BY distance ASC
-        LIMIT ${limit}
-      `;
+      const results = await this.pgvector.semanticSearch(query, caseId, limit);
+      return results.map(result => ({
+        content: result.content,
+        metadata: result.metadata,
+        similarity_score: result.score
+      }));
     } catch (err) {
       console.error('[TrinityRouter] PGVector query failed:', err);
       return [];
@@ -366,6 +394,7 @@ export class TrinityRouter {
   async shutdown(): Promise<void> {
     await Promise.all([
       this.graphiti.close(),
+      this.pgvector.close(),
     ]);
     this.initialized = false;
     console.log('[TrinityRouter] All storage tiers shut down');

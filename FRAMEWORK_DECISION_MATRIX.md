@@ -129,23 +129,22 @@
 
 ### ✅ USE EXISTING FRAMEWORKS
 
-**1. Vector Operations → LangChain**
+**1. Vector Operations → LangChain** ✅ COMPLETE
 ```typescript
-import { Chroma } from '@langchain/community/vectorstores/chroma';
+// Implemented in server/mcp/storage/pgvector-client.ts
 import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
 import { OllamaEmbeddings } from '@langchain/community/embeddings/ollama';
 
-// Working memory (72hr TTL)
-const chromaStore = await Chroma.fromExistingCollection(
-  new OllamaEmbeddings({ baseUrl: 'http://10.10.0.3:11434' }),
-  { collectionName: 'evidence', url: 'http://10.10.0.3:8000' }
-);
+// Tier 3: Permanent semantic search (LangChain + Ollama)
+const pgvector = new PgVectorClient({
+  postgresUrl: 'postgresql://user:pass@10.10.0.2:5432/evidence_db',
+  ollamaBaseUrl: 'http://10.10.0.3:11434',
+  ollamaModel: 'nomic-embed-text'
+});
 
-// Permanent storage
-const pgStore = await PGVectorStore.initialize(
-  new OllamaEmbeddings({ baseUrl: 'http://10.10.0.3:11434' }),
-  { connectionString: process.env.POSTGRES_URL, tableName: 'embeddings' }
-);
+// Integrated into TrinityRouter:
+// - storeEvidence() → stores embeddings in Tier 3
+// - semanticSearch() → queries pgvector with LangChain
 ```
 
 **2. LLM Operations → LangChain + LiteLLM**
