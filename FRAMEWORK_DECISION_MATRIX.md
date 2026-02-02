@@ -248,19 +248,19 @@ import { CopilotSidebar } from '@copilotkit/react-ui';
 ## 🎯 Revised Implementation Strategy
 
 ### Phase 1: Framework Integration (10 hours)
-1. **LangChain Vector Stores** (3 hours)
-   - Replace custom Chroma client with LangChain
-   - Replace custom pgvector with LangChain
-   - Wire to TrinityRouter
+1. **LangChain Vector Stores** ✅ COMPLETE (3 hours)
+   - Replaced custom pgvector with LangChain PGVectorStore
+   - Integrated OllamaEmbeddings for Tier 3
+   - Wired to TrinityRouter
 
 2. **LangChain LLMs** (2 hours)
    - Configure LiteLLM gateway
    - Replace custom LLM calls with LangChain models
 
-3. **NotebookLM MCP** (1 hour)
-   - Install community server
-   - Remove custom plugin
-   - Test integration
+3. **NotebookLM MCP** ✅ COMPLETE (1 hour)
+   - Configured community server (@pleaseprompto/notebooklm-mcp)
+   - Removed custom plugin (477 lines)
+   - Added to claude_desktop_config.json
 
 4. **CopilotKit UI** (4 hours)
    - Set up runtime endpoint
@@ -268,9 +268,10 @@ import { CopilotSidebar } from '@copilotkit/react-ui';
    - Replace custom chat UI
 
 ### Phase 2: Custom Core Logic (20 hours)
-5. **Graphiti MCP Tools** (8 hours)
-   - Create memory tools using LangChain for entity extraction
-   - Implement temporal queries
+5. **Graphiti MCP Tools** ✅ COMPLETE (8 hours)
+   - Created 5 MCP tools (add_memory, search_memory, get_timeline, detect_contradictions, share_context)
+   - Implemented temporal queries with valid_from/valid_to
+   - Entity storage with facts and relationships
 
 6. **Contradiction Detection** (4 hours)
    - Cypher queries + LangChain for analysis
