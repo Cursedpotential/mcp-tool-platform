@@ -1,16 +1,19 @@
 # Gap Analysis & Critical Priorities
 
 **Last Updated:** February 1, 2026
-**Status:** 🚨 BLOCKING - Nothing else gets done until these are complete
-**Priority Level:** CRITICAL - Core system functionality depends on these
+**Status:** 🚨 BLOCKING - Nothing else gets done until ALL priorities complete
+**Priority Level:** CRITICAL - ALL items required (P1 + P2 + P3)
+**Total Effort:** 58-62 hours
 
 ---
 
 ## ⚠️ STOP - Read This First
 
-**This document contains the MOST CRITICAL gaps** in the MCP Tool Platform. These are not optional enhancements - they are **required for the system to function as designed**.
+**This document contains ALL CRITICAL gaps** in the MCP Tool Platform. These are not optional enhancements - they are **required for the system to function as designed**. The advanced features (Priority 3) are **what this application is being built for**.
 
-**RULE:** Do not work on any other features, refactoring, or improvements until ALL Priority 1 items are complete and tested.
+**RULE:** Do not work on any other features, refactoring, or improvements until **ALL priorities (1, 2, AND 3)** are complete and tested.
+
+**USER DIRECTIVE:** "I need everything all the way to the advanced done. The advanced is what I am doing this for."
 
 ---
 
@@ -602,29 +605,640 @@ export async function mergeEntities(args: {
 
 ---
 
-## 📊 Priority 3: ADVANCED (Complete After P2)
+## 📊 Priority 3: ADVANCED (This Is What We're Building For) ⚠️
 
-### Gap 3.1: Temporal Pattern Analysis
-- Detect repeating temporal patterns
-- Event sequence mining
-- Relationship evolution over time
+### Gap 3.1: Temporal Pattern Analysis ⚠️
 
-**Estimated Time:** 10+ hours
+**Status:** 🔴 CRITICAL - Core forensic capability
+**Impact:** Can't detect behavioral patterns over time
+**Effort:** 10-12 hours
 
-### Gap 3.2: Cross-Evidence Linking
+**What's Missing:**
+- Repeating temporal patterns (same behavior at intervals)
+- Event sequence mining (A always follows B)
+- Relationship evolution tracking (how connections change)
+- Temporal motif detection (common time-based patterns)
+
+**Implementation:**
+
+**File:** `server/mcp/plugins/graph-analytics.ts`
+
+```typescript
+export async function detectTemporalPatterns(args: {
+  caseId: string;
+  patternType: 'repeating' | 'sequence' | 'evolution' | 'motif';
+  timeWindow?: { start: string; end: string };
+  minOccurrences?: number;
+}): Promise<{
+  patterns: Array<{
+    type: string;
+    occurrences: number;
+    timestamps: string[];
+    entities: Entity[];
+    confidence: number;
+    description: string;
+  }>;
+}> {
+  // Detect repeating patterns
+  if (args.patternType === 'repeating') {
+    const query = `
+      // Find relationships that repeat over time
+      MATCH (e1:Entity)-[r:${relationshipType}]->(e2:Entity)
+      WHERE r.case_id = $caseId
+        AND r.timestamp >= $start
+        AND r.timestamp <= $end
+      WITH e1, e2, type(r) AS relType,
+           COLLECT(r.timestamp) AS timestamps
+      WHERE SIZE(timestamps) >= $minOccurrences
+      RETURN e1, e2, relType, timestamps,
+             SIZE(timestamps) AS occurrences
+      ORDER BY occurrences DESC
+    `;
+
+    return formatPatterns(await graphitiClient.runQuery(query, args));
+  }
+
+  // Detect event sequences (A → B → C)
+  if (args.patternType === 'sequence') {
+    const query = `
+      // Find common event sequences
+      MATCH path = (e1)-[r1]->(e2)-[r2]->(e3)
+      WHERE r1.timestamp < r2.timestamp
+        AND r1.case_id = $caseId
+      WITH [node IN nodes(path) | node.name] AS sequence,
+           COUNT(*) AS frequency
+      WHERE frequency >= $minOccurrences
+      RETURN sequence, frequency
+      ORDER BY frequency DESC
+    `;
+
+    return formatSequences(await graphitiClient.runQuery(query, args));
+  }
+
+  // Track relationship evolution
+  if (args.patternType === 'evolution') {
+    const query = `
+      // Track how relationships change over time
+      MATCH (e1:Entity)-[r]->(e2:Entity)
+      WHERE r.case_id = $caseId
+      WITH e1, e2, type(r) AS relType,
+           COLLECT({
+             timestamp: r.timestamp,
+             properties: r.properties,
+             strength: r.strength
+           }) AS evolution
+      WHERE SIZE(evolution) > 1
+      RETURN e1, e2, relType, evolution
+    `;
+
+    return formatEvolution(await graphitiClient.runQuery(query, args));
+  }
+
+  return { patterns: [] };
+}
+```
+
+**Acceptance Criteria:**
+- [ ] Detects repeating temporal patterns (same relationship over time)
+- [ ] Mines event sequences (A → B → C patterns)
+- [ ] Tracks relationship evolution (how connections change)
+- [ ] Identifies temporal motifs (common time-based patterns)
+- [ ] Returns confidence scores and occurrence counts
+
+**Estimated Time:** 10-12 hours
+
+---
+
+### Gap 3.2: Cross-Evidence Linking ⚠️
+
+**Status:** 🔴 CRITICAL - Core forensic capability
+**Impact:** Can't correlate evidence across sources
+**Effort:** 10 hours
+
+**What's Missing:**
 - Link evidence to knowledge graph entities
 - Find supporting/contradicting evidence
-- Evidence clustering by topic
+- Evidence clustering by topic/entity
+- Cross-source correlation (message + GPS + document)
+- Evidence timeline reconstruction
 
-**Estimated Time:** 8+ hours
+**Implementation:**
 
-### Gap 3.3: Network Topology Metrics
-- Clustering coefficient
-- Network density
-- Shortest path analysis
-- Diameter/radius
+**File:** `server/mcp/plugins/evidence-linker.ts` (NEW)
 
-**Estimated Time:** 6+ hours
+```typescript
+export async function linkEvidenceToGraph(args: {
+  evidenceId: string;
+  caseId: string;
+}): Promise<{
+  linkedEntities: Entity[];
+  linkedRelationships: Relationship[];
+  confidence: number;
+}> {
+  // 1. Get evidence from PostgreSQL
+  const evidence = await pgClient`
+    SELECT * FROM evidence WHERE id = ${args.evidenceId}
+  `;
+
+  // 2. Extract entities from evidence content
+  const entities = await extractEntities(evidence.content);
+
+  // 3. Match entities to knowledge graph
+  const matches = await graphitiClient.runQuery(`
+    UNWIND $entities AS entity
+    MATCH (e:Entity)
+    WHERE toLower(e.name) = toLower(entity.name)
+      OR e.id IN entity.aliases
+    RETURN e, entity
+  `, { entities });
+
+  // 4. Create REFERENCED_IN relationships
+  for (const match of matches) {
+    await graphitiClient.storeRelationships([{
+      type: 'REFERENCED_IN',
+      sourceId: match.e.id,
+      targetId: args.evidenceId,
+      properties: {
+        timestamp: evidence.created_at,
+        confidence: match.confidence,
+        case_id: args.caseId
+      }
+    }]);
+  }
+
+  return { linkedEntities: matches.map(m => m.e), linkedRelationships: [], confidence: 0.85 };
+}
+
+export async function findRelatedEvidence(args: {
+  evidenceId: string;
+  relationshipType: 'supporting' | 'contradicting' | 'contextual';
+  limit?: number;
+}): Promise<{
+  evidence: Array<{
+    id: string;
+    type: string;
+    content: string;
+    relationship: string;
+    confidence: number;
+  }>;
+}> {
+  // 1. Get entities from source evidence
+  const sourceEntities = await pgClient`
+    SELECT e.* FROM evidence ev
+    JOIN evidence_entities ee ON ee.evidence_id = ev.id
+    JOIN entities e ON e.id = ee.entity_id
+    WHERE ev.id = ${args.evidenceId}
+  `;
+
+  // 2. Find evidence mentioning same entities
+  const related = await pgClient`
+    SELECT DISTINCT ev2.*,
+           COUNT(DISTINCT e.id) AS shared_entities
+    FROM evidence ev2
+    JOIN evidence_entities ee2 ON ee2.evidence_id = ev2.id
+    JOIN entities e ON e.id = ee2.entity_id
+    WHERE e.id IN (${sourceEntities.map(e => e.id)})
+      AND ev2.id != ${args.evidenceId}
+    GROUP BY ev2.id
+    ORDER BY shared_entities DESC
+    LIMIT ${args.limit || 10}
+  `;
+
+  // 3. Classify relationship (supporting/contradicting)
+  return classifyEvidenceRelationships(related, args.relationshipType);
+}
+
+export async function clusterEvidenceByTopic(args: {
+  caseId: string;
+  minClusterSize?: number;
+}): Promise<{
+  clusters: Array<{
+    id: string;
+    topic: string;
+    evidence: string[];
+    entities: Entity[];
+    size: number;
+  }>;
+}> {
+  // Use pgvector + graph analysis for clustering
+  // 1. Get evidence embeddings from pgvector
+  // 2. Cluster embeddings (K-means or DBSCAN)
+  // 3. For each cluster, extract common entities from graph
+  // 4. Assign topic labels based on entity types and frequencies
+}
+```
+
+**Acceptance Criteria:**
+- [ ] Evidence automatically linked to knowledge graph entities
+- [ ] Can find supporting evidence (mentions same entities)
+- [ ] Can find contradicting evidence (conflicts with facts)
+- [ ] Evidence clusters by topic/entity
+- [ ] Cross-source correlation (message + GPS + document at same time)
+- [ ] Timeline reconstruction from multiple evidence sources
+
+**Estimated Time:** 10 hours
+
+---
+
+### Gap 3.3: Network Topology Metrics ⚠️
+
+**Status:** 🔴 CRITICAL - Core forensic capability
+**Impact:** Can't analyze communication network structure
+**Effort:** 8 hours
+
+**What's Missing:**
+- Clustering coefficient (how tightly knit is the network?)
+- Network density (how connected is the network?)
+- Shortest path analysis (degrees of separation)
+- Diameter/radius (network size metrics)
+- Bridge detection (entities connecting separate groups)
+- Isolated node detection (entities with few connections)
+
+**Implementation:**
+
+**File:** `server/mcp/plugins/graph-analytics.ts`
+
+```typescript
+export async function analyzeNetworkTopology(args: {
+  caseId: string;
+  metrics: Array<'clustering' | 'density' | 'diameter' | 'bridges' | 'isolated'>;
+}): Promise<{
+  clustering: { coefficient: number; byEntity: Map<string, number> };
+  density: number;
+  diameter: number;
+  radius: number;
+  bridges: Entity[];
+  isolated: Entity[];
+}> {
+  const results: any = {};
+
+  // Clustering coefficient
+  if (args.metrics.includes('clustering')) {
+    const query = `
+      MATCH (n:Entity {case_id: $caseId})
+      OPTIONAL MATCH (n)--(neighbor:Entity)
+      WITH n, COLLECT(DISTINCT neighbor) AS neighbors
+      WHERE SIZE(neighbors) > 1
+      OPTIONAL MATCH (n1)--(n2)
+      WHERE n1 IN neighbors AND n2 IN neighbors AND n1 <> n2
+      WITH n, neighbors, COUNT(DISTINCT n1) + COUNT(DISTINCT n2) AS actualConnections,
+           SIZE(neighbors) * (SIZE(neighbors) - 1) AS possibleConnections
+      RETURN AVG(actualConnections * 1.0 / possibleConnections) AS avgClustering,
+             COLLECT({entity: n.id, coefficient: actualConnections * 1.0 / possibleConnections}) AS byEntity
+    `;
+    results.clustering = await graphitiClient.runQuery(query, { caseId: args.caseId });
+  }
+
+  // Network density
+  if (args.metrics.includes('density')) {
+    const query = `
+      MATCH (n:Entity {case_id: $caseId})
+      WITH COUNT(n) AS nodeCount
+      MATCH ()-[r]->()
+      WHERE r.case_id = $caseId
+      WITH nodeCount, COUNT(r) AS edgeCount
+      RETURN edgeCount * 1.0 / (nodeCount * (nodeCount - 1)) AS density
+    `;
+    results.density = await graphitiClient.runQuery(query, { caseId: args.caseId });
+  }
+
+  // Diameter and radius
+  if (args.metrics.includes('diameter')) {
+    const query = `
+      // Use APOC for shortest path calculations
+      MATCH (n1:Entity {case_id: $caseId}), (n2:Entity {case_id: $caseId})
+      WHERE n1 <> n2
+      MATCH path = shortestPath((n1)-[*]-(n2))
+      RETURN MAX(LENGTH(path)) AS diameter,
+             MIN(LENGTH(path)) AS radius
+    `;
+    const result = await graphitiClient.runQuery(query, { caseId: args.caseId });
+    results.diameter = result[0].diameter;
+    results.radius = result[0].radius;
+  }
+
+  // Bridge detection (high betweenness centrality)
+  if (args.metrics.includes('bridges')) {
+    const query = `
+      CALL gds.betweenness.stream({
+        nodeProjection: 'Entity',
+        relationshipProjection: 'RELATES_TO'
+      })
+      YIELD nodeId, score
+      WHERE score > 0.5  // High betweenness = bridge
+      MATCH (e:Entity) WHERE id(e) = nodeId
+      RETURN e
+    `;
+    results.bridges = await graphitiClient.runQuery(query, { caseId: args.caseId });
+  }
+
+  // Isolated nodes (degree < 2)
+  if (args.metrics.includes('isolated')) {
+    const query = `
+      MATCH (n:Entity {case_id: $caseId})
+      WHERE NOT (n)-[]-()  // No connections
+         OR SIZE([(n)-[]-() | 1]) < 2  // < 2 connections
+      RETURN n
+    `;
+    results.isolated = await graphitiClient.runQuery(query, { caseId: args.caseId });
+  }
+
+  return results;
+}
+```
+
+**Acceptance Criteria:**
+- [ ] Calculates clustering coefficient (network cohesion)
+- [ ] Calculates network density (overall connectivity)
+- [ ] Finds diameter and radius (network size)
+- [ ] Identifies bridge entities (connect separate groups)
+- [ ] Detects isolated nodes (minimal connections)
+- [ ] All metrics computed efficiently using Neo4j GDS
+
+**Estimated Time:** 8 hours
+
+---
+
+### Gap 3.4: PostGIS Spatial Analysis ⚠️
+
+**Status:** 🔴 CRITICAL - TraceIQ GPS integration
+**Impact:** Can't analyze geospatial evidence patterns
+**Effort:** 8 hours
+
+**What's Missing:**
+- Proximity clustering (frequent location grouping)
+- Movement pattern analysis (routes, speed, stops)
+- Geofencing alerts (entity entered/exited area)
+- Spatial-temporal correlation (who was where when)
+- Location prediction (where will entity go next)
+
+**Implementation:**
+
+**File:** `server/mcp/plugins/spatial-analytics.ts` (NEW)
+
+```typescript
+export async function analyzeSpatialPatterns(args: {
+  caseId: string;
+  entityId?: string;
+  analysisType: 'clustering' | 'movement' | 'correlation' | 'prediction';
+  timeWindow?: { start: string; end: string };
+}): Promise<{
+  clusters?: Array<{ center: { lat: number; lon: number }; radius: number; visits: number }>;
+  movements?: Array<{ route: any; distance: number; duration: number; avgSpeed: number }>;
+  correlations?: Array<{ entity1: string; entity2: string; proximity: number; timeOverlap: number }>;
+}> {
+  // Location clustering (ST_ClusterDBSCAN)
+  if (args.analysisType === 'clustering') {
+    const clusters = await pgClient`
+      SELECT ST_ClusterDBSCAN(geom, eps := 100, minpoints := 3) OVER () AS cluster_id,
+             ST_Centroid(ST_Collect(geom)) AS center,
+             COUNT(*) AS visits,
+             AVG(ST_Distance(geom, ST_Centroid(ST_Collect(geom)))) AS avg_radius
+      FROM evidence
+      WHERE case_id = ${args.caseId}
+        AND geom IS NOT NULL
+      GROUP BY cluster_id
+      HAVING cluster_id IS NOT NULL
+      ORDER BY visits DESC
+    `;
+
+    return { clusters: formatClusters(clusters) };
+  }
+
+  // Movement analysis
+  if (args.analysisType === 'movement') {
+    const routes = await pgClient`
+      WITH ordered_points AS (
+        SELECT geom, created_at,
+               LAG(geom) OVER (ORDER BY created_at) AS prev_geom,
+               LAG(created_at) OVER (ORDER BY created_at) AS prev_time
+        FROM evidence
+        WHERE case_id = ${args.caseId}
+          AND metadata->>'entity_id' = ${args.entityId}
+          AND geom IS NOT NULL
+        ORDER BY created_at
+      )
+      SELECT ST_MakeLine(prev_geom, geom) AS segment,
+             ST_Distance(prev_geom::geography, geom::geography) AS distance_meters,
+             EXTRACT(EPOCH FROM (created_at - prev_time)) AS duration_seconds,
+             ST_Distance(prev_geom::geography, geom::geography) /
+               EXTRACT(EPOCH FROM (created_at - prev_time)) AS speed_mps
+      FROM ordered_points
+      WHERE prev_geom IS NOT NULL
+    `;
+
+    return { movements: formatMovements(routes) };
+  }
+
+  // Spatial-temporal correlation (who was near whom when)
+  if (args.analysisType === 'correlation') {
+    const correlations = await pgClient`
+      SELECT e1.metadata->>'entity_id' AS entity1,
+             e2.metadata->>'entity_id' AS entity2,
+             ST_Distance(e1.geom::geography, e2.geom::geography) AS distance_meters,
+             ABS(EXTRACT(EPOCH FROM (e1.created_at - e2.created_at))) AS time_diff_seconds,
+             COUNT(*) AS proximity_events
+      FROM evidence e1
+      JOIN evidence e2 ON e1.case_id = e2.case_id
+      WHERE e1.case_id = ${args.caseId}
+        AND e1.id < e2.id  -- Avoid duplicates
+        AND ST_DWithin(e1.geom::geography, e2.geom::geography, 100)  -- Within 100m
+        AND ABS(EXTRACT(EPOCH FROM (e1.created_at - e2.created_at))) < 300  -- Within 5 min
+      GROUP BY entity1, entity2, distance_meters, time_diff_seconds
+      HAVING COUNT(*) >= 3  -- At least 3 proximity events
+      ORDER BY proximity_events DESC
+    `;
+
+    return { correlations: formatCorrelations(correlations) };
+  }
+
+  return {};
+}
+
+export async function detectGeofenceViolations(args: {
+  caseId: string;
+  geofences: Array<{
+    id: string;
+    polygon: { type: 'Polygon'; coordinates: number[][][] };
+    alertType: 'entry' | 'exit' | 'presence';
+  }>;
+  timeWindow?: { start: string; end: string };
+}): Promise<{
+  violations: Array<{
+    geofenceId: string;
+    entityId: string;
+    timestamp: string;
+    eventType: 'entered' | 'exited' | 'present';
+    location: { lat: number; lon: number };
+  }>;
+}> {
+  // For each geofence, detect entry/exit events
+  const violations = [];
+
+  for (const fence of args.geofences) {
+    const query = `
+      WITH points_with_status AS (
+        SELECT
+          metadata->>'entity_id' AS entity_id,
+          geom,
+          created_at,
+          ST_Within(geom, ST_GeomFromGeoJSON($polygon)) AS inside,
+          LAG(ST_Within(geom, ST_GeomFromGeoJSON($polygon)))
+            OVER (PARTITION BY metadata->>'entity_id' ORDER BY created_at) AS was_inside
+        FROM evidence
+        WHERE case_id = ${args.caseId}
+          AND geom IS NOT NULL
+          AND created_at >= ${args.timeWindow?.start}
+          AND created_at <= ${args.timeWindow?.end}
+      )
+      SELECT entity_id, created_at, geom,
+             CASE
+               WHEN inside AND NOT COALESCE(was_inside, false) THEN 'entered'
+               WHEN NOT inside AND COALESCE(was_inside, false) THEN 'exited'
+               WHEN inside THEN 'present'
+             END AS event_type
+      FROM points_with_status
+      WHERE inside != COALESCE(was_inside, false)
+         OR (inside AND $alertType = 'presence')
+    `;
+
+    const events = await pgClient.query(query, {
+      polygon: JSON.stringify(fence.polygon),
+      alertType: fence.alertType,
+      ...args
+    });
+
+    violations.push(...events.map(e => ({
+      geofenceId: fence.id,
+      entityId: e.entity_id,
+      timestamp: e.created_at,
+      eventType: e.event_type,
+      location: { lat: e.geom.y, lon: e.geom.x }
+    })));
+  }
+
+  return { violations };
+}
+```
+
+**Acceptance Criteria:**
+- [ ] Links evidence to knowledge graph entities
+- [ ] Finds supporting evidence (corroborates facts)
+- [ ] Finds contradicting evidence (conflicts with facts)
+- [ ] Clusters evidence by topic using embeddings + graph
+- [ ] Cross-source correlation (message + GPS + document)
+- [ ] Timeline reconstruction from multiple sources
+- [ ] Geofence violation detection
+
+**Estimated Time:** 10 hours
+
+---
+
+### Gap 3.5: Advanced Relationship Discovery ⚠️
+
+**Status:** 🔴 CRITICAL - Core forensic capability
+**Impact:** Can't infer hidden relationships
+**Effort:** 8 hours
+
+**What's Missing:**
+- Transitive relationship discovery (A knows B, B knows C → A may know C)
+- Relationship strength scoring (frequency + recency + context)
+- Hidden connection detection (indirect relationships)
+- Association rule mining (if A then usually B)
+- Anomaly detection (unusual relationship patterns)
+
+**Implementation:**
+
+```typescript
+export async function discoverHiddenRelationships(args: {
+  caseId: string;
+  maxDegrees: number; // Degrees of separation to search
+  minConfidence: number;
+}): Promise<{
+  inferred: Array<{
+    entity1: Entity;
+    entity2: Entity;
+    inferredType: string;
+    confidence: number;
+    path: Entity[];
+    evidence: string[];
+  }>;
+}> {
+  // Find transitive relationships
+  const query = `
+    // Find entities connected through intermediaries
+    MATCH (e1:Entity {case_id: $caseId}),
+          (e2:Entity {case_id: $caseId}),
+          path = shortestPath((e1)-[*..${args.maxDegrees}]-(e2))
+    WHERE e1 <> e2
+      AND NOT (e1)-[]-(e2)  // Not directly connected
+      AND LENGTH(path) <= $maxDegrees
+    WITH e1, e2, path,
+         1.0 / LENGTH(path) AS pathStrength,  // Shorter path = stronger inference
+         [rel IN relationships(path) | rel.confidence] AS confidences
+    WITH e1, e2, path, pathStrength,
+         REDUCE(s = 1.0, c IN confidences | s * c) AS pathConfidence
+    WHERE pathStrength * pathConfidence >= $minConfidence
+    RETURN e1, e2,
+           [node IN nodes(path) | node] AS intermediaries,
+           pathConfidence * pathStrength AS confidence
+    ORDER BY confidence DESC
+  `;
+
+  return formatInferredRelationships(await graphitiClient.runQuery(query, args));
+}
+
+export async function scoreRelationshipStrength(args: {
+  caseId: string;
+}): Promise<{
+  relationships: Array<{
+    id: string;
+    type: string;
+    entities: [Entity, Entity];
+    strength: number;
+    factors: {
+      frequency: number;      // How often they interact
+      recency: number;        // How recently they interacted
+      diversity: number;      // Variety of interaction types
+      duration: number;       // Time span of relationship
+    };
+  }>;
+}> {
+  const query = `
+    MATCH (e1:Entity)-[r]->(e2:Entity)
+    WHERE r.case_id = $caseId
+    WITH e1, e2, type(r) AS relType,
+         COUNT(r) AS frequency,
+         MAX(r.timestamp) AS lastInteraction,
+         MIN(r.timestamp) AS firstInteraction,
+         COLLECT(DISTINCT type(r)) AS interactionTypes
+    WITH e1, e2, relType,
+         frequency,
+         duration(firstInteraction, lastInteraction).days AS durationDays,
+         duration(lastInteraction, datetime()).days AS daysSinceLastContact,
+         SIZE(interactionTypes) AS diversity
+    RETURN e1, e2, relType,
+           // Composite strength score
+           (frequency * 0.3) +                                    // 30% weight on frequency
+           ((365.0 - daysSinceLastContact) / 365.0 * 0.3) +      // 30% weight on recency
+           (diversity * 0.2) +                                    // 20% weight on diversity
+           (LOG(durationDays + 1) * 0.2)                         // 20% weight on duration
+           AS strength
+    ORDER BY strength DESC
+  `;
+
+  return formatRelationshipStrengths(await graphitiClient.runQuery(query, args));
+}
+```
+
+**Acceptance Criteria:**
+- [ ] Discovers transitive relationships (degrees of separation)
+- [ ] Scores relationship strength (frequency + recency + diversity + duration)
+- [ ] Detects hidden connections through intermediaries
+- [ ] Identifies anomalous relationships (unusual patterns)
+- [ ] Association rule mining (co-occurrence patterns)
+
+**Estimated Time:** 8 hours
 
 ---
 
