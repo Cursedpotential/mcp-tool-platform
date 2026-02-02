@@ -497,7 +497,14 @@ export async function getTimeline(params: {
 }
 
 /**
- * Detect contradictions (stub for now - Gap 1.3)
+ * Detect contradictions in temporal facts
+ * Implements Gap 1.3 from GAP_ANALYSIS_PRIORITIES.md
+ *
+ * STRATEGY:
+ * 1. Find entities with multiple facts
+ * 2. Compare overlapping temporal facts (same valid_from range)
+ * 3. Score contradictions based on semantic opposition
+ * 4. Report high-confidence contradictions
  */
 export async function detectContradictions(params: {
   case_id: string;
@@ -506,14 +513,189 @@ export async function detectContradictions(params: {
 }): Promise<{
   contradictions: Array<{
     entity: string;
-    fact1: { claim: string; timestamp: string };
-    fact2: { claim: string; timestamp: string };
+    fact1: { claim: string; timestamp: string; confidence: number };
+    fact2: { claim: string; timestamp: string; confidence: number };
     confidence: number;
+    reason: string;
   }>;
 }> {
-  console.warn('[Graphiti MCP] detectContradictions is a stub - Gap 1.3 not yet implemented');
-  // TODO: Implement in Gap 1.3
-  return { contradictions: [] };
+  try {
+    const threshold = params.threshold || 0.7;
+    const contradictions: Array<{
+      entity: string;
+      fact1: { claim: string; timestamp: string; confidence: number };
+      fact2: { claim: string; timestamp: string; confidence: number };
+      confidence: number;
+      reason: string;
+    }> = [];
+
+    // Build query with optional entity filter
+    let entityFilter = `e.case_id = $caseId`;
+    if (params.entity_name) {
+      entityFilter += ` AND e.name = $entityName`;
+    }
+
+    // Find entities with multiple facts that overlap temporally
+    const overlappingFacts = await graphitiClient.runQuery<{
+      e: any;
+      f1: any;
+      f2: any;
+    }>(
+      `
+      MATCH (e:Entity)-[:HAS_FACT]->(f1:Fact)
+      MATCH (e)-[:HAS_FACT]->(f2:Fact)
+      WHERE ${entityFilter}
+      AND f1.id < f2.id
+      AND f1.valid_from <= coalesce(f2.valid_to, datetime())
+      AND coalesce(f1.valid_to, datetime()) >= f2.valid_from
+      RETURN e, f1, f2
+      LIMIT 100
+      `,
+      {
+        caseId: params.case_id,
+        entityName: params.entity_name
+      }
+    );
+
+    // Analyze each pair for contradictions
+    for (const result of overlappingFacts) {
+      const entity = result.e.properties;
+      const fact1 = result.f1.properties;
+      const fact2 = result.f2.properties;
+
+      // Simple heuristic-based contradiction detection
+      const contradictionScore = detectSemanticContradiction(
+        fact1.claim,
+        fact2.claim,
+        fact1.confidence || 1.0,
+        fact2.confidence || 1.0
+      );
+
+      if (contradictionScore.score >= threshold) {
+        contradictions.push({
+          entity: entity.name,
+          fact1: {
+            claim: fact1.claim,
+            timestamp: fact1.valid_from,
+            confidence: fact1.confidence || 1.0
+          },
+          fact2: {
+            claim: fact2.claim,
+            timestamp: fact2.valid_from,
+            confidence: fact2.confidence || 1.0
+          },
+          confidence: contradictionScore.score,
+          reason: contradictionScore.reason
+        });
+      }
+    }
+
+    return { contradictions };
+  } catch (error) {
+    console.error('[Graphiti MCP] detectContradictions failed:', error);
+    throw error;
+  }
+}
+
+/**
+ * Heuristic-based semantic contradiction detection
+ *
+ * SIMPLE RULES (can be enhanced with LLM later):
+ * 1. Negation patterns (was/wasn't, did/didn't, is/isn't)
+ * 2. Conflicting values for same property
+ * 3. Mutually exclusive states
+ *
+ * Returns score 0.0-1.0 and reason
+ */
+function detectSemanticContradiction(
+  claim1: string,
+  claim2: string,
+  confidence1: number,
+  confidence2: number
+): { score: number; reason: string } {
+  const c1 = claim1.toLowerCase();
+  const c2 = claim2.toLowerCase();
+
+  // Rule 1: Direct negation patterns
+  const negationPairs = [
+    ['was', "wasn't"],
+    ['did', "didn't"],
+    ['is', "isn't"],
+    ['has', "hasn't"],
+    ['will', "won't"],
+    ['can', "can't"],
+    ['true', 'false'],
+    ['yes', 'no'],
+    ['alive', 'dead'],
+    ['present', 'absent'],
+    ['guilty', 'innocent']
+  ];
+
+  for (const [positive, negative] of negationPairs) {
+    if (
+      (c1.includes(positive) && c2.includes(negative)) ||
+      (c1.includes(negative) && c2.includes(positive))
+    ) {
+      // Check if they're about the same subject
+      const words1 = new Set(c1.split(/\s+/));
+      const words2 = new Set(c2.split(/\s+/));
+      const commonWords = Array.from(words1).filter(w => words2.has(w)).length;
+
+      if (commonWords >= 2) {
+        return {
+          score: Math.min(confidence1, confidence2) * 0.95,
+          reason: `Direct negation pattern: "${positive}" vs "${negative}"`
+        };
+      }
+    }
+  }
+
+  // Rule 2: Conflicting numbers/dates/values
+  const numbers1 = c1.match(/\d+/g) || [];
+  const numbers2 = c2.match(/\d+/g) || [];
+
+  if (numbers1.length > 0 && numbers2.length > 0) {
+    const words1 = new Set(c1.split(/\s+/).filter(w => w.length > 3));
+    const words2 = new Set(c2.split(/\s+/).filter(w => w.length > 3));
+    const commonWords = Array.from(words1).filter(w => words2.has(w) && !/^\d+$/.test(w)).length;
+
+    if (commonWords >= 2 && numbers1[0] !== numbers2[0]) {
+      return {
+        score: Math.min(confidence1, confidence2) * 0.85,
+        reason: `Conflicting values: "${numbers1[0]}" vs "${numbers2[0]}" in similar claims`
+      };
+    }
+  }
+
+  // Rule 3: Mutually exclusive states
+  const exclusivePairs = [
+    ['married', 'single'],
+    ['employed', 'unemployed'],
+    ['guilty', 'innocent'],
+    ['alive', 'deceased'],
+    ['present', 'absent'],
+    ['active', 'inactive'],
+    ['open', 'closed'],
+    ['confirmed', 'denied']
+  ];
+
+  for (const [state1, state2] of exclusivePairs) {
+    if ((c1.includes(state1) && c2.includes(state2)) || (c1.includes(state2) && c2.includes(state1))) {
+      const words1 = new Set(c1.split(/\s+/));
+      const words2 = new Set(c2.split(/\s+/));
+      const commonWords = Array.from(words1).filter(w => words2.has(w)).length;
+
+      if (commonWords >= 2) {
+        return {
+          score: Math.min(confidence1, confidence2) * 0.9,
+          reason: `Mutually exclusive states: "${state1}" vs "${state2}"`
+        };
+      }
+    }
+  }
+
+  // No contradiction detected
+  return { score: 0, reason: 'No contradiction pattern found' };
 }
 
 /**
