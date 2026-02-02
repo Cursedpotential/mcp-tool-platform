@@ -200,12 +200,9 @@ import { CopilotSidebar } from '@copilotkit/react-ui';
 </CopilotKit>
 ```
 
-**5. NotebookLM → Community MCP Server**
+**5. NotebookLM → Community MCP Server** ✅ COMPLETE
 ```bash
-# Install
-npm install -g @pleaseprompto/notebooklm-mcp
-
-# Add to MCP config
+# Configured in claude_desktop_config.json
 {
   "mcpServers": {
     "notebooklm": {
@@ -214,6 +211,10 @@ npm install -g @pleaseprompto/notebooklm-mcp
     }
   }
 }
+
+# Removed custom implementation
+# - Deleted server/mcp/plugins/notebooklm.ts (477 lines)
+# - Now using community MCP server directly
 ```
 
 ### ⚠️ CUSTOM IMPLEMENTATION REQUIRED
