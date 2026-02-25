@@ -102,10 +102,37 @@
 
 ## Traceability
 
-<!-- Filled by roadmapper -->
+<!-- Filled by gsd-roadmapper@opencode 2026-02-25 -->
 
 | REQ-ID | Phase | Status |
 |--------|-------|--------|
+| FOUND-01 | Phase 1: Foundation | Pending |
+| FOUND-02 | Phase 1: Foundation | Pending |
+| FOUND-03 | Phase 1: Foundation | Pending |
+| PIPE-01 | Phase 3: First Vertical Slice | Pending |
+| PIPE-02 | Phase 2: Pipeline Core | Pending |
+| PIPE-03 | Phase 4: NLP & Pattern Analysis | Pending |
+| PIPE-04 | Phase 2: Pipeline Core | Pending |
+| PIPE-05 | Phase 2: Pipeline Core | Pending |
+| PIPE-06 | Phase 6: Multi-Source & Scale | Pending |
+| PARSE-01 | Phase 3: First Vertical Slice | Pending |
+| PARSE-02 | Phase 6: Multi-Source & Scale | Pending |
+| PARSE-03 | Phase 2: Pipeline Core | Pending |
+| NLP-01 | Phase 4: NLP & Pattern Analysis | Pending |
+| NLP-02 | Phase 4: NLP & Pattern Analysis | Pending |
+| NLP-03 | Phase 4: NLP & Pattern Analysis | Pending |
+| NLP-04 | Phase 5: Pattern Detection UX | Pending |
+| NLP-05 | Phase 5: Pattern Detection UX | Pending |
+| UI-01 | Phase 3: First Vertical Slice | Pending |
+| UI-02 | Phase 5: Pattern Detection UX | Pending |
+| UI-03 | Phase 5: Pattern Detection UX | Pending |
+| UI-04 | Phase 6: Multi-Source & Scale | Pending |
+| MEM-01 | Phase 7: Memory Architecture | Pending |
+| MEM-02 | Phase 7: Memory Architecture | Pending |
+| FW-01 | Phase 8: Framework Integration | Pending |
+| FW-02 | Phase 8: Framework Integration | Pending |
+| FW-03 | Phase 8: Framework Integration | Pending |
+| FW-04 | Phase 8: Framework Integration | Pending |
 
 ---
 
