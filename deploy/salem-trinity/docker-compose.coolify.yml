@@ -32,8 +32,9 @@ services:
       - mcp_internal
     labels:
       # Coolify / Traefik Routing
+      # 'app.' is for the React Frontend UI. 'api.' is the headless endpoint for MCP/LLM integration.
       - "traefik.enable=true"
-      - "traefik.http.routers.mcp-platform.rule=Host(`api.mitechconsult.com`, `*.mitechconsult.com`)"
+      - "traefik.http.routers.mcp-platform.rule=Host(`app.mitechconsult.com`, `api.mitechconsult.com`)"
       - "traefik.http.services.mcp-platform.loadbalancer.server.port=3000"
 
   # --------------------------------------------------------
@@ -85,8 +86,69 @@ services:
       - "${HETZNER_VPC_IP:-127.0.0.1}:7687:7687"
 
   # --------------------------------------------------------
-  # 4. Tailscale Sidecar (Secure Admin Access)
+  # 5. Open WebUI (Local Models & AI Chat)
   # --------------------------------------------------------
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: mcp-open-webui
+    restart: unless-stopped
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434 # Assuming Ollama is local or via VPC
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+    volumes:
+      - mcp_openwebui_data:/app/backend/data
+    networks:
+      - mcp_internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.open-webui.rule=Host(`chat.mitechconsult.com`)"
+      - "traefik.http.services.open-webui.loadbalancer.server.port=8080"
+
+  # --------------------------------------------------------
+  # 6. LibreChat (Advanced Chat Interface)
+  # --------------------------------------------------------
+  librechat:
+    image: ghcr.io/danny-avila/librechat-dev:latest
+    container_name: mcp-librechat
+    restart: unless-stopped
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/librechat
+      - MEILI_HOST=http://meilisearch:7700
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+      - ENDPOINTS=openAi,anthropic,google,custom
+      # Point to your OpenCode Proxy or LiteLLM here
+      - OPENAI_API_KEY=${OPENAI_API_KEY} 
+    volumes:
+      - ./librechat/librechat.yaml:/app/librechat.yaml
+    networks:
+      - mcp_internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.librechat.rule=Host(`ai.mitechconsult.com`)"
+      - "traefik.http.services.librechat.loadbalancer.server.port=3080"
+
+  # MongoDB for LibreChat
+  mongodb:
+    image: mongo:latest
+    container_name: mcp-mongodb
+    restart: unless-stopped
+    volumes:
+      - mcp_mongo_data:/data/db
+    networks:
+      - mcp_internal
+
+  # MeiliSearch for LibreChat Memory
+  meilisearch:
+    image: getmeili/meilisearch:v1.7.3
+    container_name: mcp-meilisearch
+    restart: unless-stopped
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+      - MEILI_NO_ANALYTICS=true
+    volumes:
+      - mcp_meili_data:/meili_data
+    networks:
+      - mcp_internal
   tailscale-sidecar:
     image: tailscale/tailscale:latest
     container_name: tailscale-sidecar
