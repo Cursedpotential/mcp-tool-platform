@@ -1,5 +1,8 @@
 import { getDuckDBClient } from '../storage/duckdb';
 import { SmsXmlReader } from './readers/SmsXmlReader';
+import { BehavioralFlagExtractor } from './extractors/BehavioralFlagExtractor';
+import { GlinerExtractor } from './extractors/GlinerExtractor';
+import { RecognizersExtractor } from './extractors/RecognizersExtractor';
 import { Document } from 'llamaindex';
 
 export interface IngestionResult {
@@ -7,6 +10,9 @@ export interface IngestionResult {
   sourceHash: string;
   status: string;
   chunksGenerated: number;
+  flagsDetected: number;
+  entitiesExtracted: number;
+  structuredDataExtracted: number;
 }
 
 /**
@@ -39,6 +45,9 @@ export async function ingestEvidence(
 
   // 2. Document Routing (Modular parsing)
   let chunks: Document[] = [];
+  let totalFlags = 0;
+  let totalEntities = 0;
+  let totalStructuredData = 0;
   
   try {
     if (sourceName.toLowerCase().endsWith('.xml') && binaryPath) {
@@ -53,6 +62,48 @@ export async function ingestEvidence(
       });
       
       console.log(`[Ingest] Successfully chunked into ${chunks.length} LlamaIndex documents.`);
+
+      // 3. Behavioral Flagging (Pass 1 Enrichment)
+      console.log(`[Ingest] Running Behavioral Flag Extractor...`);
+      const flagExtractor = new BehavioralFlagExtractor();
+      const flagMetadataList = await flagExtractor.extract(chunks);
+
+      chunks.forEach((chunk, idx) => {
+        const extractedMeta = flagMetadataList[idx];
+        if (extractedMeta && extractedMeta['forensic_flags']) {
+          chunk.metadata = { ...chunk.metadata, ...extractedMeta };
+          totalFlags += (extractedMeta['forensic_flags'] as any[]).length;
+        }
+      });
+      console.log(`[Ingest] Forensic scanning complete. Found ${totalFlags} behavioral flags.`);
+
+      // 4. GLiNER2 Entity Extraction (Names, Locations, Events)
+      console.log(`[Ingest] Running GLiNER2 Entity Extractor...`);
+      const glinerExtractor = new GlinerExtractor();
+      const glinerMetadataList = await glinerExtractor.extract(chunks);
+
+      chunks.forEach((chunk, idx) => {
+        const extractedMeta = glinerMetadataList[idx];
+        if (extractedMeta && extractedMeta['gliner_entities']) {
+          chunk.metadata = { ...chunk.metadata, ...extractedMeta };
+          totalEntities += (extractedMeta['gliner_entities'] as any[]).length;
+        }
+      });
+      console.log(`[Ingest] GLiNER2 scanning complete. Found ${totalEntities} entities.`);
+
+      // 5. Recognizers-Text Extraction (Dates, Currencies, Phones)
+      console.log(`[Ingest] Running Recognizers-Text Extractor...`);
+      const recognizersExtractor = new RecognizersExtractor();
+      const recognizersMetadataList = await recognizersExtractor.extract(chunks);
+
+      chunks.forEach((chunk, idx) => {
+        const extractedMeta = recognizersMetadataList[idx];
+        if (extractedMeta && extractedMeta['structured_entities']) {
+          chunk.metadata = { ...chunk.metadata, ...extractedMeta };
+          totalStructuredData += (extractedMeta['structured_entities'] as any[]).length;
+        }
+      });
+      console.log(`[Ingest] Recognizers scanning complete. Found ${totalStructuredData} structured items.`);
     }
     // Future routes: .pdf -> Docling, .png -> Textract
   } catch (error) {
@@ -63,6 +114,9 @@ export async function ingestEvidence(
     documentId: ingestion.id,
     sourceHash: ingestion.source_hash,
     status: 'processing', // Pass 1 processing started
-    chunksGenerated: chunks.length
+    chunksGenerated: chunks.length,
+    flagsDetected: totalFlags,
+    entitiesExtracted: totalEntities,
+    structuredDataExtracted: totalStructuredData
   };
 }

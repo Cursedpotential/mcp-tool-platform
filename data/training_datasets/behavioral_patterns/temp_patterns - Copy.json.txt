@@ -1,0 +1,191 @@
+{ name: 'Gaslighting: Denial', category: 'gaslighting', pattern: 'i never said that', description: 'Denying previous statements', severity: 8 }
+{ name: 'Gaslighting: Imagined', category: 'gaslighting', pattern: 'you imagined', description: 'Suggesting victim fabricated memories', severity: 8 }
+{ name: 'Gaslighting: Never Happened', category: 'gaslighting', pattern: 'that never happened', description: 'Denying events', severity: 9 }
+{ name: 'Gaslighting: No One Believe', category: 'gaslighting', pattern: 'no one will believe', description: 'Threatening credibility', severity: 9 }
+{ name: 'Gaslighting: Just Kidding', category: 'gaslighting', pattern: 'just kidding', description: 'Dismissing as joke', severity: 6 }
+{ name: 'Gaslighting: Drugs Talking', category: 'gaslighting', pattern: 'this is the drugs talking', description: 'Attributing to substances', severity: 8 }
+{ name: 'Blame: Your Fault', category: 'blame_shifting', pattern: 'this is your fault', description: 'Direct blame', severity: 7 }
+{ name: 'Blame: You Made Me', category: 'blame_shifting', pattern: 'you made me', description: 'Claiming causation', severity: 8 }
+{ name: 'Blame: Because of You', category: 'blame_shifting', pattern: 'because of you', description: 'Attributing outcomes', severity: 7 }
+{ name: 'Blame: You Started', category: 'blame_shifting', pattern: 'you started this', description: 'Initiation claim', severity: 6 }
+{ name: 'Blame: Always Do This', category: 'blame_shifting', pattern: 'you always do this', description: 'Pattern accusation', severity: 7 }
+{ name: 'Blame: Made Me Do', category: 'blame_shifting', pattern: 'look what you made me do', description: 'Forced action claim', severity: 9 }
+{ name: 'Minimizing: Not Big Deal', category: 'minimizing', pattern: 'not a big deal', description: 'Trivializing', severity: 6 }
+{ name: 'Minimizing: Calm Down', category: 'minimizing', pattern: 'calm down', description: 'Dismissing emotions', severity: 5 }
+{ name: 'Minimizing: Get Over It', category: 'minimizing', pattern: 'get over it', description: 'Demanding move on', severity: 7 }
+{ name: 'Minimizing: Making Scene', category: 'minimizing', pattern: 'stop making a scene', description: 'Scene shaming', severity: 6 }
+{ name: 'Minimizing: Just Joke', category: 'minimizing', pattern: 'it was just a joke', description: 'Joke defense', severity: 6 }
+{ name: 'Minimizing: Relax', category: 'minimizing', pattern: 'relax', description: 'Dismissal', severity: 5 }
+{ name: 'Circular: Keep Changing', category: 'circular', pattern: 'you keep changing', description: 'Changing accusation', severity: 6 }
+{ name: 'Circular: Know What I Mean', category: 'circular', pattern: 'you know what i mean', description: 'Vague understanding', severity: 5 }
+{ name: 'Circular: Anyway', category: 'circular', pattern: 'anyway', description: 'Termination', severity: 5 }
+{ name: 'Circular: Whatever', category: 'circular', pattern: 'whatever', description: 'Dismissal', severity: 5 }
+{ name: 'DARVO: I Never', category: 'darvo_deny', pattern: 'i never', description: 'Denial', severity: 8 }
+{ name: 'DARVO: Never Happened', category: 'darvo_deny', pattern: 'that never happened', description: 'Event denial', severity: 9 }
+{ name: 'DARVO: Would Never', category: 'darvo_deny', pattern: 'i would never', description: 'Character defense', severity: 7 }
+{ name: 'DARVO: Need Protection', category: 'darvo_reverse', pattern: 'i need protection from you', description: 'Protection need', severity: 10 }
+{ name: 'Overelaboration: Just Left', category: 'overelaboration', pattern: 'i just left', description: 'Departure', severity: 7 }
+{ name: 'Overelaboration: Just Arrived', category: 'overelaboration', pattern: 'i just arrived at', description: 'Arrival', severity: 7 }
+{ name: 'Overelaboration: Left At', category: 'overelaboration', pattern: 'i left at', description: 'Departure time', severity: 7 }
+{ name: 'Overelaboration: Had To', category: 'overelaboration', pattern: 'i had to', description: 'Necessity', severity: 8 }
+{ name: 'Overelaboration: Needed To', category: 'overelaboration', pattern: 'i needed to', description: 'Need explanation', severity: 8 }
+{ name: 'Overelaboration: Reason Is', category: 'overelaboration', pattern: 'the reason is', description: 'Reasoning', severity: 8 }
+{ name: 'Overelaboration: Was Just', category: 'overelaboration', pattern: 'i was just', description: 'Past justification', severity: 7 }
+{ name: 'Overelaboration: Before You Ask', category: 'overelaboration', pattern: 'before you ask', description: 'Pre-emptive', severity: 8 }
+{ name: 'Overelaboration: Just So Know', category: 'overelaboration', pattern: 'just so you know', description: 'Pre-emptive info', severity: 7 }
+{ name: 'Overelaboration: For Record', category: 'overelaboration', pattern: 'for the record', description: 'Documenting', severity: 7 }
+{ name: 'Overelaboration: To Be Clear', category: 'overelaboration', pattern: 'to be clear', description: 'Over-clarifying', severity: 7 }
+{ name: 'Overelaboration: Let Me Explain', category: 'overelaboration', pattern: 'let me explain', description: 'Unprompted explanation', severity: 7 }
+{ name: 'Love Bombing: Perfect', category: 'love_bombing', pattern: 'perfect', description: 'Excessive praise', severity: 5 }
+{ name: 'Love Bombing: Amazing', category: 'love_bombing', pattern: 'amazing', description: 'Excessive praise', severity: 5 }
+{ name: 'Love Bombing: Soulmate', category: 'love_bombing', pattern: 'soulmate', description: 'Premature commitment', severity: 6 }
+{ name: 'Love Bombing: Always', category: 'love_bombing', pattern: 'always', description: 'Forever promise', severity: 5 }
+{ name: 'Love Bombing: Forever', category: 'love_bombing', pattern: 'forever', description: 'Forever promise', severity: 5 }
+{ name: 'Love Bombing: Everything', category: 'love_bombing', pattern: 'everything', description: 'Totality claim', severity: 5 }
+{ name: 'Love Bombing: Desperate', category: 'love_bombing', pattern: 'desperate', description: 'Intensity', severity: 6 }
+{ name: 'Love Bombing: Need You', category: 'love_bombing', pattern: 'need you', description: 'Dependency', severity: 6 }
+{ name: 'Love Bombing: Give Everything', category: 'love_bombing', pattern: 'i want to give you everything', description: 'Grand promise', severity: 6 }
+{ name: 'Gratitude: Owe Everything', category: 'excessive_gratitude', pattern: 'i owe you everything', description: 'Creating obligation', severity: 6 }
+{ name: 'Gratitude: Never Repay', category: 'excessive_gratitude', pattern: 'i could never repay you', description: 'Unpayable debt', severity: 6 }
+{ name: 'Gratitude: Thank Everything', category: 'excessive_gratitude', pattern: 'thank you for everything', description: 'Blanket gratitude', severity: 4 }
+{ name: 'Gratitude: Saved Me', category: 'excessive_gratitude', pattern: 'you saved me', description: 'Savior positioning', severity: 7 }
+{ name: 'Gratitude: Owe Life', category: 'excessive_gratitude', pattern: 'i owe you my life', description: 'Extreme debt', severity: 7 }
+{ name: 'Debt: Remember When', category: 'debt_reminders', pattern: 'remember when i', description: 'Past favor reminder', severity: 7 }
+{ name: 'Debt: Was There', category: 'debt_reminders', pattern: 'i was there for you when', description: 'Support reminder', severity: 7 }
+{ name: 'Debt: I Helped', category: 'debt_reminders', pattern: 'i helped you', description: 'Assistance reminder', severity: 6 }
+{ name: 'Debt: I Gave', category: 'debt_reminders', pattern: 'i gave you', description: 'Gift reminder', severity: 6 }
+{ name: 'Savior: You Need Me', category: 'savior_complex', pattern: 'you need me', description: 'Dependency claim', severity: 8 }
+{ name: 'Savior: Let Me Handle', category: 'savior_complex', pattern: 'let me handle it', description: 'Control taking', severity: 6 }
+{ name: 'Savior: Trust To Protect', category: 'savior_complex', pattern: 'trust me to protect you', description: 'Trust demand', severity: 7 }
+{ name: 'Savior: Everyone Else Hurt', category: 'savior_complex', pattern: 'everyone else will hurt you', description: 'World as dangerous', severity: 9 }
+{ name: 'Savior: World Dangerous', category: 'savior_complex', pattern: 'the world is dangerous', description: 'Fear creation', severity: 8 }
+{ name: 'Substance: Drink', category: 'substance_alcohol', pattern: 'drink', description: 'Alcohol mention', severity: 0 }
+{ name: 'Substance: Drank', category: 'substance_alcohol', pattern: 'drank', description: 'Alcohol mention', severity: 0 }
+{ name: 'Substance: Drunk', category: 'substance_alcohol', pattern: 'drunk', description: 'Intoxication', severity: 0 }
+{ name: 'Substance: Buzzed', category: 'substance_alcohol', pattern: 'buzzed', description: 'Intoxication', severity: 0 }
+{ name: 'Substance: Tipsy', category: 'substance_alcohol', pattern: 'tipsy', description: 'Intoxication', severity: 0 }
+{ name: 'Substance: Wasted', category: 'substance_alcohol', pattern: 'wasted', description: 'Intoxication', severity: 0 }
+{ name: 'Substance: Bottle', category: 'substance_alcohol', pattern: 'bottle', description: 'Alcohol container', severity: 0 }
+{ name: 'Substance: Wine', category: 'substance_alcohol', pattern: 'wine', description: 'Alcohol type', severity: 0 }
+{ name: 'Substance: Beer', category: 'substance_alcohol', pattern: 'beer', description: 'Alcohol type', severity: 0 }
+{ name: 'Substance: Liquor', category: 'substance_alcohol', pattern: 'liquor', description: 'Alcohol type', severity: 0 }
+{ name: 'Substance: Vodka', category: 'substance_alcohol', pattern: 'vodka', description: 'Alcohol type', severity: 0 }
+{ name: 'Substance: Tequila', category: 'substance_alcohol', pattern: 'tequila', description: 'Alcohol type', severity: 0 }
+{ name: 'Substance: Hungover', category: 'substance_alcohol', pattern: 'hungover', description: 'After-effects', severity: 0 }
+{ name: 'Substance: Fireball', category: 'substance_alcohol', pattern: 'fireball', description: 'Alcohol brand', severity: 0 }
+{ name: 'Substance Weapon: Crackhead', category: 'substance_weaponized', pattern: 'crackhead', description: 'Drug slur', severity: 9 }
+{ name: 'Substance Weapon: Tweaker', category: 'substance_weaponized', pattern: 'tweaker', description: 'Drug slur', severity: 9 }
+{ name: 'Substance Weapon: Addict', category: 'substance_weaponized', pattern: 'addict', description: 'Drug label', severity: 8 }
+{ name: 'Substance Weapon: Junkie', category: 'substance_weaponized', pattern: 'junkie', description: 'Drug slur', severity: 9 }
+{ name: 'Substance Weapon: User', category: 'substance_weaponized', pattern: 'user', description: 'Drug label', severity: 7 }
+{ name: 'Substance Weapon: On Something', category: 'substance_weaponized', pattern: 'are you on something', description: 'Accusation', severity: 8 }
+{ name: 'Substance Weapon: Drugs Talking', category: 'substance_weaponized', pattern: 'this is the drugs talking', description: 'Invalidation', severity: 8 }
+{ name: 'Adderall: Adderall', category: 'adderall_control', pattern: 'adderall', description: 'Medication mention', severity: 7 }
+{ name: 'Adderall: Addy', category: 'adderall_control', pattern: 'addy', description: 'Medication slang', severity: 7 }
+{ name: 'Adderall: Pills', category: 'adderall_control', pattern: 'pills', description: 'Medication generic', severity: 6 }
+{ name: 'Adderall: Script', category: 'adderall_control', pattern: 'script', description: 'Prescription', severity: 6 }
+{ name: 'Adderall: Share', category: 'adderall_control', pattern: 'share', description: 'Medication sharing', severity: 7 }
+{ name: 'Adderall: Split', category: 'adderall_control', pattern: 'split', description: 'Medication splitting', severity: 7 }
+{ name: 'Adderall: Your Turn', category: 'adderall_control', pattern: 'your turn', description: 'Medication rationing', severity: 8 }
+{ name: 'Adderall: How Many', category: 'adderall_control', pattern: 'how many did you take', description: 'Medication monitoring', severity: 8 }
+{ name: 'Infidelity: Cheating', category: 'infidelity', pattern: 'cheating', description: 'Infidelity mention', severity: 8 }
+{ name: 'Infidelity: Cheated', category: 'infidelity', pattern: 'cheated', description: 'Infidelity past', severity: 8 }
+{ name: 'Infidelity: Slept With', category: 'infidelity', pattern: 'slept with', description: 'Sexual involvement', severity: 8 }
+{ name: 'Infidelity: Affair', category: 'infidelity', pattern: 'affair', description: 'Relationship betrayal', severity: 9 }
+{ name: 'Infidelity: Secret', category: 'infidelity', pattern: 'secret', description: 'Hidden behavior', severity: 6 }
+{ name: 'Infidelity: Seeing Someone', category: 'infidelity', pattern: 'seeing someone', description: 'Other relationship', severity: 8 }
+{ name: 'Infidelity: Loyal', category: 'infidelity', pattern: 'loyal', description: 'Loyalty claim', severity: 5 }
+{ name: 'Infidelity: Faithful', category: 'infidelity', pattern: 'faithful', description: 'Faithfulness claim', severity: 5 }
+{ name: 'Infidelity: Just Work', category: 'infidelity', pattern: 'we just work together', description: 'Denial', severity: 6 }
+{ name: 'Financial Weapon: What Do I Get', category: 'financial_weaponized', pattern: 'what do i get out of this', description: 'Transactional', severity: 8 }
+{ name: 'Sexual Shame: Slut', category: 'sexual_shaming', pattern: 'slut', description: 'Sexual slur', severity: 10 }
+{ name: 'Sexual Shame: Whore', category: 'sexual_shaming', pattern: 'whore', description: 'Sexual slur', severity: 10 }
+{ name: 'Sexual Shame: Pervert', category: 'sexual_shaming', pattern: 'pervert', description: 'Sexual slur', severity: 9 }
+{ name: 'Sexual Shame: Disgusting', category: 'sexual_shaming', pattern: 'disgusting', description: 'Degradation', severity: 8 }
+{ name: 'Sexual Shame: Sick', category: 'sexual_shaming', pattern: 'sick', description: 'Degradation', severity: 8 }
+{ name: 'Sexual Shame: Nasty', category: 'sexual_shaming', pattern: 'nasty', description: 'Degradation', severity: 8 }
+{ name: 'Sexual Shame: Freak', category: 'sexual_shaming', pattern: 'freak', description: 'Sexual slur', severity: 9 }
+{ name: 'Sexual Shame: Used', category: 'sexual_shaming', pattern: 'used', description: 'Degradation', severity: 9 }
+{ name: 'Sexual Shame: Cheap', category: 'sexual_shaming', pattern: 'cheap', description: 'Degradation', severity: 8 }
+{ name: 'Sexual Shame: Everyone Leaves', category: 'sexual_shaming', pattern: 'no wonder everyone leaves you', description: 'Abandonment threat', severity: 10 }
+{ name: 'Sexual Shame: To Think', category: 'sexual_shaming', pattern: 'to think i ever did', description: 'Regret expression', severity: 9 }
+{ name: 'Alienation: Protect From You', category: 'parental_alienation', pattern: 'i have to protect the children from you', description: 'Protection justification', severity: 10 }
+{ name: 'Alienation: Kailah', category: 'parental_alienation', pattern: 'kailah', description: 'Child name mention', severity: 10 }
+{ name: 'Alienation: Kyla', category: 'parental_alienation', pattern: 'kyla', description: 'Child name variant', severity: 10 }
+{ name: 'Alienation: My Daughter', category: 'parental_alienation', pattern: 'my daughter', description: 'Possessive child reference', severity: 8 }
+{ name: 'Alienation: Our Daughter', category: 'parental_alienation', pattern: 'our daughter', description: 'Child reference', severity: 7 }
+{ name: 'Alienation: The Baby', category: 'parental_alienation', pattern: 'the baby', description: 'Child reference', severity: 6 }
+{ name: 'Alienation: The Kid', category: 'parental_alienation', pattern: 'the kid', description: 'Child reference', severity: 6 }
+{ name: 'Medical: Need Meds', category: 'medical_abuse', pattern: 'you need your meds', description: 'Medication control', severity: 9 }
+{ name: 'Medical: Take Pills', category: 'medical_abuse', pattern: 'did you take your pills', description: 'Medication monitoring', severity: 8 }
+{ name: 'Medical: Need Hospitalized', category: 'medical_abuse', pattern: 'you need to be hospitalized', description: 'Institutionalization threat', severity: 10 }
+{ name: 'Reproductive: Want Pregnant', category: 'reproductive_coercion', pattern: 'i want you pregnant', description: 'Pregnancy demand', severity: 10 }
+{ name: 'Reproductive: Should Get Pregnant', category: 'reproductive_coercion', pattern: 'you should get pregnant', description: 'Pregnancy pressure', severity: 10 }
+{ name: 'Reproductive: Stop Birth Control', category: 'reproductive_coercion', pattern: 'stop taking birth control', description: 'Contraception interference', severity: 10 }
+{ name: 'Reproductive: Baby Fix', category: 'reproductive_coercion', pattern: 'a baby will fix us', description: 'Baby as solution', severity: 9 }
+{ name: 'Reproductive: Owe Child', category: 'reproductive_coercion', pattern: 'you owe me a child', description: 'Child as debt', severity: 10 }
+{ name: 'Reproductive: Sabotaged', category: 'reproductive_coercion', pattern: 'i sabotaged your birth control', description: 'Contraception sabotage', severity: 10 }
+{ name: 'Deference: Is Alright', category: 'victim_deference', pattern: 'is that alright', description: 'Approval seeking', severity: 7 }
+{ name: 'Deference: Sorry', category: 'victim_deference', pattern: 'sorry', description: 'Apologetic', severity: 6 }
+{ name: 'Deference: My Bad', category: 'victim_deference', pattern: 'my bad', description: 'Apologetic', severity: 6 }
+{ name: 'Deference: I Apologize', category: 'victim_deference', pattern: 'i apologize', description: 'Apologetic', severity: 6 }
+{ name: 'Deference: Let Me Know', category: 'victim_deference', pattern: 'let me know if', description: 'Deferential', severity: 6 }
+{ name: 'Directive: Where Are You', category: 'abuser_directives', pattern: 'where are you', description: 'Location demand', severity: 8 }
+{ name: 'Directive: What Doing', category: 'abuser_directives', pattern: 'what are you doing', description: 'Activity demand', severity: 8 }
+{ name: 'Directive: Who With', category: 'abuser_directives', pattern: 'who are you with', description: 'Company demand', severity: 8 }
+{ name: 'Directive: Come Here', category: 'abuser_directives', pattern: 'come here', description: 'Movement command', severity: 7 }
+{ name: 'Directive: Go There', category: 'abuser_directives', pattern: 'go there', description: 'Movement command', severity: 7 }
+{ name: 'Directive: Do This', category: 'abuser_directives', pattern: 'do this', description: 'Action command', severity: 7 }
+{ name: 'Directive: Stop That', category: 'abuser_directives', pattern: 'stop that', description: 'Prohibition command', severity: 7 }
+{ name: 'Directive: Tell Me', category: 'abuser_directives', pattern: 'tell me', description: 'Information demand', severity: 7 }
+{ name: 'Directive: Show Me', category: 'abuser_directives', pattern: 'show me', description: 'Proof demand', severity: 8 }
+{ name: 'Directive: Prove It', category: 'abuser_directives', pattern: 'prove it', description: 'Evidence demand', severity: 8 }
+{ name: 'Certainty: Always', category: 'certainty_absolutes', pattern: 'always', description: 'Absolute claim', severity: 0 }
+{ name: 'Certainty: Never', category: 'certainty_absolutes', pattern: 'never', description: 'Absolute claim', severity: 0 }
+{ name: 'Certainty: Nothing', category: 'certainty_absolutes', pattern: 'nothing', description: 'Absolute claim', severity: 0 }
+{ name: 'Certainty: Everything', category: 'certainty_absolutes', pattern: 'everything', description: 'Absolute claim', severity: 0 }
+{ name: 'Certainty: Everyone', category: 'certainty_absolutes', pattern: 'everyone', description: 'Absolute claim', severity: 0 }
+{ name: 'Certainty: Nobody', category: 'certainty_absolutes', pattern: 'nobody', description: 'Absolute claim', severity: 0 }
+{ name: 'Certainty: Fact', category: 'certainty_absolutes', pattern: 'fact', description: 'Certainty marker', severity: 0 }
+{ name: 'Certainty: Obviously', category: 'certainty_absolutes', pattern: 'obviously', description: 'Certainty marker', severity: 0 }
+{ name: 'Certainty: Clearly', category: 'certainty_absolutes', pattern: 'clearly', description: 'Certainty marker', severity: 0 }
+{ name: 'Certainty: Literally', category: 'certainty_absolutes', pattern: 'literally', description: 'Certainty marker', severity: 0 }
+{ name: 'Hedge: Maybe', category: 'hedge_words', pattern: 'maybe', description: 'Uncertainty marker', severity: 0 }
+{ name: 'Hedge: Perhaps', category: 'hedge_words', pattern: 'perhaps', description: 'Uncertainty marker', severity: 0 }
+{ name: 'Hedge: Possibly', category: 'hedge_words', pattern: 'possibly', description: 'Uncertainty marker', severity: 0 }
+{ name: 'Hedge: Might', category: 'hedge_words', pattern: 'might', description: 'Uncertainty marker', severity: 0 }
+{ name: 'Hedge: Could', category: 'hedge_words', pattern: 'could', description: 'Uncertainty marker', severity: 0 }
+{ name: 'Hedge: I Think', category: 'hedge_words', pattern: 'i think', description: 'Uncertainty marker', severity: 0 }
+{ name: 'Hedge: I Guess', category: 'hedge_words', pattern: 'i guess', description: 'Uncertainty marker', severity: 0 }
+{ name: 'Hedge: Sort Of', category: 'hedge_words', pattern: 'sort of', description: 'Uncertainty marker', severity: 0 }
+{ name: 'Hedge: Kind Of', category: 'hedge_words', pattern: 'kind of', description: 'Uncertainty marker', severity: 0 }
+{ name: 'Hedge: Probably', category: 'hedge_words', pattern: 'probably', description: 'Uncertainty marker', severity: 0 }
+{ name: 'NPD: Parenting Superiority', category: 'npd_grandiosity', pattern: 'better parent', description: 'Claims of parenting superiority', severity: 7 }
+{ name: 'NPD: Everyone Agrees', category: 'npd_grandiosity', pattern: 'everyone agrees', description: 'Claims universal support without evidence', severity: 5 }
+{ name: 'NPD: Lucky To Have Me', category: 'npd_grandiosity', pattern: 'lucky to have me', description: 'Frames relationship as privilege', severity: 6 }
+{ name: 'NPD: Best Years', category: 'npd_grandiosity', pattern: 'gave you the best years', description: 'Martyrdom framing', severity: 5 }
+{ name: 'NPD: I Deserve', category: 'npd_entitlement', pattern: 'i deserve', description: 'Entitlement claim', severity: 7 }
+{ name: 'NPD: Makes Me Look', category: 'npd_empathy_deficit', pattern: 'makes me look', description: 'Self-centering in crisis', severity: 8 }
+{ name: 'NPD: Too Dramatic', category: 'npd_empathy_deficit', pattern: 'being too dramatic', description: 'Invalidating emotions', severity: 6 }
+{ name: 'BPD: Going To Abandon', category: 'bpd_abandonment', pattern: 'going to abandon', description: 'Projecting abandonment', severity: 6 }
+{ name: 'BPD: Already Abandoned', category: 'bpd_abandonment', pattern: 'already abandoned', description: 'Reframing custody as abandonment', severity: 7 }
+{ name: 'BPD: With Or Against', category: 'bpd_splitting', pattern: 'with me or against me', description: 'Binary loyalty demand', severity: 7 }
+{ name: 'BPD: Pure Evil', category: 'bpd_splitting', pattern: 'pure evil', description: 'All-or-nothing characterization', severity: 6 }
+{ name: 'BPD: Never Loved', category: 'bpd_splitting', pattern: 'never really loved', description: 'Rewriting relationship history', severity: 7 }
+{ name: 'BPD: End It All', category: 'bpd_self_harm_threat', pattern: 'end it all', description: 'Suicide threat', severity: 10 }
+{ name: 'ASPD: Deserved It', category: 'aspd_callousness', pattern: 'deserved it', description: 'Justifying harm', severity: 7 }
+{ name: 'ASPD: Made Me Do It', category: 'aspd_no_remorse', pattern: 'you made me do', description: 'Blaming victim for abuse', severity: 8 }
+{ name: 'ASPD: Forced My Hand', category: 'aspd_no_remorse', pattern: 'forced my hand', description: 'Justifying harmful actions', severity: 6 }
+{ name: 'Custody: Different Judge', category: 'custody_court_manipulation', pattern: 'different judge', description: 'Judge shopping intent', severity: 7 }
+{ name: 'Custody: Drag It Out', category: 'custody_court_manipulation', pattern: 'drag it out', description: 'Explicit delay tactic', severity: 8 }
+{ name: 'Custody: Game The System', category: 'custody_court_manipulation', pattern: 'game the system', description: 'Admission of manipulation', severity: 9 }
+{ name: 'Custody: None Of Your Business', category: 'custody_gatekeeping', pattern: 'none of your business', description: 'Blocking parental information', severity: 6 }
+{ name: 'Custody: Not Allowed To See', category: 'custody_gatekeeping', pattern: 'not allowed to see', description: 'Blocking contact', severity: 8 }
+{ name: 'Custody: Without Asking You', category: 'custody_gatekeeping', pattern: 'without asking you', description: 'Unilateral decisions', severity: 7 }
+{ name: 'Custody: Emergency Came Up', category: 'custody_schedule_interference', pattern: 'emergency came up', description: 'Manufactured emergencies', severity: 6 }
+{ name: 'Custody: Already Made Plans', category: 'custody_schedule_interference', pattern: 'already made plans', description: 'Scheduling over custody time', severity: 7 }
+{ name: 'Custody: Tell Your Dad', category: 'custody_child_messenger', pattern: 'tell your dad', description: 'Using child to communicate', severity: 7 }
+{ name: 'Custody: Find Out What', category: 'custody_child_messenger', pattern: 'find out what', description: 'Child as spy', severity: 8 }
+{ name: 'Custody: Real Dad', category: 'custody_parental_replacement', pattern: 'real dad', description: 'New partner as replacement', severity: 8 }
+{ name: 'Custody: Real Family', category: 'custody_parental_replacement', pattern: 'real family', description: 'Redefining family', severity: 8 }
+{ name: 'Custody: Change Name', category: 'custody_parental_replacement', pattern: 'change their name', description: 'Name change pressure', severity: 7 }
