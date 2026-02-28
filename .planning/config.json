@@ -8,5 +8,24 @@
     "research": true,
     "plan_check": true,
     "verifier": true
+  },
+  "profiles": {
+    "presets": {
+      "quality": {
+        "planning": "google/antigravity-claude-opus-4-6-thinking",
+        "execution": "google/antigravity-claude-sonnet-4-6",
+        "verification": "google/antigravity-gemini-3.1-pro"
+      },
+      "balanced": {
+        "planning": "google/antigravity-claude-opus-4-6-thinking",
+        "execution": "google/antigravity-claude-sonnet-4-6",
+        "verification": "google/antigravity-gemini-3.1-pro"
+      },
+      "budget": {
+        "planning": "google/antigravity-gemini-3-flash",
+        "execution": "google/antigravity-gemini-3-flash",
+        "verification": "google/gemini-3-flash-preview"
+      }
+    }
   }
 }

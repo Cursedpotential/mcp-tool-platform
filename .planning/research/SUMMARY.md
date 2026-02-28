@@ -1,345 +1,191 @@
-# Project Research Summary
-
-**Project:** MCP Tool Platform
-**Domain:** Forensic evidence preprocessing / Legal case management
-**Researched:** 2026-02-25
-**Confidence:** HIGH (all 4 research files grounded in direct codebase analysis + Context7-verified library docs)
-
 ---
+title: GraphRAG Integration Research Summary
+version: 2.0.0
+created: 2026-02-28 14:00
+modified: 2026-02-28 15:00
+author: thinking@opencode
+project: MCP_Tool_Platform
+status: final
+---
+
+# Research Summary: GraphRAG as Abstraction Layer
+
+**Domain:** Evidence management platform with knowledge graph retrieval
+**Researched:** 2026-02-28
+**Overall confidence:** MEDIUM-HIGH
 
 ## Executive Summary
 
-The MCP Tool Platform is a ~75-80% built forensic evidence preprocessing system that ingests messaging data (Facebook, SMS, Snapchat), runs NLP and behavioral pattern detection (303 patterns mapped to Michigan custody best-interest factors), and stores results across a multi-database architecture (PostgreSQL/pgvector, Neo4j/Graphiti, ChromaDB, Directus). The core problem is not missing features — it's that existing components aren't wired together. The platform has 22+ tRPC routers the UI never calls, a Pattern Library with 21 TODO comments, mock embeddings (`Array(384).fill(0)`) where real ones should be, a Python bridge that silently degrades to toy JS fallbacks, and three competing pipeline implementations with different database clients. The ~80 TypeScript compilation errors from a branch merge block all development.
+Microsoft GraphRAG (`graphrag 3.0.5`) and Neo4j GraphRAG Python (`neo4j-graphrag-python 1.5.0`) are **complementary packages** that together can serve as the intelligence and routing layer between DuckDB ingestion and the existing storage backends (LanceDB, Neo4j/Semantica, Neo4j/Graphiti). The goal: replace most custom TrinityRouter routing logic, custom NLP extraction code, and custom retrieval orchestration with battle-tested library code.
 
-The recommended approach is staged: fix the build, verify database connectivity, then wire ONE format (XML SMS) end-to-end before touching anything else. The existing stack is solid — TypeScript/Node 22, tRPC, Drizzle ORM, React 19 — and only needs one new package (BullMQ for job queues). The research also identified a significant architectural evolution planned via a detailed Perplexity/Gemini conversation (see reference below) that introduces PG/pgvector as a 6-tier memory spine, Semantica for semantic intelligence, Docling for document parsing, Agno for agent orchestration, CopilotKit for HITL UI, and Langflow as a workflow design studio. These additions should be phased in progressively after the core messaging pipeline works — they are force multipliers, not prerequisites.
+**The key insight:** These are not competing libraries — they operate at different levels:
 
-The critical risks are: (1) the Python bridge silently falling back to garbage JS NLP without any indication, (2) multi-database writes with no tracking of which tiers succeeded, and (3) the "80% built" integration trap where wiring existing components takes 3x longer than building new ones. All three must be addressed in the first two phases.
+| Package | Role | Strength |
+|---|---|---|
+| **Neo4j GraphRAG Python** | Real-time abstraction layer | NER, entity extraction, graph writes to Neo4j, query routing via ToolsRetriever — the "it just works" layer |
+| **Microsoft GraphRAG** | Batch enrichment engine | Community detection (Leiden), global summarization, cross-document patterns — the "hindsight synthesis" engine |
+| **Graphiti** (existing, ~40% built) | Temporal memory | Temporal edges, episodic memory, contradiction detection — neither GraphRAG package can do this |
 
-**Architectural evolution reference:** `C:\Users\matts\Projects\TheBigOne\[https___github.com_Hawksight-AI_semantica](https_.md` (1777 lines) — downstream agents (roadmapper, phase planners) MUST read this file when working on Phases 4-6. Do NOT attempt to inline its contents.
+**Recommendation:** Use Neo4j GraphRAG Python as the **primary abstraction layer** for real-time operations (entity extraction via SimpleKGPipeline, query routing via ToolsRetriever). Use Microsoft GraphRAG as the **batch enrichment engine** for Pass 2 community detection and global summarization. Keep Graphiti for temporal memory. DuckDB remains the untouched first-touch/chain-of-custody layer.
 
----
+## The Integration Architecture
 
-## Key Findings
+```
+INGESTION (real-time):
+  Document → DuckDB (SHA-256, chain of custody — UNCHANGED)
+           → Neo4j GraphRAG SimpleKGPipeline (NER, entity extraction → Neo4j/Semantica)
+           → LanceDB (embeddings — via pipeline or direct)
+           → Graphiti (temporal edges — UNCHANGED)
 
-### Recommended Stack
+ENRICHMENT (batch, periodic):
+  DuckDB accumulated docs → Microsoft GraphRAG pipeline
+    → Leiden community detection
+    → Community summarization
+    → Cross-document relationship discovery
+    → Parquet outputs → imported into Neo4j/Semantica via Cypher
 
-The existing stack is locked and sufficient. Only one new install is required.
+RETRIEVAL (query-time):
+  Query → Neo4j GraphRAG ToolsRetriever (REPLACES custom TrinityRouter query routing)
+    → VectorRetriever (semantic similarity — LanceDB or Neo4j vector index)
+    → Text2CypherRetriever (structured graph queries against Neo4j)
+    → MS GraphRAG local/global/drift search (community-aware retrieval)
+    → Graphiti search (temporal/contradiction queries)
+```
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| **Job Queue** | BullMQ `^5.70.1` (NEW) | Replaces 490-line custom Redis queue. FlowProducer handles parse→NLP→pattern→store dependencies. Built on already-installed ioredis. |
-| **Knowledge Graph** | graphiti-core `0.28.x` (UPDATE) | Only KG library with native temporal awareness. Pin to `>=0.28.0,<0.29.0`. Requires LLM — budget for API costs or use Ollama. |
-| **NLP (TypeScript)** | compromise + natural (EXISTING) | Entity extraction, sentiment, POS tagging. No Python needed for first-pass analysis. |
-| **NLP (Python)** | spaCy + sentence-transformers (EXISTING) | Deep NER, embeddings. NOT installed locally — deployment dependency. Pin spaCy to `>=3.8.0,<3.9.0`. |
-| **Embeddings** | Ollama nomic-embed-text 768-dim (EXISTING) | Free, local, already in docker-compose. Drizzle has native `vector()` column + HNSW index. |
-| **Hashing** | Node.js crypto SHA-256 (EXISTING) | chain-custody.ts (316 lines) already implements full forensic chain. No new library needed. |
-| **Schema Validation** | Zod 4.x (EXISTING) | Already used extensively with tRPC. Define per-platform message schemas. |
+## What Gets Replaced vs What Stays
 
-**Do NOT use:** faiss-node (pgvector does it), neo4j-driver v6 (breaking changes), fast-xml-parser v6 (breaking changes), mem0 for evidence storage, LlamaIndex for KG (Graphiti is purpose-built), any new database systems.
+### Custom Code That Gets REPLACED
 
-### Expected Features
+| Current Custom Code | Replaced By | Confidence |
+|---|---|---|
+| TrinityRouter entity extraction dispatch | Neo4j GraphRAG SimpleKGPipeline | **HIGH** |
+| TrinityRouter query routing (5-tier coordination) | Neo4j GraphRAG ToolsRetriever | **MEDIUM** — needs custom tool definitions |
+| Python bridge NER/NLP extraction | SimpleKGPipeline (LLM-based) | **HIGH** |
+| Missing community detection (Pass 2) | Microsoft GraphRAG Leiden algorithm | **HIGH** |
+| Missing global summarization | Microsoft GraphRAG global search (map-reduce) | **HIGH** |
+| Missing multi-hop retrieval | Neo4j GraphRAG VectorRetriever + Text2CypherRetriever | **HIGH** |
+| Custom embedding pipeline | Both packages support Ollama embeddings via LiteLLM | **MEDIUM** |
 
-**Must work for the platform to be usable (Table Stakes):**
+### Custom Code That STAYS
 
-| Priority | Feature | Gap |
-|----------|---------|-----|
-| P0 | Fix ~80 TypeScript errors | Branch merge artifacts blocking all development |
-| P0 | Database connections verified | Silent data loss if services unreachable |
-| P1 | File upload → ingestion pipeline | No upload UI exists. Ingestion router untested E2E |
-| P1 | Facebook + SMS parser execution | Parsers exist but untested with real data at scale |
-| P1 | Message results browser | No browser page exists — biggest visible gap |
-| P1 | Pattern Library UI wired | 21 TODOs = commented-out tRPC calls. Backend complete. |
-| P2 | Pipeline progress feedback | onProgress callback exists but not wired to UI |
+| Component | Why It Stays |
+|---|---|
+| **DuckDB first-touch + SHA-256 chain of custody** | Domain-specific forensic requirement. No library handles this. |
+| **TrinityRouter write-status tracking** | Reliability feature for multi-store writes. No library equivalent. |
+| **TrinityRouter health checks** | Operations concern, not a library's job. |
+| **Graphiti temporal edges + contradiction detection** | Neither GraphRAG package is temporally aware. Unique capability. |
+| **MySQL app metadata (Drizzle)** | Application layer, outside GraphRAG scope entirely. |
 
-**What makes this platform worth building (Differentiators):**
+### TrinityRouter Evolution
 
-| Priority | Feature | Status |
-|----------|---------|--------|
-| P2 | MCL 722.23 behavioral pattern detection | 1659-line analyzer exists. Needs integration testing + UI. |
-| P2 | HITL approval workflow | Backend complete (547 lines). UI components exist. Wire only. |
-| P2 | Semantic search (pgvector) | Infrastructure exists. Needs search UI + real embeddings in pipeline. |
-| P2 | Snapchat parser | Schema exists with CSS selectors. No loader implementation. |
-| P2 | Cross-platform timeline | Backend exists. UI agent exists. Wire together. |
-| P3 | Knowledge graph visualization | Highest complexity. Needs graph rendering library. Defer. |
+TrinityRouter (currently 389 lines) becomes a **thin delegation layer**:
 
-**Do NOT build now:** Case Bible/Obsidian integration, automated court docs, multi-model LLM for bulk analysis, CI/CD, voice/video, 3D graph rendering, multi-user collaboration, TraceIQ integration.
+```
+BEFORE (current): TrinityRouter does routing + extraction + orchestration + health
+AFTER (target):   TrinityRouter does DuckDB-first-touch + delegates to GraphRAG packages
 
-### Architecture Approach
-
-**Current architecture is sound but unwired.** Five layers: Presentation (React) → tRPC API (22+ routers) → Processing (parsers, NLP, pattern detection) → Queue (Redis, not wired) → Storage (TrinityRouter across 5 tiers).
-
-**Key patterns to preserve:**
-1. **Graceful degradation** — TrinityRouter wraps each storage tier in try/catch. If Neo4j goes down, PostgreSQL still works.
-2. **TypeScript-first, Python-fallback** — Use compromise/natural for fast NLP, reserve Python for deep analysis.
-3. **Forensic hashing at every stage** — SHA-256 chain of custody is already built.
-4. **PostgreSQL as source of truth** — Neo4j is a derived relationship view, rebuildable from PG.
-
-**Anti-patterns to fix:**
-1. Stale Supabase references in production-pipeline.ts (dead code, will crash)
-2. Mock embeddings `Array(384).fill(0)` polluting vector stores
-3. Synchronous pipeline processing (blocks UI on large imports)
-4. SQL.js in pattern analyzer (PostgreSQL is already available)
-5. Three competing pipeline implementations (consolidate to ingestion router)
-6. Schema mismatch between drizzle/schema.ts, production-message-schemas, and production-pipeline.ts Supabase tables
-
-**Architectural evolution (Perplexity conversation — reference file for details):**
-- PG/pgvector becomes 6-tier memory spine (short-term sessions, episodic raw_events, semantic entities, vector embeddings, community clusters, human annotations)
-- Bitemporal timestamps (event_time + ingested_at) — critical for forensic temporal analysis
-- Semantica (Hawksight-AI) replaces hand-rolled graph/provenance/conflict detection
-- Docling (IBM/LF AI) replaces custom PDF/office parsing
-- Agno as primary agent runtime/AgentOS
-- CopilotKit for human-in-the-loop UI
-- Langflow as visual workflow design studio (NOT a gateway replacement)
-- OWL (CAMEL-AI) optional for specialist multi-agent tasks
-
-### Critical Pitfalls
-
-**Top 5 pitfalls with prevention strategies:**
-
-| # | Pitfall | Severity | Prevention | Phase |
-|---|---------|----------|------------|-------|
-| 1 | **Python bridge silently degrades to JS fallbacks** — you think you have real NLP but you have 17-word sentiment lists and bag-of-words hashes. All downstream analysis is compromised. | BLOCKER | Startup health gate. Canary test before processing. Tag every result with `method: "spacy" | "js_fallback"`. Reject storing fallback results in evidence DBs. | Phase 0 |
-| 2 | **Multi-DB write inconsistency** — PostgreSQL says "processed" but ChromaDB has no embeddings and Neo4j has no entities. No reconciliation mechanism exists. | BLOCKER | Add `write_status` JSON column to PG tracking per-tier success. Background retry for failed tiers. Reconciliation check after each batch. | Phase 1 |
-| 3 | **"80% built" wiring trap** — fixing one TS error creates 2 new ones. Components built by different agents with different data shape assumptions. 22+ routers never called from UI. | BLOCKER | Fix ALL TS errors first. Then ONE vertical slice E2E. 2-hour timebox per integration task. | Phase 0-1 |
-| 4 | **Graphiti LLM cost explosion** — add_episode() fires LLM calls per episode. 10K messages = $100+ and days of processing. add_episode_bulk() skips edge invalidation (defeats purpose). | HIGH | Use direct Cypher for bulk loading. Reserve Graphiti for high-value flagged conversations only. Configure local LLM via Ollama. | Phase 4+ |
-| 5 | **Hardcoded GCP API keys in 5 files** — blocks deployment, security risk if repo is ever shared | HIGH | Move to `.env`. 30-minute task. Rotate keys after cleanup. | Phase 0 |
-
----
+Reduced responsibilities:
+  1. DuckDB write (SHA-256, chain of custody) — STAYS
+  2. Delegate extraction → Neo4j GraphRAG SimpleKGPipeline — NEW
+  3. Delegate queries → Neo4j GraphRAG ToolsRetriever — NEW  
+  4. Trigger batch enrichment → Microsoft GraphRAG — NEW
+  5. Write-status tracking — STAYS (simplified)
+  6. Health checks — STAYS
+```
 
 ## Implications for Roadmap
 
-### Suggested Phase Structure
+### Phase 1: Neo4j GraphRAG Python Integration (Real-Time Path)
+- Replace custom NER/entity extraction with SimpleKGPipeline
+- Set up ToolsRetriever with custom tool definitions for existing storage tiers
+- **Why first:** Immediate custom code reduction. SimpleKGPipeline is the most "it just works" component — give it text, it extracts entities and writes to Neo4j.
+- **Risk:** LOW — well-documented, native Neo4j, existing Neo4j infrastructure
 
-**6 phases. Ship working features over polished features. Each phase delivers something Matt can use.**
+### Phase 2: Microsoft GraphRAG Batch Pipeline
+- Set up periodic batch indexing for community detection + summarization
+- Build parquet-to-Neo4j import pipeline for community data
+- Start with `fast` (NLP) method to avoid LLM cost explosion
+- **Why second:** Batch processing needs documents already in the system (Phase 1 must work first).
+- **Risk:** MEDIUM — parquet-to-Neo4j import is custom glue code
 
----
+### Phase 3: TrinityRouter Simplification
+- Reduce from 389-line orchestrator to thin DuckDB-first-touch + delegation layer
+- Route extraction → SimpleKGPipeline, queries → ToolsRetriever, batch → MS GraphRAG
+- **Why third:** Need proven replacements before stripping the coordinator
+- **Risk:** LOW — making code simpler, not more complex
 
-#### Phase 0: Foundation — "Make It Compile"
-**Rationale:** Nothing works until the app builds. Security debt must be cleared before deployment. Python bridge health gate prevents garbage data from day one.
-
-**Delivers:** A compiling application with verified infrastructure.
-
-**Work:**
-- Fix ~80 TypeScript compilation errors (`tsc --noEmit` exits 0)
-- Move 5 hardcoded GCP API keys to `.env`
-- Python bridge startup health gate (verify spaCy + sentence-transformers load)
-- Unify two Python bridges (python-bridge.ts + graphiti-client.ts separate spawn logic)
-- Fix `process.cwd()` → `import.meta.url` in python-bridge.ts
-- Database connection health checks at startup (all 5 tiers)
-- Auth bypass mode (`AUTH_MODE=bypass`) for Tailscale-protected deployment
-
-**Pitfalls to avoid:** P1 (Python silent failure), P3 (wiring cascade), P7 (hardcoded keys), P11 (cwd path)
-
-**Features addressed:** T1 (build fix), T6 (DB connections)
-
-**Estimated effort:** 2-3 days
-
----
-
-#### Phase 1: First Vertical Slice — "Upload SMS, See Messages"
-**Rationale:** Get ONE format flowing end-to-end before adding complexity. Users can start loading evidence immediately. Messages browsable after parse, even before NLP completes.
-
-**Delivers:** Matt can upload XML SMS exports and see parsed messages in a browser UI.
-
-**Work:**
-- File upload component → tRPC mutation → ingestion router
-- Wire TrinityRouter into ingestion pipeline (replace Supabase refs)
-- Replace mock embeddings with real-embedding-service.ts / Ollama calls
-- Schema reconciliation (consolidate 3 schema approaches to production-message-schemas)
-- Add `write_status` JSON column for multi-DB write tracking
-- Build message results browser page (list + search + filter + conversation threading)
-- Neo4j driver pool configuration (maxConnectionPoolSize: 25, etc.)
-- ChromaDB cleanup scheduler (setInterval every 6 hours)
-- Fix `getEvidenceStats()` to use pagination (currently fetches ALL docs → OOM)
-- ONE integration test: "upload small SMS export → verify in PostgreSQL"
-- Smoke tests for each database connection
-
-**Pitfalls to avoid:** P2 (multi-DB inconsistency), P5 (ChromaDB no cleanup), P6 (Neo4j session leak), P8 (large JSON OOM), P9 (OAuth lock-in)
-
-**Features addressed:** T2 (upload→ingestion), T3 (SMS parser), T5 (results browser), T6 (verified connections)
-
-**Estimated effort:** 5-7 days
-
----
-
-#### Phase 2: NLP + Pattern Detection — "See What the Messages Mean"
-**Rationale:** Analysis is the value proposition. Pattern detection is what makes this platform better than manually reading messages. Backend is mostly built — this phase is primarily wiring.
-
-**Delivers:** Messages enriched with sentiment, entities, behavioral pattern tags mapped to MCL 722.23 factors. HITL review for low-confidence detections.
-
-**Work:**
-- Wire Multi-Pass Classifier into pipeline (after parse, before store)
-- Migrate Pattern Analyzer from SQL.js to Drizzle ORM (PostgreSQL)
-- Wire Pattern Analyzer as pipeline stage (after NLP)
-- Pattern Library UI wiring (21 TODOs → uncomment tRPC calls + connect)
-- Show pattern tags and confidence scores in message results browser
-- Pipeline progress feedback (wire onProgress → SSE/WebSocket → frontend)
-- HITL approval queue wiring (backend + components exist, connect them)
-- Semantic search UI component (pgvector queries already possible)
-
-**Pitfalls to avoid:** P4 (Graphiti cost — don't use Graphiti here, use rule-based patterns)
-
-**Features addressed:** T4 (Pattern Library), T7 (progress feedback), D1 (MCL patterns), D3 (HITL), D4 (semantic search)
-
-**Estimated effort:** 5-7 days
-
----
-
-#### Phase 3: Additional Parsers + Scale — "Process All Message Sources"
-**Rationale:** Facebook and Snapchat are critical data sources beyond SMS. BullMQ replaces the fragile custom queue for large exports. Python bridge optimization enables batch processing without timeout.
-
-**Delivers:** Facebook HTML, Snapchat parsing. Large exports (10K+ messages) process without blocking UI.
-
-**Work:**
-- Port Facebook HTML parser from production-pipeline.ts to ingestion router pattern
-- Build Snapchat parser (schema with CSS selectors exists, need loader)
-- Install BullMQ, wire FlowProducer for staged pipeline (parse→NLP→patterns→embed→store)
-- Python bridge persistent process pool (stdin/stdout JSON-RPC, 3-5 workers)
-- Batch NLP calls (50 messages per dispatch)
-- Processing status tracking with per-stage UI indicator
-- Stream-parse large JSON files (replace JSON.parse(readFileSync) with stream-json)
-- Consolidate duplicate pipeline files (production-pipeline.ts, end-to-end-pipeline.ts → ingestion router)
-- Cross-platform timeline generation (wire existing backend + UI agent)
-
-**Pitfalls to avoid:** P8 (large JSON OOM), P10 (spawn overhead)
-
-**Features addressed:** D6 (Snapchat), D7 (timeline), T3 (Facebook parser)
-
-**Estimated effort:** 7-10 days
-
----
-
-#### Phase 4: Memory Architecture + Knowledge Graph — "Build the Evidence Brain"
-**Rationale:** The PG/pgvector memory spine redesign is foundational for everything that follows. Knowledge graph visualization is the highest-value differentiator but has the highest complexity. By this phase, the core pipeline is proven reliable.
-
-**Delivers:** 6-tier memory architecture. Knowledge graph visualization. Forensic chain-of-custody audit UI.
-
-**Work:**
-- PostgreSQL schema evolution: bitemporal timestamps (event_time + ingested_at)
-- Implement memory tiers in PG: episodic (raw_events), semantic (entities/relationships), vector (embeddings), community (clusters), human annotations
-- Directus configuration as bulk storage/admin portal over PG
-- Neo4j/Graphiti selective enrichment (flagged conversations only, not bulk)
-- Direct Cypher bulk loading for initial entity population
-- Knowledge graph 2D visualization (react-force-graph-2d or vis-network — NOT 3D)
-- Temporal filtering in graph view (show relationships as they existed at a point in time)
-- Chain-of-custody audit trail UI (display hash provenance for any document)
-- Configure Graphiti with Ollama (free) or budget-capped OpenAI
-
-**Pitfalls to avoid:** P4 (Graphiti LLM cost — use direct Cypher for bulk, Graphiti for selective)
-
-**Features addressed:** D2 (KG visualization), D5 (chain of custody UI)
-
-**Reference:** See Perplexity conversation file for full memory tier architecture details.
-
-**Estimated effort:** 10-14 days
-
----
-
-#### Phase 5: Framework Integration — "Level Up the Platform"
-**Rationale:** These are force multipliers that replace hand-rolled systems with purpose-built frameworks. They should only be integrated after the core pipeline is stable and producing reliable results.
-
-**Delivers:** Semantic intelligence layer, advanced document parsing, visual workflow design, agent orchestration, improved HITL UI.
-
-**Work:**
-- **Semantica (Hawksight-AI):** Semantic intelligence layer between ingestion and graph/vector stores. Replaces hand-rolled provenance and conflict detection.
-- **Docling (IBM/LF AI):** Document intelligence for PDF/office parsing. Has MCP server. Replaces custom PDF parsing.
-- **Agno:** Agent runtime/AgentOS. Replaces custom agent orchestration. Python-based.
-- **CopilotKit:** React-native copilot for human-in-the-loop UI. Replaces existing HITL components.
-- **Langflow:** Visual workflow builder as "design studio and incubator" for pipeline experimentation.
-- **OWL (CAMEL-AI):** Optional specialist multi-agent automation, invoked via MCP when needed.
-
-**Reference:** See Perplexity conversation file for ALL implementation details. Do NOT design these integrations without reading that file first.
-
-**Estimated effort:** 14-21 days (highly variable — depends on framework maturity and API stability)
-
----
+### Phase 4: Graphiti Boundary Definition
+- Define clear boundary: Graphiti owns temporal edges + contradiction detection
+- Neo4j GraphRAG owns semantic facts + entity relationships
+- Evaluate entity extraction overlap between Graphiti and SimpleKGPipeline
+- **Why last:** Graphiti is ~40% built and working. Boundary question requires Phases 1-2 experience.
+- **Risk:** HIGH — overlap is poorly documented, needs empirical testing
 
 ### Phase Ordering Rationale
-
-```
-Phase 0 (Foundation) ──→ Phase 1 (Vertical Slice) ──→ Phase 2 (NLP + Patterns)
-                                                              │
-                                                              ├──→ Phase 3 (Parsers + Scale)
-                                                              │         │
-                                                              │         ├──→ Phase 4 (Memory + KG)
-                                                              │         │         │
-                                                              │         │         └──→ Phase 5 (Frameworks)
-                                                              │         │
-                                                              │         └── (can partially overlap Phase 4)
-```
-
-**Why this order:**
-1. **Phase 0 before everything** — can't test what doesn't compile
-2. **Phase 1 before Phase 2** — analysis is useless without a working data pipeline
-3. **Phase 2 before Phase 3** — prove patterns work on one format before adding more formats
-4. **Phase 3 before Phase 4** — memory architecture benefits from having diverse data flowing through it
-5. **Phase 4 before Phase 5** — framework integration should work with the production memory architecture, not the prototype one
-6. **Phases 3-4 can partially overlap** — additional parsers are independent of memory architecture work
-
-**Matt can start using the platform productively after Phase 1.** Each subsequent phase adds capabilities without breaking what works.
+- Phase 1 before 2: real-time ingestion matters more than batch enrichment
+- Phase 2 before 3: proven replacements needed before simplifying TrinityRouter
+- Phase 4 last: Graphiti boundary is an empirical question, not a design question
 
 ### Research Flags
-
-| Phase | Needs `/gsd-research-phase`? | Why |
-|-------|------------------------------|-----|
-| Phase 0 | **NO** — Standard patterns | TypeScript error fixing, env var migration, health checks. Well-documented. |
-| Phase 1 | **NO** — Wiring existing code | Components exist. Schema reconciliation is codebase work, not research. |
-| Phase 2 | **MAYBE** — Pattern analyzer migration | SQL.js → Drizzle migration may have edge cases. Compromise plugin API should be verified via Context7. |
-| Phase 3 | **YES** — BullMQ FlowProducer patterns | FlowProducer parent-child dependency patterns need research. Facebook export format may have changed. Stream-json API needs Context7 lookup. |
-| Phase 4 | **YES** — Memory architecture + Graphiti selective usage | 6-tier memory schema design needs research. Graphiti 0.28.x API changes from 0.26.3. react-force-graph-2d vs vis-network comparison. Must read Perplexity conversation file. |
-| Phase 5 | **YES** — All new frameworks | Semantica, Docling, Agno, CopilotKit, Langflow all need deep research. Current docs, API stability, integration patterns. Must read Perplexity conversation file. |
-
----
+- Phase 1: Standard patterns, well-documented. **LOW research risk.**
+- Phase 2: MS GraphRAG `fast` method quality needs empirical testing. **MEDIUM research risk.**
+- Phase 3: No library handles DuckDB chain-of-custody — stays custom. **LOW research risk.**
+- Phase 4: Graphiti + Neo4j GraphRAG entity extraction overlap. **HIGH research risk** — needs hands-on testing.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| **Stack** | **HIGH** | All versions verified via npm/PyPI/Context7. Only 1 new install (BullMQ). Compatibility matrix fully verified. |
-| **Features** | **HIGH** | Grounded in direct codebase inspection. Feature gaps identified by reading actual source files, not guessing. Priority matrix reflects real dependencies. |
-| **Architecture** | **HIGH** | Based on analysis of 15+ source files. Data flow diagrams match actual code. Anti-patterns verified by reading the offending lines. |
-| **Pitfalls** | **HIGH** | All pitfalls verified against Context7 (Neo4j driver, ChromaDB, Graphiti) and Node.js official docs. Codebase-specific issues (Python bridge, mock embeddings) verified by reading source. |
-| **Phase ordering** | **MEDIUM-HIGH** | Logical based on dependencies, but effort estimates are rough. Wiring tasks are notoriously hard to estimate for a solo non-programmer. |
-| **Framework integration (Phase 5)** | **MEDIUM** | Referenced in Perplexity conversation but not independently verified. API stability of newer frameworks (Semantica, Agno) is uncertain. |
+| Stack | HIGH | Both packages verified via Context7, PyPI, official docs. Versions current as of Feb 2026. |
+| Features | HIGH | Feature sets confirmed via Context7 queries + official documentation |
+| Architecture | MEDIUM | Two-package integration pattern is novel — no reference implementations found. Logical but unproven. |
+| Pitfalls | MEDIUM | Cost estimates based on documented behavior + community reports. Ollama JSON issues confirmed by multiple sources. |
 
-### Gaps to Address During Planning
+## Gaps to Address
 
-1. **Facebook export format verification** — Facebook changes export format periodically. Need to test with Matt's actual Facebook data download before Phase 3 parser work.
-2. **VPS resource constraints** — No research on whether Salem Trinity VPS instances have enough RAM/CPU for concurrent PostgreSQL + Neo4j + ChromaDB + Ollama + Python NLP. Could be a deployment blocker.
-3. **LLM cost modeling for Graphiti** — Need to calculate: (number of high-value conversations) × (cost per LLM call) = total budget. Depends on which provider and whether Ollama is viable for entity extraction quality.
-4. **Drizzle schema migration path** — Three schema approaches exist. The reconciliation strategy (which tables survive, which get renamed) needs careful planning before Phase 1 implementation.
-5. **Semantica / Docling / Agno maturity** — These are referenced in the Perplexity conversation but haven't been independently verified for production readiness. Phase 5 planning must include feasibility assessment.
+1. **SimpleKGPipeline + existing Neo4j schema compatibility**: Does SimpleKGPipeline's default schema conflict with Semantica's existing node/edge types? Needs Phase 1 testing.
+2. **Microsoft GraphRAG parquet → Neo4j import**: Bratanič's `ms_graphrag_import.ipynb` provides a proven pattern using Cypher UNWIND for batch import. Creates `__Entity__`, `__Chunk__`, `__Community__` nodes with `RELATED`, `HAS_ENTITY`, `IN_COMMUNITY` relationships. Need to adapt for our dual-database setup (import into `semantic_facts` DB specifically).
+3. **Entity resolution NOT included in MS GraphRAG**: Must be custom post-import step. Bratanič's approach: k-NN on entity name embeddings → WCC (Weakly Connected Components via Neo4j GDS) → word distance filtering → LLM evaluation for final merge. Critical for custody domain where same person appears as "Matt", "Matthew", "Dad", etc.
+4. **Ollama structured output reliability**: GraphRAG docs explicitly warn about malformed JSON from Ollama models. Needs testing with qwen2.5:14b, mistral-nemo.
+5. **LanceDB version compatibility**: Both MS GraphRAG and the existing platform use LanceDB. Version conflicts possible. MS GraphRAG may pin a different version than our `@lancedb/lancedb ^0.15.0`.
+6. **Graphiti entity extraction vs SimpleKGPipeline**: Both extract entities into Neo4j. Which runs when? Do they conflict? Unknown — requires empirical testing in Phase 4.
+7. **Neo4j GDS required**: Leiden algorithm for community detection and WCC for entity resolution both require Neo4j Graph Data Science library. Must verify Neo4j Aura tier supports GDS, or run community edition locally.
 
----
+## Key Reference Material (verified 2026-02-28)
+
+### Neo4j Blog Integration Guide
+**Source:** https://neo4j.com/blog/developer/microsoft-graphrag-neo4j/
+- Full parquet → Neo4j import pipeline with Cypher queries
+- Local + global retriever implementations using LangChain and LlamaIndex
+- Neo4j graph schema: `__Entity__`, `__Chunk__`, `__Community__` nodes
+- Vector index creation on entity description embeddings for local search
+
+### Bratanič Deep Dive (Medium)
+**Source:** https://medium.com/neo4j/implementing-from-local-to-global-graphrag-with-neo4j-and-between-lines-d6571220d7e0
+- Entity resolution approach (k-NN + WCC + word distance + LLM eval)
+- Cost analysis: ~75% of indexing cost is entity extraction phase
+- Leiden community detection via Neo4j GDS
+- `fast` NLP method (spaCy/NLTK) reduces cost dramatically vs LLM extraction
+
+### Original Paper & Pattern Catalog
+**Source:** https://graphrag.com/appendices/research/2404.16130
+- "From Local to Global" methodology
+- Hierarchical community detection at multiple levels
+- Map-reduce global search pattern
+
+### Implementation Notebooks
+**Source:** https://github.com/tomasonjo/blogs/tree/master/msft_graphrag
+- `ms_graphrag_import.ipynb` — Parquet → Neo4j import with UNWIND Cypher
+- `ms_graphrag_retriever.ipynb` — Local + global retriever implementations
 
 ## Sources
 
-### From STACK.md
-- Context7: graphiti-core (help_getzep_graphiti), Drizzle ORM (pgvector integration), BullMQ (FlowProducer), fast-xml-parser (v5/v6 API), compromise (NER), neo4j-javascript-driver (streaming API)
-- npm registry: all Node.js package versions verified 2026-02-25
-- PyPI: graphiti-core 0.28.1, spaCy 3.8.11 verified
-- Codebase: package.json, requirements.txt, redis-queue.ts, chain-custody.ts, graphiti_runner.py
-
-### From FEATURES.md
-- Codebase inspection: server/mcp/loaders/*, server/mcp/pipelines/*, server/mcp/forensics/*, server/api/routers/*, client/src/pages/*
-- PROJECT.md: project definition with validated/active/out-of-scope features
-- Pattern Library: 21 commented-out tRPC calls visible in PatternLibrary.tsx lines 50-68
-- Ingestion Router: 326 lines, production-pipeline: 662 lines
-
-### From ARCHITECTURE.md
-- Direct codebase analysis of 15+ source files
-- INGESTION_ARCHITECTURE.md, STORAGE_ARCHITECTURE.md, BACKEND_ARCHITECTURE.md
-- PROJECT.md
-
-### From PITFALLS.md
-- Node.js child_process official docs (v25.7.0)
-- Context7: neo4j-javascript-driver (benchmark 94.9), chroma-core/chroma (benchmark 79.9), graphiti (benchmark 68)
-- Codebase: python-bridge.ts (626 lines), graphiti-client.ts (752 lines), chroma-client.ts (513 lines)
-
-### Architectural Evolution
-- Perplexity/Gemini conversation: `C:\Users\matts\Projects\TheBigOne\[https___github.com_Hawksight-AI_semantica](https_.md` (1777 lines)
-
----
-*Research synthesis completed: 2026-02-25*
-*Ready for roadmap: yes*
-*Author: gsd-research-synthesizer@opencode*
+- Context7: `/microsoft/graphrag` — architecture, pipeline, search modes, BYOG, config
+- Context7: `/websites/microsoft_github_io_graphrag` — vector stores, models, NLP extraction
+- Context7: `/neo4j/neo4j-graphrag-python` — SimpleKGPipeline, retrievers, ToolsRetriever
+- PyPI: graphrag 3.0.5 (Feb 27, 2026), neo4j-graphrag-python 1.5.0
+- Neo4j Blog: https://neo4j.com/blog/developer/microsoft-graphrag-neo4j/
+- Medium (Bratanič): https://medium.com/neo4j/implementing-from-local-to-global-graphrag-with-neo4j-and-between-lines-d6571220d7e0
+- graphrag.com: https://graphrag.com/appendices/research/2404.16130
+- GitHub: https://github.com/tomasonjo/blogs/tree/master/msft_graphrag
+- Existing codebase: STORAGE_ARCHITECTURE.md, INGESTION_ARCHITECTURE.md, systemRouter.ts, graphiti-client.ts
