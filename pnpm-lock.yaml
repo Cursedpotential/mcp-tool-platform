@@ -185,6 +185,9 @@ importers:
       cheerio:
         specifier: ^1.1.2
         version: 1.1.2
+      chokidar:
+        specifier: ^5.0.0
+        version: 5.0.0
       chromadb:
         specifier: ^3.2.0
         version: 3.2.0
@@ -2236,7 +2239,6 @@ packages:
   '@lancedb/lancedb@0.15.0':
     resolution: {integrity: sha512-qm3GXLA17/nFGUwrOEuFNW0Qg2gvCtp+yAs6qoCM6vftIreqzp8d4Hio6eG/YojS9XqPnR2q+zIeIFy12Ywvxg==}
     engines: {node: '>= 18'}
-    cpu: [x64, arm64]
     os: [darwin, linux, win32]
     peerDependencies:
       apache-arrow: '>=15.0.0 <=18.1.0'

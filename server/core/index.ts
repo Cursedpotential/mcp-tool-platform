@@ -8,6 +8,8 @@ import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../api";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
+import { initAllDatabases } from "./db";
+import { startEvidenceWatcher } from "../mcp/ingest/watcher";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {

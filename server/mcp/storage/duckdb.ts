@@ -109,7 +109,7 @@ export class DuckDBClient {
     if (!this.connection) throw new Error('Not connected');
 
     // Ingestion log - tracks all incoming evidence
-    await this.connection.query(`
+    await this.connection.run(`
       CREATE TABLE IF NOT EXISTS ingestion_log (
         id VARCHAR PRIMARY KEY,
         source_hash VARCHAR NOT NULL UNIQUE,
@@ -127,7 +127,7 @@ export class DuckDBClient {
     `);
 
     // Normalized messages - standardized message format
-    await this.connection.query(`
+    await this.connection.run(`
       CREATE TABLE IF NOT EXISTS normalized_messages (
         id VARCHAR PRIMARY KEY,
         ingestion_id VARCHAR NOT NULL,
@@ -144,7 +144,7 @@ export class DuckDBClient {
     `);
 
     // Write tracking - which tier has what data
-    await this.connection.query(`
+    await this.connection.run(`
       CREATE TABLE IF NOT EXISTS write_tracking (
         id VARCHAR PRIMARY KEY,
         ingestion_id VARCHAR NOT NULL UNIQUE,
@@ -159,13 +159,13 @@ export class DuckDBClient {
     `);
 
     // Create indexes for common queries
-    await this.connection.query(`
+    await this.connection.run(`
       CREATE INDEX IF NOT EXISTS idx_ingestion_hash ON ingestion_log(source_hash)
     `);
-    await this.connection.query(`
+    await this.connection.run(`
       CREATE INDEX IF NOT EXISTS idx_ingestion_status ON ingestion_log(pass1_status, pass2_status)
     `);
-    await this.connection.query(`
+    await this.connection.run(`
       CREATE INDEX IF NOT EXISTS idx_messages_timestamp ON normalized_messages(timestamp)
     `);
 
@@ -206,13 +206,13 @@ export class DuckDBClient {
     const contentToHash = rawContent || binaryPath || '';
     const sourceHash = await this.hashContent(contentToHash);
 
-    await this.connection.query(`
+    await this.connection.run(`
       INSERT INTO ingestion_log (id, source_hash, source_type, source_name, raw_content, binary_path, metadata)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `, [id, sourceHash, sourceType, sourceName, rawContent, binaryPath, JSON.stringify(metadata)]);
 
     // Initialize write tracking
-    await this.connection.query(`
+    await this.connection.run(`
       INSERT INTO write_tracking (id, ingestion_id, duckdb_written)
       VALUES (?, ?, true)
     `, [this.generateUUIDv7(), id]);
@@ -226,7 +226,7 @@ export class DuckDBClient {
   async getIngestionById(id: string): Promise<IngestionLog> {
     if (!this.connection) throw new Error('Not connected');
 
-    const result = await this.connection.query(`
+    const result = await this.connection.run(`
       SELECT * FROM ingestion_log WHERE id = ?
     `, [id]);
 
@@ -244,7 +244,7 @@ export class DuckDBClient {
   async getIngestionByHash(hash: string): Promise<IngestionLog | null> {
     if (!this.connection) throw new Error('Not connected');
 
-    const result = await this.connection.query(`
+    const result = await this.connection.run(`
       SELECT * FROM ingestion_log WHERE source_hash = ?
     `, [hash]);
 
@@ -263,7 +263,7 @@ export class DuckDBClient {
     if (!this.connection) throw new Error('Not connected');
 
     const completedAt = status === 'completed' ? new Date().toISOString() : null;
-    await this.connection.query(`
+    await this.connection.run(`
       UPDATE ingestion_log 
       SET pass1_status = ?, pass1_completed_at = ?
       WHERE id = ?
@@ -277,7 +277,7 @@ export class DuckDBClient {
     if (!this.connection) throw new Error('Not connected');
 
     const completedAt = status === 'completed' ? new Date().toISOString() : null;
-    await this.connection.query(`
+    await this.connection.run(`
       UPDATE ingestion_log 
       SET pass2_status = ?, pass2_completed_at = ?
       WHERE id = ?
@@ -295,7 +295,7 @@ export class DuckDBClient {
     if (!this.connection) throw new Error('Not connected');
 
     const column = `${tier}_written`;
-    await this.connection.query(`
+    await this.connection.run(`
       UPDATE write_tracking 
       SET ${column} = ?, last_updated = CURRENT_TIMESTAMP
       WHERE ingestion_id = ?
@@ -308,7 +308,7 @@ export class DuckDBClient {
   async getPendingPass1(limit: number = 100): Promise<IngestionLog[]> {
     if (!this.connection) throw new Error('Not connected');
 
-    const result = await this.connection.query(`
+    const result = await this.connection.run(`
       SELECT * FROM ingestion_log 
       WHERE pass1_status = 'pending'
       ORDER BY ingested_at ASC
@@ -325,7 +325,7 @@ export class DuckDBClient {
   async getPendingPass2(limit: number = 100): Promise<IngestionLog[]> {
     if (!this.connection) throw new Error('Not connected');
 
-    const result = await this.connection.query(`
+    const result = await this.connection.run(`
       SELECT * FROM ingestion_log 
       WHERE pass1_status = 'completed' 
         AND pass2_status = 'pending'
@@ -344,7 +344,7 @@ export class DuckDBClient {
   async healthCheck(): Promise<boolean> {
     try {
       if (!this.connection) return false;
-      await this.connection.query('SELECT 1');
+      await this.connection.run('SELECT 1');
       return true;
     } catch {
       return false;
@@ -356,11 +356,11 @@ export class DuckDBClient {
    */
   async close(): Promise<void> {
     if (this.connection) {
-      await this.connection.close();
+      await this.connection.closeSync();
       this.connection = null;
     }
     if (this.instance) {
-      await this.instance.close();
+      await this.instance.closeSync();
       this.instance = null;
     }
     this.initialized = false;
@@ -418,5 +418,5 @@ export const duckdb = {
   },
   initialize: () => getDuckDBClient().initialize(),
   healthCheck: () => getDuckDBClient().healthCheck(),
-  close: () => getDuckDBClient().close()
+  close: () => getDuckDBClient().closeSync()
 };

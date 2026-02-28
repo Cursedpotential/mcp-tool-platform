@@ -4,7 +4,7 @@
 
 import { getMySqlDb, testMySqlConnection, closeMySql } from './db.mysql';
 import { getDuckDBClient } from '../mcp/storage/duckdb';
-import { getLanceDbClient } from '../mcp/storage/lancedb';
+import { getLanceDBClient } from '../mcp/storage/lancedb';
 import { graphitiClient } from '../mcp/storage/graphiti-client';
 
 // ============================================================================
@@ -22,7 +22,10 @@ export const DATABASE_ROLES = {
   VECTOR_VAULT: 'vector_vault',
 
   /** Tier 3 & 4: Neo4j (Temporal Graph + Semantica) */
-  GRAPH_VAULT: 'graph_vault'
+  GRAPH_VAULT: 'graph_vault',
+
+  // Legacy mappings for backwards compatibility with old plugins
+  PRIMARY: 'control_plane'
 } as const;
 
 export type DatabaseRole = typeof DATABASE_ROLES[keyof typeof DATABASE_ROLES];
@@ -33,6 +36,11 @@ export type DatabaseRole = typeof DATABASE_ROLES[keyof typeof DATABASE_ROLES];
 
 export async function getAppDb() {
   return await getMySqlDb();
+}
+
+// Legacy alias for plugins expecting Postgres
+export async function getDb() {
+  return await getAppDb();
 }
 
 export async function testAppConnection() {
@@ -56,7 +64,7 @@ export function getEvidenceDb() {
 // ============================================================================
 
 export function getVectorDb() {
-  return getLanceDbClient();
+  return getLanceDBClient();
 }
 
 // ============================================================================
@@ -100,7 +108,24 @@ export async function initAllDatabases() {
 export async function closeAll() {
   await Promise.all([
     closeApp(),
-    getEvidenceDb().close(),
+    getEvidenceDb().closeSync(),
     graphitiClient.close()
   ]);
+}
+
+// ============================================================================
+// USER SDK MOCK STUBS (To satisfy old endpoints during migration)
+// ============================================================================
+export async function getUserByOpenId(openId: string): Promise<any | null> {
+  const db = await getAppDb();
+  if (!db) return null;
+  console.log(`[DB] Stub: getUserByOpenId called for ${openId}`);
+  return null; 
+}
+
+export async function upsertUser(userData: any): Promise<any> {
+  const db = await getAppDb();
+  if (!db) return null;
+  console.log(`[DB] Stub: upsertUser called for ${userData.email}`);
+  return userData;
 }
