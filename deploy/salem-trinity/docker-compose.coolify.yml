@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # --------------------------------------------------------
+  # 1. MCP Tool Platform (Node.js Backend & API)
+  # --------------------------------------------------------
+  mcp-platform:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp-platform
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # Internal Docker DNS resolution for MySQL and Neo4j
+      - DATABASE_URL=mysql://mcp_user:${MYSQL_PASSWORD}@mysql:3306/mcp_platform
+      - NEO4J_URL=bolt://neo4j:7687
+      - NEO4J_USERNAME=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      # Local paths inside the container for Embedded DBs
+      - DUCKDB_PATH=/app/data/duckdb/forensic_vault.db
+      - LANCEDB_PATH=/app/data/lancedb/multimodal_vault
+    volumes:
+      # CRITICAL: Mount the 50GB Hetzner Block Storage for 4GB XML uploads
+      # Rclone will drop files into /mnt/block_storage on the host
+      - /mnt/block_storage/evidence_drop:/app/data/evidence_drop
+      # Persistent volumes for Embedded Tier 1 & Tier 2 Storage
+      - mcp_duckdb_data:/app/data/duckdb
+      - mcp_lancedb_data:/app/data/lancedb
+    networks:
+      - mcp_internal
+    labels:
+      # Coolify / Traefik Routing
+      - "traefik.enable=true"
+      - "traefik.http.routers.mcp-platform.rule=Host(`api.mitechconsult.com`, `*.mitechconsult.com`)"
+      - "traefik.http.services.mcp-platform.loadbalancer.server.port=3000"
+
+  # --------------------------------------------------------
+  # 2. Application State DB (Tier 5 Storage)
+  # --------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: mcp-mysql
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=mcp_platform
+      - MYSQL_USER=mcp_user
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - mcp_mysql_data:/var/lib/mysql
+    networks:
+      - mcp_internal
+    ports:
+      # BIND TO HETZNER PRIVATE NETWORK (eth1/ens10)
+      # Do not expose 3306 to 0.0.0.0. Only to the 10.x.x.x VPC.
+      - "${HETZNER_VPC_IP:-127.0.0.1}:3306:3306"
+
+  # --------------------------------------------------------
+  # 3. Dual-Graph DB (Tier 3 & 4 Storage)
+  # --------------------------------------------------------
+  neo4j:
+    image: neo4j:5.15.0
+    container_name: mcp-neo4j
+    restart: unless-stopped
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
+      # Enable Graph Data Science (GDS) and APOC for LlamaIndex/GraphRAG Native clustering
+      - NEO4J_PLUGINS=["graph-data-science", "apoc"]
+    volumes:
+      - mcp_neo4j_data:/data
+      - mcp_neo4j_logs:/logs
+      - mcp_neo4j_import:/var/lib/neo4j/import
+      - mcp_neo4j_plugins:/plugins
+    networks:
+      - mcp_internal
+    labels:
+      # Expose the Neo4j Browser UI securely via Traefik
+      - "traefik.enable=true"
+      - "traefik.http.routers.neo4j-ui.rule=Host(`graph.mitechconsult.com`)"
+      - "traefik.http.services.neo4j-ui.loadbalancer.server.port=7474"
+    ports:
+      # BIND BOLT TO HETZNER PRIVATE NETWORK for fast cross-VPS Graph access
+      - "${HETZNER_VPC_IP:-127.0.0.1}:7687:7687"
+
+  # --------------------------------------------------------
+  # 4. Tailscale Sidecar (Secure Admin Access)
+  # --------------------------------------------------------
+  tailscale-sidecar:
+    image: tailscale/tailscale:latest
+    container_name: tailscale-sidecar
+    hostname: salem-platform-tailscale
+    restart: unless-stopped
+    environment:
+      - TS_AUTHKEY=${TS_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=false
+    volumes:
+      - mcp_tailscale_data:/var/lib/tailscale
+      # Required for Tailscale to interface with host networking
+      - /dev/net/tun:/dev/net/tun
+    cap_add:
+      - net_admin
+      - sys_module
+    # Network mode host allows it to expose the actual VPS to your Tailnet
+    network_mode: "host" 
+
+networks:
+  mcp_internal:
+    driver: bridge
+
+volumes:
+  mcp_duckdb_data:
+  mcp_lancedb_data:
+  mcp_mysql_data:
+  mcp_neo4j_data:
+  mcp_neo4j_logs:
+  mcp_neo4j_import:
+  mcp_neo4j_plugins:
+  mcp_tailscale_data:
