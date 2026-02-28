@@ -1,0 +1,86 @@
+version: '3.8'
+
+# ===================================================================
+# TEST & STAGING ENVIRONMENT (ISOLATED)
+# Use this for testing new parsers, LlamaIndex pipelines, or models.
+# It uses completely isolated volumes so it never touches production.
+# ===================================================================
+
+services:
+  # --------------------------------------------------------
+  # 1. MCP Tool Platform (The Sandbox)
+  # --------------------------------------------------------
+  mcp-platform-test:
+    build: 
+      context: ../../
+      dockerfile: Dockerfile
+    container_name: mcp-platform-test
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=mysql://mcp_test:${MYSQL_PASSWORD}@mysql-test:3306/mcp_test_db
+      - NEO4J_URL=bolt://neo4j-test:7687
+      - NEO4J_USERNAME=neo4j
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD}
+      # Local paths inside the container for Embedded DBs
+      - DUCKDB_PATH=/app/data/duckdb/test_forensic_vault.db
+      - LANCEDB_PATH=/app/data/lancedb/test_multimodal_vault
+    volumes:
+      # Isolated test block storage
+      - /mnt/block_storage/test_evidence_drop:/app/data/evidence_drop
+      # Isolated embedded volumes
+      - mcp_test_duckdb:/app/data/duckdb
+      - mcp_test_lancedb:/app/data/lancedb
+    networks:
+      - mcp_test_internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mcp-test.rule=Host(`test-api.mitechconsult.com`)"
+      - "traefik.http.services.mcp-test.loadbalancer.server.port=3000"
+
+  # --------------------------------------------------------
+  # 2. Application State DB (Isolated)
+  # --------------------------------------------------------
+  mysql-test:
+    image: mysql:8.0
+    container_name: mcp-mysql-test
+    restart: unless-stopped
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=mcp_test_db
+      - MYSQL_USER=mcp_test
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+    volumes:
+      - mcp_test_mysql:/var/lib/mysql
+    networks:
+      - mcp_test_internal
+
+  # --------------------------------------------------------
+  # 3. Dual-Graph DB (Isolated)
+  # --------------------------------------------------------
+  neo4j-test:
+    image: neo4j:5.15.0
+    container_name: mcp-neo4j-test
+    restart: unless-stopped
+    environment:
+      - NEO4J_AUTH=neo4j/${NEO4J_PASSWORD}
+      - NEO4J_PLUGINS=["graph-data-science", "apoc"]
+    volumes:
+      - mcp_test_neo4j:/data
+    networks:
+      - mcp_test_internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.neo4j-test-ui.rule=Host(`test-graph.mitechconsult.com`)"
+      - "traefik.http.services.neo4j-test-ui.loadbalancer.server.port=7474"
+
+networks:
+  mcp_test_internal:
+    driver: bridge
+
+volumes:
+  mcp_test_duckdb:
+  mcp_test_lancedb:
+  mcp_test_mysql:
+  mcp_test_neo4j:
