@@ -220,7 +220,7 @@ export class LanceDBClient {
 
     const results = await this.embeddingsTable
       .query()
-      .where(`source_hash = '${sourceHash}'`)
+      .where(`source_hash = '${sourceHash.replace(/'/g, "''")}'`)
       .limit(1)
       .toArray();
 
@@ -236,7 +236,7 @@ export class LanceDBClient {
 
     const results = await this.binariesTable
       .query()
-      .where(`source_hash = '${sourceHash}'`)
+      .where(`source_hash = '${sourceHash.replace(/'/g, "''")}'`)
       .limit(1)
       .toArray();
 
