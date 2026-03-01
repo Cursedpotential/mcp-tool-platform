@@ -1,4 +1,5 @@
 import { getDuckDBClient } from '../storage/duckdb';
+import { getLanceDBClient } from '../storage/lancedb';
 import { SmsXmlReader } from './readers/SmsXmlReader';
 import { BehavioralFlagExtractor } from './extractors/BehavioralFlagExtractor';
 import { GlinerExtractor } from './extractors/GlinerExtractor';
@@ -26,10 +27,14 @@ export async function ingestEvidence(
   metadata: Record<string, unknown> = {}
 ): Promise<IngestionResult> {
   const duckdb = getDuckDBClient();
+  const lancedb = getLanceDBClient();
   
   // Ensure DB is ready
   if (!duckdb.isInitialized()) {
     await duckdb.initialize();
+  }
+  if (!lancedb.isInitialized()) {
+    await lancedb.initialize();
   }
 
   // 1. Log Ingestion (Generates SHA-256 and UUIDv7 internally)
@@ -104,11 +109,27 @@ export async function ingestEvidence(
         }
       });
       console.log(`[Ingest] Recognizers scanning complete. Found ${totalStructuredData} structured items.`);
+
+      // 6. LanceDB Final Commit
+      // Map LlamaIndex chunks to LanceDB expected schema
+      if (chunks.length > 0) {
+        console.log(`[Ingest] Embedding and committing ${chunks.length} chunks to LanceDB (Multimodal Vault)...`);
+        const lancePayload = chunks.map(c => ({
+            id: c.id_,
+            text: c.getContent('text'),
+            metadata: JSON.stringify(c.metadata),
+            document_id: c.metadata['parent_document_id'] || ingestion.id
+        }));
+        await lancedb.addDocuments(lancePayload);
+        console.log(`[Ingest] Successfully committed to LanceDB.`);
+      }
     }
     // Future routes: .pdf -> Docling, .png -> Textract
   } catch (error) {
     console.error(`[Ingest] Parsing failed for ${sourceName}:`, error);
   }
+
+  // TODO: Add MySQL 'ingested_documents' catalog sync here in Sprint 2
 
   return {
     documentId: ingestion.id,
