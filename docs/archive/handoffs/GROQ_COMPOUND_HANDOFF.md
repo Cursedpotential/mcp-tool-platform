@@ -20,12 +20,12 @@ Deploy PostgreSQL, FerretDB, Directus, PhotoPrism, n8n, and Tailscale to **salem
 ### Coolify API
 
 - **URL:** https://nexus.mitechconsult.com
-- **API Key:** `1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619b`
+- **API Key:** `REDACTED-ROTATE-THIS-CREDENTIAL`
 - **Test:** `curl -H "Authorization: Bearer <API_KEY>" https://nexus.mitechconsult.com/api/v1/servers`
 
 ### Hetzner Cloud API
 
-- **API Key:** `BpA7Tw9IkbPG57dSFVtG0q56Bz7F20Wkcdg5Gpd2vaj2pOvGWKtVd817I0n0eAUl`
+- **API Key:** `REDACTED-ROTATE-THIS-CREDENTIAL`
 - **salem-nexus:** ID 116864004, IP 116.203.199.238 (8c/16GB)
 - **salem-forge:** ID 116864005, IP 116.203.198.77 (8c/16GB, will add as remote server later)
 - **salem-vault:** 60GB XFS volume attached to salem-nexus
@@ -33,7 +33,7 @@ Deploy PostgreSQL, FerretDB, Directus, PhotoPrism, n8n, and Tailscale to **salem
 ### Cloudflare
 
 - **Email:** matt.salem85@gmail.com
-- **Global API Key:** `d4a987b34085205d82f58e410e38dbba99786`
+- **Global API Key:** `REDACTED-ROTATE-THIS-CREDENTIAL`
 - **Zone ID:** `d543c96e4bb7fad63e5f1925dce79640`
 - **Domain:** mitechconsult.com
 
@@ -90,7 +90,7 @@ chmod 755 /mnt/salem-vault/n8n
 #### 2. Test Coolify API Connection
 
 ```bash
-curl -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619b" \
+curl -H "Authorization: Bearer REDACTED-ROTATE-THIS-CREDENTIAL" \
   https://nexus.mitechconsult.com/api/v1/servers | jq '.'
 ```
 
@@ -136,7 +136,7 @@ dig +short postgres.mitechconsult.com     # 116.203.199.238
 
 ```bash
 # Example API call (adjust based on Coolify API docs)
-curl -X POST -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619b" \
+curl -X POST -H "Authorization: Bearer REDACTED-ROTATE-THIS-CREDENTIAL" \
   -H "Content-Type: application/json" \
   -d @deployment-payload.json \
   https://nexus.mitechconsult.com/api/v1/applications
@@ -483,7 +483,7 @@ ssh -i /root/.ssh/coolify_remote root@116.203.198.77 "docker ps"
 **Via Coolify API (if available):**
 
 ```bash
-curl -X POST -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619b" \
+curl -X POST -H "Authorization: Bearer REDACTED-ROTATE-THIS-CREDENTIAL" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "salem-forge",
@@ -526,7 +526,7 @@ Once salem-forge is added as remote server, deploy services from `docker-compose
 
 ```bash
 # Check Hetzner volume status
-curl -H "Authorization: Bearer BpA7Tw9IkbPG57dSFVtG0q56Bz7F20Wkcdg5Gpd2vaj2pOvGWKtVd817I0n0eAUl" \
+curl -H "Authorization: Bearer REDACTED-ROTATE-THIS-CREDENTIAL" \
   https://api.hetzner.cloud/v1/volumes | jq '.volumes[] | {name, server, status}'
 
 # Remount manually

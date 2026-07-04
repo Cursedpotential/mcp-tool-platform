@@ -2,7 +2,7 @@
 
 **Date:** January 7, 2026  
 **Servers:** salem-nexus (Coolify master), salem-forge (remote worker)  
-**Coolify API Key:** `1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619b`
+**Coolify API Key:** `REDACTED-ROTATE-THIS-CREDENTIAL`
 
 ---
 
@@ -35,7 +35,7 @@
 ### 1.1 Test API Connection
 
 ```bash
-curl -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619b" \
+curl -H "Authorization: Bearer REDACTED-ROTATE-THIS-CREDENTIAL" \
   https://nexus.mitechconsult.com/api/v1/servers
 ```
 
@@ -44,7 +44,7 @@ curl -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619
 ### 1.2 Get Server Details
 
 ```bash
-curl -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619b" \
+curl -H "Authorization: Bearer REDACTED-ROTATE-THIS-CREDENTIAL" \
   https://nexus.mitechconsult.com/api/v1/servers/{server_id}
 ```
 
@@ -71,7 +71,7 @@ curl -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619
 ### 2.3 Or via API
 
 ```bash
-curl -X POST -H "Authorization: Bearer 1|VieISJXT6EBaBL8DLO1Fc1q2hAPuVWjBgKwAVTFZd343619b" \
+curl -X POST -H "Authorization: Bearer REDACTED-ROTATE-THIS-CREDENTIAL" \
   -H "Content-Type: application/json" \
   -d '{
     "name": "salem-forge",
@@ -370,11 +370,11 @@ R2_SECRET_KEY=<get_from_cloudflare>
 R2_ENDPOINT=<your_r2_endpoint>
 
 # Hetzner
-HETZNER_API_KEY=BpA7Tw9IkbPG57dSFVtG0q56Bz7F20Wkcdg5Gpd2vaj2pOvGWKtVd817I0n0eAUl
+HETZNER_API_KEY=REDACTED-ROTATE-THIS-CREDENTIAL
 
 # Cloudflare
 CLOUDFLARE_EMAIL=matt.salem85@gmail.com
-CLOUDFLARE_API_KEY=d4a987b34085205d82f58e410e38dbba99786
+CLOUDFLARE_API_KEY=REDACTED-ROTATE-THIS-CREDENTIAL
 CLOUDFLARE_ZONE_ID=d543c96e4bb7fad63e5f1925dce79640
 ```
 
@@ -479,7 +479,7 @@ scp docker-compose.vps2-compute.yml root@116.203.198.77:/root/
 
 ```bash
 # Check Hetzner volume status
-curl -H "Authorization: Bearer BpA7Tw9IkbPG57dSFVtG0q56Bz7F20Wkcdg5Gpd2vaj2pOvGWKtVd817I0n0eAUl" \
+curl -H "Authorization: Bearer REDACTED-ROTATE-THIS-CREDENTIAL" \
   https://api.hetzner.cloud/v1/volumes
 
 # Remount manually
